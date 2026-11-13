@@ -1,0 +1,331 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { parseEphemeris, type Ephemeris } from './core/ephemeris';
+import {
+  flipFor, getState, LIVE_ID, neverLitFor, pin, restoreFromAddress, samplesFor, select, selected,
+  setData, setGhost, setLiveSite, setLiveTime, setMode, setRange, shiftWindow, skylineFor,
+  stateToAddress, subscribe, summaryFor, timelineFor, unpin,
+} from './state';
+
+const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
+const T0 = Date.parse('2027-01-01T00:00:00Z');
+
+// A made-up table: the Sun circles the equator once per 29.53 days; Earth holds still.
+function circlingSun(days: number): Ephemeris {
+  const rows = days * 24 + 1;
+  const buffer = new ArrayBuffer(rows * 24);
+  const view = new DataView(buffer);
+  for (let r = 0; r < rows; r++) {
+    const lon = (-2 * Math.PI * (r / 24)) / 29.53;
+    [Math.cos(lon), Math.sin(lon), 0, 384400, 0, 0].forEach((v, c) => view.setFloat32((r * 6 + c) * 4, v, true));
+  }
+  return parseEphemeris({
+    start: '2027-01-01T00:00:00Z', step_s: 3600, rows, frame: 'MOON_ME_DE421',
+    columns: [], source: 'made up for a test',
+  }, buffer);
+}
+
+beforeEach(() => {
+  restoreFromAddress('', T0);
+  setData({ eph: null, dem: null, sites: [] });
+});
+
+describe('start', () => {
+  it('opens on the live scenario, nothing pinned, 30 days, 2D', () => {
+    const s = getState();
+    expect(s.live.id).toBe(LIVE_ID);
+    expect(s.live.tMs).toBe(T0);
+    expect(s.pinned).toEqual([]);
+    expect(s.ghost).toBeNull();
+    expect(s.selectedId).toBe(LIVE_ID);
+    expect(s.range).toBe('30d');
+    expect(s.mode).toBe('2d');
+    expect(s.windowStartMs).toBe(T0);
+    expect(selected()).toBe(s.live);
+  });
+
+  it('starts on the whole hour', () => {
+    restoreFromAddress('', T0 + 25 * 60_000);
+    expect(getState().live.tMs).toBe(T0);
+  });
+});
+
+describe('page address (F17)', () => {
+  it('pin two scenarios, rebuild state from the page address, both are back', () => {
+    setLiveSite({ lat: -88, lon: 45 });
+    setLiveTime(T0 + 3 * DAY);
+    pin();
+    setLiveSite({ lat: -87.67, lon: 45, eye_m: 10 });
+    setLiveTime(T0 + 10 * DAY + 90_500);
+    pin();
+    setLiveSite({ lat: 1, lon: 23 });
+    const before = getState();
+    expect(before.pinned).toHaveLength(2);
+
+    const address = stateToAddress();
+    restoreFromAddress('', T0);                       // a fresh page...
+    expect(getState().pinned).toEqual([]);
+    restoreFromAddress('#' + address, T0);            // ...opened with the link
+
+    const after = getState();
+    expect(after.pinned).toEqual(before.pinned);
+    expect(after.pinned.map((p) => p.color)).toEqual(['--scn-a', '--scn-b']);
+    expect(after.pinned[1].site).toEqual({ lat: -87.67, lon: 45, eye_m: 10 });
+    expect(after.pinned[1].tMs).toBe(T0 + 10 * DAY + 90_500);
+    expect(after.live).toEqual(before.live);
+  });
+
+  it('keeps the selected scenario, the range and the mode', () => {
+    pin();
+    pin();
+    select('b');
+    setRange('90d');
+    setMode('3d');
+    const address = stateToAddress();
+    restoreFromAddress(address, T0 + 99 * DAY);
+    const s = getState();
+    expect(s.selectedId).toBe('b');
+    expect(s.range).toBe('90d');
+    expect(s.mode).toBe('3d');
+    expect(s.live.tMs).toBe(T0);
+  });
+
+  it('keeps a pinned scenario in its own slot when an earlier one was removed', () => {
+    pin();
+    pin();
+    unpin('a');
+    restoreFromAddress(stateToAddress(), T0);
+    expect(getState().pinned.map((p) => [p.id, p.label, p.color])).toEqual([['b', 'B', '--scn-b']]);
+  });
+
+  it('reads like this', () => {
+    setLiveSite({ lat: -88, lon: 45 });
+    pin();
+    expect(stateToAddress()).toBe('live=-88,45,2027-01-01T00:00:00Z&a=-88,45,2027-01-01T00:00:00Z');
+  });
+
+  it('ignores the parts of an address that make no sense', () => {
+    restoreFromAddress('#live=95,0,2027-01-01T00:00:00Z&a=banana&b=-88,45,not-a-date&c=-89,10,2027-02-01T00:00:00Z&sel=b&range=7d&mode=4d&x=1', T0);
+    const s = getState();
+    expect(s.live.site).toEqual({ lat: -89.5, lon: 0 });
+    expect(s.live.tMs).toBe(T0);
+    expect(s.pinned.map((p) => p.id)).toEqual(['c']);
+    expect(s.selectedId).toBe(LIVE_ID);
+    expect(s.range).toBe('30d');
+    expect(s.mode).toBe('2d');
+    expect(() => restoreFromAddress('%%%&&&===,,,', T0)).not.toThrow();
+  });
+
+  it('keeps loaded data when an address is restored', () => {
+    const eph = circlingSun(10);
+    setData({ eph });
+    restoreFromAddress('a=-88,45,2027-01-02T00:00:00Z', T0);
+    expect(getState().eph).toBe(eph);
+  });
+});
+
+describe('timeline window', () => {
+  it('setLiveTime inside the window keeps windowStartMs', () => {
+    setLiveTime(T0 + 12 * DAY);
+    expect(getState().windowStartMs).toBe(T0);
+    setLiveTime(T0 + 30 * DAY);                       // the right edge is still inside
+    expect(getState().windowStartMs).toBe(T0);
+    setLiveTime(T0);
+    expect(getState().windowStartMs).toBe(T0);
+    expect(getState().live.tMs).toBe(T0);
+  });
+
+  it('setLiveTime outside the window restarts it at the new time', () => {
+    setLiveTime(T0 + 31 * DAY);
+    expect(getState().windowStartMs).toBe(T0 + 31 * DAY);
+    setLiveTime(T0 + 30 * DAY);                       // now before the window
+    expect(getState().windowStartMs).toBe(T0 + 30 * DAY);
+  });
+
+  it('shiftWindow moves by half the range, and leaves the live time alone', () => {
+    shiftWindow(1);
+    expect(getState().windowStartMs).toBe(T0 + 15 * DAY);
+    shiftWindow(-1);
+    shiftWindow(-1);
+    expect(getState().windowStartMs).toBe(T0 - 15 * DAY);
+    setRange('90d');
+    shiftWindow(1);
+    expect(getState().windowStartMs).toBe(T0 + 30 * DAY);
+    expect(getState().live.tMs).toBe(T0);
+  });
+
+  it('setRange keeps the window while the live time is inside the new one', () => {
+    setLiveTime(T0 + 20 * DAY);
+    setRange('365d');
+    expect(getState().windowStartMs).toBe(T0);
+    setLiveTime(T0 + 200 * DAY);
+    expect(getState().windowStartMs).toBe(T0);
+    setRange('30d');                                  // day 200 is no longer inside
+    expect(getState().windowStartMs).toBe(T0 + 200 * DAY);
+  });
+});
+
+describe('selected and live', () => {
+  it('pins up to three, coloured A, B, C in order', () => {
+    pin(); pin(); pin(); pin();
+    const s = getState();
+    expect(s.pinned.map((p) => p.id)).toEqual(['a', 'b', 'c']);
+    expect(s.pinned.map((p) => p.label)).toEqual(['A', 'B', 'C']);
+    expect(s.pinned.map((p) => p.color)).toEqual(['--scn-a', '--scn-b', '--scn-c']);
+    expect(s.selectedId).toBe(LIVE_ID);
+  });
+
+  it('pinned scenarios never change', () => {
+    setLiveSite({ lat: -88, lon: 45 });
+    pin();
+    const pinnedBefore = getState().pinned[0];
+    setLiveSite({ lat: -80, lon: -120 });
+    setLiveTime(T0 + 5 * DAY);
+    expect(getState().pinned[0]).toEqual(pinnedBefore);
+    expect(getState().pinned[0].site).toEqual({ lat: -88, lon: 45 });
+    expect(getState().pinned[0].tMs).toBe(T0);
+  });
+
+  it('an edit lands on live and selects it, even with a pinned scenario selected', () => {
+    pin();
+    select('a');
+    expect(selected().id).toBe('a');
+    setLiveTime(T0 + DAY);
+    expect(getState().selectedId).toBe(LIVE_ID);
+    select('a');
+    setLiveSite({ lat: 10, lon: 20 });
+    expect(selected().id).toBe(LIVE_ID);
+    expect(selected().site).toEqual({ lat: 10, lon: 20 });
+  });
+
+  it('unpinning the selected scenario selects live, and frees the colour', () => {
+    pin(); pin();
+    select('a');
+    unpin('a');
+    expect(getState().selectedId).toBe(LIVE_ID);
+    expect(getState().pinned.map((p) => p.id)).toEqual(['b']);
+    pin();
+    expect(getState().pinned.map((p) => p.id)).toEqual(['a', 'b']);
+  });
+
+  it('ignores an unknown id, a bad site and a bad time', () => {
+    const before = getState();
+    select('z');
+    unpin('z');
+    setLiveSite({ lat: 95, lon: 0 });
+    setLiveSite({ lat: Number.NaN, lon: 0 });
+    setLiveTime(Number.NaN);
+    expect(getState()).toBe(before);
+  });
+
+  it('keeps longitude between -180 and 180', () => {
+    setLiveSite({ lat: 0, lon: 190 });
+    expect(getState().live.site.lon).toBe(-170);
+    setLiveSite({ lat: 0, lon: 359 });
+    expect(getState().live.site.lon).toBe(-1);
+    setLiveSite({ lat: 0, lon: 180 });
+    expect(getState().live.site.lon).toBe(180);
+  });
+
+  it('sets and clears the ghost without touching live', () => {
+    const live = getState().live;
+    setGhost({ id: 'ghost', label: 'Ghost', color: '--scn-ghost', site: { lat: -88, lon: 45 }, tMs: T0 });
+    expect(getState().ghost?.color).toBe('--scn-ghost');
+    expect(getState().live).toBe(live);
+    setGhost(null);
+    expect(getState().ghost).toBeNull();
+  });
+
+  it('tells subscribers about each change until they unsubscribe', () => {
+    let calls = 0;
+    const stop = subscribe(() => { calls++; });
+    setLiveTime(T0 + HOUR);
+    pin();
+    expect(calls).toBe(2);
+    stop();
+    setLiveTime(T0 + 2 * HOUR);
+    expect(calls).toBe(2);
+  });
+});
+
+describe('cached accessors', () => {
+  it('while eph is null: empty arrays, null flips, a flat skyline and zeros', () => {
+    const live = getState().live;
+    expect(samplesFor(live, '30d')).toEqual([]);
+    expect(timelineFor(live, '30d')).toEqual([]);
+    expect(flipFor(live, 'sun')).toBeNull();
+    expect(flipFor(live, 'earth')).toBeNull();
+    expect(neverLitFor(live)).toBe(false);
+    expect(summaryFor(live)).toEqual({ litPct: 0, longestLit_h: 0, longestDark_h: 0, earthPct: 0, longestEarthGap_h: 0 });
+    const sky = skylineFor(live);
+    expect(sky.terrain).toBe(false);
+    expect(Array.from(sky.elev)).toEqual(new Array(360).fill(0));
+  });
+
+  it('gives live numbers once the table is in', () => {
+    setData({ eph: circlingSun(400) });
+    setLiveSite({ lat: 0, lon: 0 });
+    const live = getState().live;
+
+    const samples = samplesFor(live, '30d');
+    expect(samples).toHaveLength(720);
+    expect(samples[0].tMs).toBe(T0);
+    expect(samples[0].sun.alt).toBeCloseTo(90, 3);
+    expect(samplesFor(live, '90d')).toHaveLength(2160);
+    expect(samplesFor(live, '365d')).toHaveLength(8760);
+
+    const sum = summaryFor(live);
+    expect(sum.litPct).toBeGreaterThan(45);
+    expect(sum.litPct).toBeLessThan(55);
+    expect(sum.earthPct).toBe(100);
+
+    expect(flipFor(live, 'sun')?.type).toBe('set');
+    expect(flipFor(live, 'earth')).toBeNull();
+    expect(neverLitFor(live)).toBe(false);
+  });
+
+  it('the Sun altitude changes when the time changes', () => {
+    setData({ eph: circlingSun(60) });
+    setLiveSite({ lat: 0, lon: 0 });
+    const noon = samplesFor(selected(), '30d')[0].sun.alt;
+    setLiveTime(T0 + 3 * DAY);
+    const later = samplesFor(selected(), '30d')[0].sun.alt;
+    expect(noon).toBeCloseTo(90, 3);
+    expect(later).toBeCloseTo(90 - (3 / 29.53) * 360, 2);
+  });
+
+  it('returns the same array for the same question, and a new one after new data', () => {
+    setData({ eph: circlingSun(60) });
+    const live = getState().live;
+    const first = samplesFor(live, '30d');
+    expect(samplesFor(live, '30d')).toBe(first);
+    setData({ eph: circlingSun(61) });
+    expect(samplesFor(live, '30d')).not.toBe(first);
+  });
+
+  it('the timeline starts at the window for live and at its own time for a pinned scenario', () => {
+    setData({ eph: circlingSun(400) });
+    setLiveTime(T0 + 10 * DAY);                       // inside the window: it stays at T0
+    pin();
+    const s = getState();
+    expect(s.windowStartMs).toBe(T0);
+    expect(timelineFor(s.live, '30d')[0].tMs).toBe(T0);
+    expect(timelineFor(s.pinned[0], '30d')[0].tMs).toBe(T0 + 10 * DAY);
+    shiftWindow(1);
+    expect(timelineFor(getState().live, '30d')[0].tMs).toBe(T0 + 15 * DAY);
+    expect(timelineFor(getState().pinned[0], '30d')[0].tMs).toBe(T0 + 10 * DAY);
+  });
+
+  it('neverLitFor is true where the Sun never clears the skyline in the whole table', () => {
+    // At the south pole this Sun sits exactly on the horizon: half its disc shows.
+    setData({ eph: circlingSun(60) });
+    setLiveSite({ lat: -90, lon: 0 });
+    expect(neverLitFor(getState().live)).toBe(false);
+    // With the Sun fixed over the north pole instead, the south pole never sees it.
+    const buffer = new ArrayBuffer(48);
+    const view = new DataView(buffer);
+    [0, 0, 1, 384400, 0, 0, 0, 0, 1, 384400, 0, 0].forEach((v, i) => view.setFloat32(i * 4, v, true));
+    setData({ eph: parseEphemeris({ start: '2027-01-01T00:00:00Z', step_s: 3600, rows: 2, frame: 'MOON_ME_DE421', columns: [], source: 'made up for a test' }, buffer) });
+    expect(neverLitFor(getState().live)).toBe(true);
+  });
+});
