@@ -3,6 +3,41 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: six more tasks
+
+A check of the plan for work nobody owned, made while T00 was in review. It searched the spec
+and the task files for each topic; it did not re-read every task in full.
+
+### tasks/README.md and the task files
+
+- **The board** had 25 tasks, T00 to T24. Now 31: T25 to T30 are new. P1's row gains T25 and
+  T26, P2's gains T27.
+- **The mirror** on rickphobia.com was in spec section 5 and in `docs/decisions.md`, with no
+  task. Now T28, if time.
+- **F16**, the camera glide, was an "if time" feature in the spec with no task file, unlike F14
+  and F15. Now T29.
+- **The freeze.** T16 and T17 collect the sources and AI-use notes, but no task checked that
+  every file was filled in, put the live address in the README, closed spec section 10, or
+  marked the submitted commit. T21 step 7 asks P1 for the README line with no task to do it in.
+  Now T26.
+- **Load time.** T05 and T24 time one skyline. Nothing measured the page loading a height map
+  of up to 15 MB on a slow connection. Now T27, which measures and hands each fix to its owner.
+- **CI** runs the unit tests and the build and never opens the page. Now T30, if time, kept
+  apart from the "not before M2" rule because it is not a feature.
+
+### SPEC.md
+
+- **Section 2 and section 4.** There was no F19. The page opened on whatever `state.ts` chose as
+  a default (latitude -89.5, longitude 0, nothing pinned). Now F19: the plain link opens on the
+  rim-against-floor example.
+- **Section 10.** Added the load-time budgets as an open decision: T27's numbers were proposed
+  by the session that wrote the task, not agreed by the team.
+
+### docs/data-contract.md
+
+- **Section 4.** Was silent on what state holds when the address is empty. Added "First open".
+  Modules can no longer assume nothing is pinned at the start.
+
 ## 14 Nov 2026: workflow audit, follow-up
 
 A third pass, `workflow-audit-follow-up.md` (five findings, two wording notes), on the plan as

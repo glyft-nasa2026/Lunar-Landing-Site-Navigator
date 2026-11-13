@@ -301,6 +301,13 @@ at `windowStartMs` for live. `setLiveTime` leaves the window alone while the new
 it, and restarts it at the new time otherwise. `shiftWindow` moves it by half the range. This
 is what lets a drag move the marker without the chart sliding under the cursor.
 
+**First open (F19, T25).** When the page address names no scenario (no live one, none pinned)
+and the site list arrives, state builds an example: live at the crater rim, the rim pinned as
+A, the crater floor pinned as B, all at the current hour, live selected. The two sites are
+found by id (section 2: `shackleton-rim` and `shackleton-floor`, or `mock-rim` and `mock-floor`).
+An address that names any scenario opens exactly what it says. So a module may find two
+scenarios pinned before the user has touched anything.
+
 **While data is loading** (`eph` is null), the accessors return empty arrays, `null` flips, a
 flat skyline and zeros. Modules show "Loading" and must not crash.
 
