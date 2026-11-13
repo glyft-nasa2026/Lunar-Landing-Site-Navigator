@@ -7,7 +7,7 @@ Status: not started
 | Owner | P5 (UI designer) |
 | Tier | must |
 | Waits for | T19, and for each module, that module's own task |
-| Branch | `t23-ui-polish`, then `t23-ui-polish-b`, `-c`, ... one small pull request per module |
+| Branch | `t23-ui-polish`, then `t23-ui-polish-b`, `-c`, ... one small pull request per module, one open at a time |
 
 ## Goal
 
@@ -37,7 +37,7 @@ module's owner in the chat. `web/src/ui/about/` is already all yours under T16.
 1. Take one merged module at a time. Open the built site beside `docs/design/<slot id>.png`.
 2. Change only that module's CSS file. Use the variables and classes of contract section 6; the one pixel value allowed is the phone breakpoint, `@media (max-width: 800px)`.
 3. Check it at 1280 px and at 390 px.
-4. One small pull request per module, so the module's owner can keep working on `index.ts` without waiting for you.
+4. One small pull request per module, so the module's owner can keep working on `index.ts` without waiting for you. Make the next branch only after the one before has merged: each of them edits `docs/ai-use/T23.md`, `docs/sources/T23.md` and the `Status:` line, so two open together would conflict with each other.
 
 ## Done when
 
@@ -49,5 +49,5 @@ module's owner in the chat. `web/src/ui/about/` is already all yours under T16.
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md section 6, docs/design.md and tasks/T23-ui-polish.md. I'll tell you which module we're doing; read its picture in docs/design/ and its CSS file. Edit only that CSS file. If the design needs a change in index.ts or in the theme, stop and tell me. When you think you're finished, run every line of "Done when" that applies to this module and show me the output.
+Read CLAUDE.md, docs/data-contract.md section 6, docs/design.md and tasks/T23-ui-polish.md. I'll tell you which module we're doing; read its picture in docs/design/ and its CSS file. Edit only that CSS file, and T23's own AI-use notes, sources and Status line. If the design needs a change in index.ts or in the theme, stop and tell me. When you think you're finished, run every line of "Done when" that applies to this module and show me the output.
 ```

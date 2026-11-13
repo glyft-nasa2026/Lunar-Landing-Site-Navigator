@@ -21,14 +21,15 @@ Nobody waits at the start: five tasks begin at kickoff. Read your row left to ri
 |---|---|---|
 | P1 | T00 | T02 (once T01 is in; if it isn't, skip ahead), T06, T12 |
 | P2 | T20, with the LOLA download running beside it | T05 (while the download finishes), T04, T11 |
-| P3 | T21, then go through the design with P5 until T00 lands | T08, T09, T10, T13 |
+| P3 | T21; while its pull request waits for T00, go through the design with P5 | T08, T09, T10, T13 |
 | P4 | Set up Python and start the lookup for T07; T01 as soon as T20 merges | T03, T07, T18 at M1, T17, T24 and T18 again at M2 |
 | P5 | T22 | T19, T16, T23 |
 
 ## Tasks
 
 "Waits for" lists every task that must be merged before you make your branch. Nothing else is
-needed to start, to finish or to merge.
+needed to start or to finish. One exception: T00, T20 and T21 start together and merge in the
+order given in `docs/team-workflow.md`, "The first three merges".
 
 | Task | What | Owner | Tier | Waits for |
 |---|---|---|---|---|
@@ -38,7 +39,7 @@ needed to start, to finish or to merge.
 | [T22](T22-design.md) | Design in Figma, pictures for every slot | P5 | must | - |
 | [T01](T01-ephemeris.md) | Sun and Earth table from Skyfield | P4 | must | T20 |
 | [T02](T02-geometry.md) | Prove the angles: geometry.ts | P1 | must | T00, T01 |
-| [T03](T03-horizons-check.md) | Check our numbers against JPL Horizons | P4 | must | T01 |
+| [T03](T03-horizons-check.md) | Check our numbers against JPL Horizons | P4 | must | T00, T01 |
 | [T04](T04-dem.md) | South-pole height map from LOLA | P2 | must | T00, T20 |
 | [T05](T05-horizon.md) | Terrain skyline: horizon.ts | P2 | must | T00 |
 | [T06](T06-windows.md) | Prove countdowns and percentages: windows.ts | P1 | must | T00 |
@@ -69,10 +70,10 @@ kickoff ─┬─ T00 ──┬── T02 (also needs T01)
          │        ├── T08, T09, T10
          │        ├── T16
          │        └── T19 (also needs T22) ── T23 (module by module)
-         ├─ T20 ──┬── T01 ── T03
+         ├─ T20 ──┬── T01 ── T03 (also needs T00)
          │        ├── T04 (also needs T00)
          │        └── T07 (also needs T00)
-         ├─ T21
+         ├─ T21 (merges after T00)
          └─ T22
 
 T24 needs T01, T04, T05, T06 and T07. T17 and T18 run alongside from M1.

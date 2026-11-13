@@ -55,10 +55,16 @@ Not yours: `web/public/data/` and `data-prep/` (T20), `.github/` (T21), `docs/de
 
 - [ ] `npm test` passes with `web/public/data/` empty. Tests build their tables and grids in memory with `parseEphemeris` and `parseDem`.
 - [ ] With `web/public/data/` empty, `npm run dev` shows the eight labelled placeholders and "Data not loaded", with no console errors.
-- [ ] With T20's mock files in place, the readout placeholder shows a Sun altitude that changes when the time changes.
+- [ ] If T20 has merged (merge `origin/main` first): the readout placeholder shows a Sun altitude that changes when the time changes. If it hasn't, P1 checks this line on `main` as soon as T20 merges and posts the result in the chat.
 - [ ] A state test: pin two scenarios, rebuild state from the page address, both are back.
 - [ ] A state test: `setLiveTime` inside the window keeps `windowStartMs`; outside it, the window restarts.
 - [ ] `npm test` and `npm run build` pass.
+
+## Notes
+
+This pull request has no `test-and-build` check: CI is T21's, and T21 merges after this. The
+reviewer runs `npm ci`, `npm test` and `npm run build` on the branch instead
+(`docs/team-workflow.md`, "The first three merges").
 
 ## Prompt to paste into Claude Code
 

@@ -19,10 +19,10 @@ The rules below exist so five sessions can work at once with no merge conflicts.
   `web/src/ui/plotTheme.ts`, `data-prep/requirements.txt`, `.github/`, `.gitattributes`,
   `docs/data-contract.md`, `docs/decisions.md`, `docs/mcp-and-skills.md`, `SPEC.md`,
   `tasks/README.md`, `history.md`, this file.
-- **Some files change owner once.** Mock data becomes real data, a first-pass `core/` file goes
-  to the task that proves it, a placeholder goes to its module, a module's CSS goes to T23.
-  Your task file says which files you take over and from which task. Make your branch after
-  that task has merged, never before.
+- **Some files pass from one task to the next.** Mock data becomes real data, a first-pass
+  `core/` file goes to the task that proves it, a placeholder goes to its module, and that
+  module's CSS then goes on to T23. Your task file says which files you take over and from
+  which task. Make your branch after that task has merged, never before.
 - **Need a change in a file you don't own?** Stop. Tell the human to ask that file's owner (the
   board in `tasks/README.md` says who). Don't make the change "just this once".
 - **Need a new npm or pip package?** Stop and tell the human to ask P1. Don't install it.

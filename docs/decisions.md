@@ -4,6 +4,7 @@ One dated line each, newest first. Only P1 edits this file.
 
 | Date | Decision | Why |
 |---|---|---|
+| 14 Nov 2026 | The first merges go in a fixed order: T00 and T20 on checks run by hand, then T21, then the rule for `main` is switched on | The `test-and-build` check doesn't exist until T21 is on `main`, and T21 can't pass until T00 is. A rule switched on earlier would lock all three out |
 | 14 Nov 2026 | Five tasks start at kickoff: T00 site skeleton (P1), T20 mock data (P2), T21 CI and deploy (P3), T22 design (P5), and P4 prepares T01 | One two-hour setup task left four people waiting on one |
 | 14 Nov 2026 | T00 writes a first pass of `geometry.ts` and `windows.ts` from the contract's formulas instead of stubs that return zeros; T02 and T06 then prove them | UI tasks could not check their "Done when" lines against zeros, and T05 needs a working `destination` |
 | 14 Nov 2026 | T01 goes to P4, T13 to P3, T17 to P4 | T01 uses the same Skyfield method as P4's T03 and frees P1 for the engine and the 3D scene; the designer does UI only |

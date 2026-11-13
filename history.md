@@ -3,6 +3,47 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: workflow audit, follow-up
+
+A third pass, `workflow-audit-follow-up.md` (five findings, two wording notes), on the plan as
+reworked below. The parallel start, merge-not-rebase and P5's UI-only role were not reopened.
+
+### CLAUDE.md
+
+- **File ownership.** Was: "Some files change owner once." A module's CSS changes owner twice:
+  T00's placeholder, then the module's task, then T23. Now: files pass from one task to the next.
+
+### docs/team-workflow.md
+
+- **Review.** Was: every pull request needs a green `test-and-build`, with no word on the first
+  merges. The check doesn't exist until T21's workflow is on `main`, and T21's own check is red
+  until T00 is in. Now: "The first three merges" gives the order and what stands in for the check.
+- **Repo settings.** Was silent on when the rule for `main` goes on. Now: after T21 has merged.
+
+### tasks/README.md and the task files
+
+- **The board** said nothing beyond "Waits for" was needed "to start, to finish or to merge".
+  Not true of T00, T20 and T21, which start together but must merge in order. Now it says so and
+  points to the workflow. P3's row had T21 merged before T00 landed, which can't happen.
+- **T00** had "With T20's mock files in place" in "Done when", though T20 may merge later. Now
+  the line is conditional, and P1 checks it on `main` once T20 is in.
+- **T03** waited for T01 only. Its test imports `parseEphemeris`, `sunAltAz` and `earthAltAz`,
+  which T00 writes. Now it waits for T00 and T01.
+- **T16** had one branch for two collections, and nobody checked the panel after M3, though
+  sessions still add sources during the freeze. Now the M3 collection is `t16-about-b`, and
+  T17's last line before submitting checks the panel and the submission against the files.
+- **T18** had one "Done when" list asking for both `qa/m1.md` and `qa/m2.md`, so the M1 delivery
+  could not pass, and its prompt always named `t18-qa`. Now each delivery has its own list. "At
+  least 2 people" is now at least one in each round.
+- **T21** told P3 to switch the rule on "after your own pull request has run" the check. Done
+  before T00 merged, that locks out T00 (no check to pass) and T21 (red until T00). Now: after
+  T21 has merged. Its "Done when" mixed lines that can only be tried after the merge (Pages
+  address, blocked pull request, refused push) with the rest; now two lists. Its note said
+  "When this is merged ... until T00 lands"; T00 lands first.
+- **T23**'s prompt said "Edit only that CSS file", which ruled out the AI-use notes, sources and
+  Status line every session must update. Now they are named. Its per-module pull requests all
+  edit those three, so two open at once conflicted with each other. Now: one open at a time.
+
 ## 14 Nov 2026: workflow audit
 
 Two audits on the same day: `workflow-audit.md` (six findings) and a second pass that also

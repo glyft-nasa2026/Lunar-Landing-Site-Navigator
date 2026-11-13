@@ -42,6 +42,9 @@ and every task can be checked before the real data exists. Runs at the same time
 No download and no real data here. Start the LOLA download for T04 in another window while this
 runs: it is the slow part of your next task.
 
+If this merges before T21, its pull request has no `test-and-build` check. The printed checks
+above, pasted in, are the review (`docs/team-workflow.md`, "The first three merges").
+
 ## Prompt to paste into Claude Code
 
 ```text

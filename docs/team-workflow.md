@@ -34,6 +34,21 @@ If your reviewer hasn't answered in 20 minutes and the check is green, ask anyon
 nobody is awake, merge it yourself and say so in the chat. A waiting pull request blocks other
 people; a missed review on a green one rarely does.
 
+### The first three merges
+
+`test-and-build` only exists once T21's workflow file is on `main`, and T21's own check stays red
+until `web/` is there. So the first merges go in this order, once:
+
+| Order | Merge | In place of the green check |
+|---|---|---|
+| 1 | T00 | Its reviewer switches to the branch and runs `npm ci`, `npm test` and `npm run build` in `web/` |
+| 1 | T20, before or after T00 | Its script's printed checks, pasted in the pull request. If T00 is already in, `npm test` and `npm run build` too |
+| 2 | T21, after T00 | P3 merges `origin/main` into the branch, the check turns green, and the review is the normal one |
+| 3 | The rule for `main` | P3 switches it on after T21 has merged, never before: a rule that demands a check T00 can't have would lock out T00, and T21 with it |
+
+From then on there is no exception. An open pull request that shows no `test-and-build` check
+was last pushed before T21 merged; step 7 of the loop starts the check.
+
 ## Rules that keep it conflict-free
 
 | Rule | Why |
@@ -113,5 +128,5 @@ Project work starts at kickoff, not before. Tools can be ready earlier:
 The repo must be public: on a free organisation GitHub refuses branch rules and Pages for a
 private one. Then, on GitHub: a rule for `main` that requires a pull request and the status
 check `test-and-build`, with "Do not allow bypassing" ticked; squash merging only; head branches
-deleted automatically; Pages published from GitHub Actions. The steps are in
-`tasks/T21-ci-deploy.md`.
+deleted automatically; Pages published from GitHub Actions. The rule goes on last, after T21
+itself has merged ("The first three merges" above). The steps are in `tasks/T21-ci-deploy.md`.
