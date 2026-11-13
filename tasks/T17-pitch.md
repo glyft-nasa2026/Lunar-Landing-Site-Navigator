@@ -1,0 +1,39 @@
+# T17: Slides, demo video, submission text
+
+Status: not started
+
+| | |
+|---|---|
+| Owner | P5 |
+| Tier | must |
+| Waits for | M1 for screenshots, M2 for the video |
+| Branch | `t17-pitch` |
+
+## Goal
+
+Everything the submission form asks for, ready before the freeze ends.
+
+## Files you own
+
+- `pitch/`
+- `docs/ai-use/T17.md`, `docs/sources/T17.md`, this file's `Status:` line
+
+## Steps
+
+1. Read the submission form on day one and list every field and its limit in `pitch/checklist.md`.
+2. Story in order: the problem (a slipped launch date, an hour across three tools) -> our answer (two scenarios compared in seconds) -> the 1 km nudge -> the Horizons check -> who it's for.
+3. Demo video script built around one moment: move the pin 1 km, the sunlight collapses.
+4. The AI-use paragraph and the source list, collected from `docs/ai-use/` and `docs/sources/`.
+
+## Done when
+
+- [ ] Every field in `pitch/checklist.md` has its text or file.
+- [ ] The video runs within the form's time limit and shows compare, nudge and the Horizons badge.
+- [ ] Someone outside the team can say what the tool does after watching it once.
+- [ ] `npm test` and `npm run build` pass.
+
+## Prompt to paste into Claude Code
+
+```text
+Read CLAUDE.md, docs/data-contract.md and tasks/T17-pitch.md. Do only that task, on branch t17-pitch. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+```
