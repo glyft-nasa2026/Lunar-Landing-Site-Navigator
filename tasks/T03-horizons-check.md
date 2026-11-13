@@ -6,7 +6,7 @@ Status: not started
 |---|---|
 | Owner | P4 |
 | Tier | must |
-| Waits for | T01 |
+| Waits for | T00, T01 |
 | Branch | `t03-horizons-check` |
 
 ## Goal

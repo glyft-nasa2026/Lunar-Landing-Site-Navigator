@@ -31,6 +31,7 @@ Everything the submission form asks for, ready before the freeze ends.
 - [ ] The video runs within the form's time limit and shows compare, nudge and the Horizons badge.
 - [ ] Someone outside the team can say what the tool does after watching it once.
 - [ ] Slides use the palette in `docs/design.md`; ask P5 for the two site screenshots.
+- [ ] Last check before submitting, after the last pull request has merged: every file in `docs/sources/` and `docs/ai-use/` on `main` is covered by the submission's source list and AI-use paragraph, and by the About panel on the deployed site. If the panel is missing one, ask P5 for one more T16 delivery and check again.
 
 ## Prompt to paste into Claude Code
 

@@ -26,11 +26,18 @@ Find what's broken or confusing before the judges do.
 
 ## Done when
 
-- [ ] `qa/m1.md` and `qa/m2.md` each list every spec feature as pass or fail.
-- [ ] The 60-second test was run with at least 2 people, with their times.
+First delivery, at M1, on `t18-qa`:
+
+- [ ] `qa/m1.md` lists every spec feature as pass or fail.
+- [ ] The 60-second test was run with at least 1 person, with their time in `qa/m1.md`.
+
+Second delivery, at M2, on `t18-qa-b`:
+
+- [ ] `qa/m2.md` lists every spec feature as pass or fail.
+- [ ] The 60-second test was run with at least 1 person who hasn't seen the site, with their time in `qa/m2.md`. That makes 2 people or more across the two rounds.
 
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T18-qa.md. Do only that task, on branch t18-qa. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T18-qa.md. Do only that task, on branch t18-qa (t18-qa-b for the second delivery, at M2), and only that delivery's part of "Done when". Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```
