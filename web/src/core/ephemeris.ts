@@ -86,7 +86,10 @@ export async function loadEphemeris(): Promise<Ephemeris> {
   const base = import.meta.env.BASE_URL + 'data/';
   const metaRes = await fetch(base + 'ephemeris.json');
   if (!metaRes.ok) throw new Error(`ephemeris.json: HTTP ${metaRes.status}`);
-  const meta = (await metaRes.json()) as EphemerisMeta;
+  // A dev server answers a missing file with the page itself, which is not JSON.
+  const meta = (await metaRes.json().catch(() => {
+    throw new Error('ephemeris.json: missing, or not JSON');
+  })) as EphemerisMeta;
   const binRes = await fetch(base + 'ephemeris.bin');
   if (!binRes.ok) throw new Error(`ephemeris.bin: HTTP ${binRes.status}`);
   return parseEphemeris(meta, await binRes.arrayBuffer());

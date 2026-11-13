@@ -70,7 +70,9 @@ function showStatus(): void {
 async function loadSites(): Promise<CuratedSite[]> {
   const res = await fetch(import.meta.env.BASE_URL + 'data/sites.json');
   if (!res.ok) throw new Error(`sites.json: HTTP ${res.status}`);
-  const list: unknown = await res.json();
+  const list: unknown = await res.json().catch(() => {
+    throw new Error('sites.json: missing, or not JSON');
+  });
   if (!Array.isArray(list)) throw new Error('sites.json: not a list');
   return list as CuratedSite[];
 }

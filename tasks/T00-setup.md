@@ -1,6 +1,6 @@
 # T00: Site skeleton
 
-Status: not started
+Status: done, in review (pull request #2)
 
 | | |
 |---|---|

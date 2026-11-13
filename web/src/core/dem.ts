@@ -107,7 +107,10 @@ export async function loadDem(onProgress?: (fraction: number) => void): Promise<
   const base = import.meta.env.BASE_URL + 'data/';
   const metaRes = await fetch(base + 'dem.json');
   if (!metaRes.ok) throw new Error(`dem.json: HTTP ${metaRes.status}`);
-  const meta = (await metaRes.json()) as DemMeta;
+  // A dev server answers a missing file with the page itself, which is not JSON.
+  const meta = (await metaRes.json().catch(() => {
+    throw new Error('dem.json: missing, or not JSON');
+  })) as DemMeta;
   if (!Number.isInteger(meta.size) || meta.size < 2) {
     throw new Error('dem.json: "size" must be a whole number, 2 or more');
   }

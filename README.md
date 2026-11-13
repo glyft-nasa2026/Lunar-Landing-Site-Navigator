@@ -36,10 +36,14 @@ web/public/data/   Output of data-prep. Committed, so the site works from a fres
 
 ## Run it
 
+Needs Node 22 or newer (`web/.nvmrc`).
+
 ```
 cd web
 npm ci
-npm run dev
+npm run dev      # the site, on your own machine
+npm test         # every test, once
+npm run build    # type-check, then build into web/dist/
 ```
 
 ## Rules of the hackathon that bind this repo
