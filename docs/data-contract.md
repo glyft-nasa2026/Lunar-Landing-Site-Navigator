@@ -18,6 +18,25 @@ maps use.
 
 ## 2. Files in `web/public/data/`
 
+### Mock data (made by T20, then replaced file by file by T01, T03, T04 and T07)
+
+Same file names and formats as the real files, so the site runs before the real data exists.
+A mock file says so: `"source": "mock"` in `ephemeris.json` and `dem.json`, and
+`"checked_at": null` in `validation.json`. Tests that need real data skip when they see this.
+
+| Mock feature | Where |
+|---|---|
+| Height grid | `size` 634, `pixel_m` 960, `x_min_m` -304320, `y_max_m` 304320; flat at 0 m apart from the features below |
+| Bowl crater, 10 km radius, floor 3,000 m down | Centre: latitude -88.0, longitude 45.0 |
+| Its rim, 500 m above the plain | 10 km from the centre. Due north of it: latitude -87.67, longitude 45.0 |
+| Ridge, 1,500 m high, 20 km long | Centre: latitude -87.0, longitude -120.0 |
+| Sun | Circles once per 29.53 days, never more than 1.5 degrees from the Moon's equator |
+| Earth | 384,400 km away, near `+x`, wobbling 7 degrees either way over 27.3 days |
+| `sites.json` | `mock-floor` (-88.0, 45.0), `mock-rim` (-87.67, 45.0), `mock-equator` (1.0, 23.0) |
+
+When a task says "crater floor" or "crater rim", it means these points on mock data, and
+`shackleton-floor` and `shackleton-rim` from `sites.json` on real data.
+
 ### `ephemeris.bin` + `ephemeris.json` (made by T01)
 
 `ephemeris.json`:
@@ -99,7 +118,11 @@ hard-codes them. File budget: 15 MB.
 ]
 ```
 
-`status`: `landed`, `planned` or `candidate`. `group`: `apollo`, `lander` or `south-pole`.
+`status`: `landed`, `planned`, `candidate` or `reference` (a point used for checks and the demo,
+not a landing site). `group`: `apollo`, `lander` or `south-pole`.
+
+The real list always has `shackleton-floor` and `shackleton-rim` (both `reference`). The terrain
+checks in T24 and the demo use them by id.
 
 ### `validation.json` (made by T03)
 
@@ -113,6 +136,22 @@ hard-codes them. File budget: 15 MB.
       "ours": { "alt": 0, "az": 0 }, "horizons": { "alt": 0, "az": 0 }, "diff_deg": 0 }
   ]
 }
+```
+
+`ours` is the Python calculation (Skyfield for a surface point, as in T01's fixtures). The
+browser's own maths is checked against the same Horizons numbers by the `horizons.json` fixture
+below. In the mock file, `checked_at` is `null` and `cases` is empty.
+
+### Fixtures: `web/src/core/__fixtures__/horizons.json` (made by T03)
+
+The same cases, Horizons values only. A test owned by T03 runs `ephemeris.ts` and `geometry.ts`
+on each case and fails above 0.1 degrees, so the badge on the About page is true of the code
+the user runs.
+
+```json
+[
+  { "lat": 0, "lon": 0, "t": "2027-01-01T00:00:00Z", "body": "sun", "alt": 0, "az": 0 }
+]
 ```
 
 ### Fixtures: `web/src/core/__fixtures__/altaz.json` (made by T01)
@@ -143,6 +182,7 @@ export type Sample = {
   sunFrac: number;     // 0..1, fraction of the Sun's disc above the skyline, by height
   earthUp: boolean;
 };
+export type Body = 'sun' | 'earth';
 export type Flip = { type: 'rise' | 'set'; tMs: number } | null;
 export type Summary = {
   litPct: number; longestLit_h: number; longestDark_h: number;
@@ -154,11 +194,28 @@ export type CuratedSite = { id: string; name: string; lat: number; lon: number; 
 
 | File | Task | Functions |
 |---|---|---|
-| `ephemeris.ts` | T00 | `loadEphemeris(): Promise<Ephemeris>` · `eph.startMs`, `eph.endMs` · `eph.vectorsAt(tMs): { sun: [x,y,z]; earthKm: [x,y,z] }` (straight-line step between rows; Sun re-normalised) |
-| `dem.ts` | T00 | `loadDem(onProgress?): Promise<Dem>` · `dem.covers(lat, lon): boolean` · `dem.heightAt(lat, lon): number` (bilinear, metres; 0 outside) · `dem.meta` |
-| `geometry.ts` | T02 | `sunAltAz(eph, site, groundM, tMs): AltAz` · `earthAltAz(eph, site, groundM, tMs): AltAz` · `destination(lat, lon, bearingDeg, distM): { lat, lon }` |
-| `horizon.ts` | T05 | `skylineAt(dem: Dem | null, site: Site): Skyline` · `skylineElev(s: Skyline, az: number): number` (interpolated) |
-| `windows.ts` | T06 | `series(eph, site, groundM, skyline, startMs, endMs, stepMs): Sample[]` · `nextFlip(eph, site, groundM, skyline, tMs, body, maxDays = 60): Flip` · `summary(samples: Sample[]): Summary` · `countdownText(...)`: the F4 wording |
+| `ephemeris.ts` | T00 | `loadEphemeris(): Promise<Ephemeris>` · `parseEphemeris(meta, buffer: ArrayBuffer): Ephemeris` (no network; tests use it) · `eph.startMs`, `eph.endMs`, `eph.meta` · `eph.vectorsAt(tMs): { sun: [x,y,z]; earthKm: [x,y,z] }` (straight-line step between rows; Sun re-normalised) |
+| `dem.ts` | T00 | `loadDem(onProgress?): Promise<Dem>` · `parseDem(meta, buffer: ArrayBuffer): Dem` (no network; tests use it) · `dem.covers(lat, lon): boolean` · `dem.heightAt(lat, lon): number` (bilinear, metres; 0 outside) · `dem.meta` |
+| `geometry.ts` | T00 first pass, then T02 | `sunAltAz(eph, site, groundM, tMs): AltAz` · `earthAltAz(eph, site, groundM, tMs): AltAz` · `destination(lat, lon, bearingDeg, distM): { lat, lon }` |
+| `horizon.ts` | T00 flat skyline, then T05 | `skylineAt(dem: Dem | null, site: Site): Skyline` · `skylineElev(s: Skyline, az: number): number` (interpolated) |
+| `windows.ts` | T00 first pass, then T06 | `series(eph, site, groundM, skyline, startMs, endMs, stepMs): Sample[]` · `nextFlip(eph, site, groundM, skyline, tMs, body: Body, maxDays = 60): Flip` · `summary(samples: Sample[]): Summary` · `countdownText(body: Body, upNow: boolean, flip: Flip, tMs: number, neverLit = false): string` |
+
+**First pass** means T00 writes the function straight from the formulas below, with a few sanity
+tests, so the site shows live numbers from the first hour. The task named after it then owns the
+file: it adds the real tests and fixes what they find. Names and signatures never change.
+
+`countdownText` wording (F4). Durations read `3 d 4 h`, or `5 h 20 min` under one day.
+
+| Case | Text |
+|---|---|
+| Sun up, a set found | `Sunset in 3 d 4 h` |
+| Sun down, a rise found | `Sunrise in 3 d 4 h` |
+| Sun up, no set found | `No sunset in the next 60 days` |
+| Sun down, no rise found | `No sunrise in the next 60 days` |
+| Sun down, `neverLit` true | `Permanently shadowed (2026-2035)` |
+| Earth up or down, a flip found | `Earthset in 3 d 4 h` or `Earthrise in 3 d 4 h` |
+| Earth up, no flip found | `Earth always visible` |
+| Earth down, no flip found | `Earth never visible` |
 
 ### Geometry (T02)
 
@@ -209,23 +266,43 @@ UI modules read state and call actions. They never call each other.
 
 ```ts
 export type Scenario = { id: string; label: string; color: string; site: Site; tMs: number };
+// color is the name of a theme variable, for example '--scn-a'. Never a colour code.
 export type Range = '30d' | '90d' | '365d';
 export type AppState = {
   live: Scenario; pinned: Scenario[]; ghost: Scenario | null;
   selectedId: string; range: Range; mode: '2d' | '3d';
+  windowStartMs: number;                 // left edge of the timeline for the live scenario
   eph: Ephemeris | null; dem: Dem | null; sites: CuratedSite[];
 };
 
 getState(): AppState
 subscribe(fn: (s: AppState) => void): () => void
 setLiveSite(site: Site) · setLiveTime(tMs: number) · pin() · unpin(id) · select(id)
-setRange(r: Range) · setGhost(s: Scenario | null) · setMode(m)
+setRange(r: Range) · shiftWindow(dir: -1 | 1) · setGhost(s: Scenario | null) · setMode(m)
+selected(): Scenario                     // the live or pinned scenario named by selectedId
 
 // computed once and cached here, so modules don't repeat the work
 skylineFor(sc: Scenario): Skyline
-samplesFor(sc: Scenario, range: Range): Sample[]     // hourly from sc.tMs
+samplesFor(sc: Scenario, range: Range): Sample[]     // hourly from sc.tMs: strips, sky paths
+timelineFor(sc: Scenario, range: Range): Sample[]    // hourly from the window start: timeline
 summaryFor(sc: Scenario): Summary                     // over 30 days from sc.tMs
+flipFor(sc: Scenario, body: Body): Flip               // next rise or set after sc.tMs
+neverLitFor(sc: Scenario): boolean                    // no sunlight there in the whole table
 ```
+
+**Selected and live.** `selectedId` is the live scenario's id or a pinned one's. The readout,
+timeline, sky panorama and the 3D scene's Sun all show the selected scenario. Pinned scenarios
+never change. `setLiveSite` and `setLiveTime` change the live scenario and select it. So an
+edit made anywhere (map click, coordinate boxes, time box, timeline drag, nudge "Keep") lands
+on live, and the view follows.
+
+**Timeline window.** `timelineFor` starts at the scenario's own time for a pinned scenario and
+at `windowStartMs` for live. `setLiveTime` leaves the window alone while the new time is inside
+it, and restarts it at the new time otherwise. `shiftWindow` moves it by half the range. This
+is what lets a drag move the marker without the chart sliding under the cursor.
+
+**While data is loading** (`eph` is null), the accessors return empty arrays, `null` flips, a
+flat skyline and zeros. Modules show "Loading" and must not crash.
 
 ## 5. Page slots: `web/index.html` (T00, P1 only)
 
@@ -243,6 +320,9 @@ summaryFor(sc: Scenario): Summary                     // over 30 days from sc.tM
 Each folder has `index.ts` exporting `mount(el)`, and its own CSS file. T00 wires all of them in
 `main.ts` with placeholders, so no later task needs to touch `main.ts` or `index.html`.
 
+`#about` is a thin bar across the top: the product name, the Horizons badge and an About button
+that opens the About panel. `#nudge` sits under `#readout`.
+
 ## 6. Look: `web/src/ui/theme.css` (T00 creates, then T19 owns)
 
 Modules use these names and never write a colour code, font or pixel size of their own. T19
@@ -257,6 +337,7 @@ changes the values; the names stay.
 | `--scn-a`, `--scn-b`, `--scn-c`, `--scn-ghost` | Scenario colours (fixed: `#E69F00`, `#0072B2`, `#009E73`, grey) |
 | `--sun`, `--earth` | Sun and Earth in charts (fixed: `#F0E442`, `#56B4E9`) |
 | `--lit`, `--dark` | Filled and empty parts of the strips |
+| `--terrain-lo`, `--terrain-hi` | The two ends of the height colour ramp in the 3D scene |
 | `--space-1` … `--space-5` | Gaps: 4, 8, 12, 16, 24 px |
 | `--radius` | Corner rounding |
 | `--font`, `--font-num` | Text; fixed-width digits for numbers |
@@ -270,3 +351,15 @@ bar is the same colour at half strength. `--sun` and `--earth` are for single-sc
 
 Charts: every Plotly chart spreads `plotLayout()` from `web/src/ui/plotTheme.ts` into its layout.
 `web/src/ui/layout.css` places the slots of section 5; modules style only their own insides.
+
+**Colours in JavaScript.** Plotly and three.js can't read `var(--sun)`; they need the real
+value. `plotTheme.ts` also exports `themeColor(name: string): string`, which returns the current
+value of a theme variable: `themeColor('--sun')`, `themeColor(sc.color)`. In CSS and inline
+styles, write `var(--sun)` or `var(${sc.color})`.
+
+**The one pixel value a module may write** is the phone breakpoint:
+`@media (max-width: 800px)`. Everything else comes from the variables.
+
+**Who styles what.** A module's own task writes its first CSS using the shared classes. Once that
+task has merged, the module's CSS file belongs to T23 (the UI designer); its `index.ts` stays
+with the module's owner.

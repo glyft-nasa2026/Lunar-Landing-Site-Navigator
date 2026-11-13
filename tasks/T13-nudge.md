@@ -4,9 +4,9 @@ Status: not started
 
 | | |
 |---|---|
-| Owner | P2 |
+| Owner | P3 |
 | Tier | must |
-| Waits for | T06, T08 |
+| Waits for | T00, T05 |
 | Branch | `t13-nudge` |
 
 ## Goal
@@ -21,12 +21,13 @@ Spec feature F11.
 ## Steps
 
 1. Six buttons: 1 km north, south, east, west (using `destination`), +1 day, -1 day. Each builds a ghost scenario with `setGhost`.
-2. Compare `summaryFor(ghost)` with `summaryFor(live)` and write the difference in plain words: hours of sunlight gained or lost over 30 days, change in sunset time, change in Earth contact.
-3. Buttons: "Keep" (ghost becomes live) and "Discard".
+2. Compare `summaryFor(ghost)` with `summaryFor(live)`, and `flipFor(ghost, ...)` with `flipFor(live, ...)`, and write the difference in plain words: hours of sunlight gained or lost over 30 days, change in sunset time, change in Earth contact.
+3. Buttons: "Keep" (calls `setLiveSite` and `setLiveTime` with the ghost's values, then clears the ghost) and "Discard".
+4. Build it from `docs/design/nudge.png` if T22 has merged. The CSS file goes to T23 once this merges.
 
 ## Done when
 
-- [ ] On the mock grid, nudging from the crater rim onto the floor reports a large loss of sunlight.
+- [ ] On the mock grid, starting at the crater rim (-87.67, 45.0) and nudging 1 km south, down the inside wall, reports a large loss of sunlight.
 - [ ] At a site north of 85 S (no terrain), a 1 km move reports "no meaningful change" and says terrain isn't modelled there.
 - [ ] +1 day changes the countdowns by about 24 hours.
 - [ ] Discard leaves the live scenario exactly as it was.

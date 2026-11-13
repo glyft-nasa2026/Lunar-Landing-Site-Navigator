@@ -7,7 +7,7 @@ Status: not started
 | Owner | P4 |
 | Tier | must |
 | Waits for | M1, repeated at M2 |
-| Branch | `t18-qa` |
+| Branch | `t18-qa` at M1, `t18-qa-b` at M2 |
 
 ## Goal
 
@@ -28,7 +28,6 @@ Find what's broken or confusing before the judges do.
 
 - [ ] `qa/m1.md` and `qa/m2.md` each list every spec feature as pass or fail.
 - [ ] The 60-second test was run with at least 2 people, with their times.
-- [ ] `npm test` and `npm run build` pass.
 
 ## Prompt to paste into Claude Code
 

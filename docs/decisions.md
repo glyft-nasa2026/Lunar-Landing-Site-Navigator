@@ -4,6 +4,14 @@ One dated line each, newest first. Only P1 edits this file.
 
 | Date | Decision | Why |
 |---|---|---|
+| 14 Nov 2026 | Five tasks start at kickoff: T00 site skeleton (P1), T20 mock data (P2), T21 CI and deploy (P3), T22 design (P5), and P4 prepares T01 | One two-hour setup task left four people waiting on one |
+| 14 Nov 2026 | T00 writes a first pass of `geometry.ts` and `windows.ts` from the contract's formulas instead of stubs that return zeros; T02 and T06 then prove them | UI tasks could not check their "Done when" lines against zeros, and T05 needs a working `destination` |
+| 14 Nov 2026 | T01 goes to P4, T13 to P3, T17 to P4 | T01 uses the same Skyfield method as P4's T03 and frees P1 for the engine and the 3D scene; the designer does UI only |
+| 14 Nov 2026 | The UI designer (P5) works in Figma and does UI only: design (T22), theme (T19), About (T16), polish of every module's CSS (T23). Module owners build from exported pictures | Figma read calls are limited per seat, so one person holds the Figma link; one eye on the look gives one product |
+| 14 Nov 2026 | Branches are updated with merge, never rebase | A pushed branch can't be rebased without a force-push, and force-pushes are banned |
+| 14 Nov 2026 | Pinned scenarios never change; every edit lands on the live scenario and selects it. The timeline has its own window that a drag doesn't move | Four modules would each have guessed differently; a chart that slides under the cursor can't be dragged |
+| 14 Nov 2026 | Checks that need real data are tests in T24, and the browser's maths is tested against Horizons directly (T03) | "After T04" lines had no owner once their task merged; the badge must be true of the code the user runs |
+| 14 Nov 2026 | Vite `base` is `./` | The repo was renamed once already; a relative base works under any name and on the mirror |
 | 14 Nov 2026 | One shared theme (variables in `theme.css`), owned by one task (T19); modules never write their own colours | Five AI sessions would otherwise produce five different looks |
 | 14 Nov 2026 | Branch and pull request per task; every file has one owner task | Five people and five AI sessions at once; disjoint files mean no merge conflicts |
 | 14 Nov 2026 | Scenarios compared by pinning (max 3) on one map, not two maps side by side | Two maps are confusing; one colour per scenario everywhere |

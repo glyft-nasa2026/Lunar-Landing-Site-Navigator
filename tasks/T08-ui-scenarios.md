@@ -21,8 +21,9 @@ Spec features F1 (list and typed coordinates), F2 (time box), F3, F4 and F5.
 ## Steps
 
 1. Scenarios panel: curated-site dropdown grouped by `group`, latitude and longitude boxes, UTC date-time box, the Pin button, one card per pinned scenario (colour dot, label, time, x to remove), click to select.
-2. Readout: Sun and Earth lines for the live scenario and the two countdowns, using `samplesFor` and `countdownText`. Say "smooth Moon, no terrain" when `skylineFor(...).terrain` is false.
+2. Readout: Sun and Earth lines for the selected scenario (`selected()`), and the two countdowns from `flipFor`, `neverLitFor` and `countdownText`. Say "smooth Moon, no terrain" when `skylineFor(...).terrain` is false, and whose numbers these are when a pinned scenario is selected.
 3. Reject bad input with a message next to the box: latitude outside +-90, longitude outside +-180, time outside the table.
+4. Build the insides from `docs/design/scenarios.png` and `docs/design/readout.png` if T22 has merged; if not, use the shared classes plainly. The CSS files go to T23 once this merges.
 
 ## Done when
 
@@ -30,6 +31,7 @@ Spec features F1 (list and typed coordinates), F2 (time box), F3, F4 and F5.
 - [ ] Pin three scenarios; the fourth Pin is disabled. Colours are A orange, B blue, C green.
 - [ ] Reloading the page keeps the pinned scenarios (`state.ts` does this; check the cards redraw from it).
 - [ ] Typing latitude 95 shows a message and changes nothing.
+- [ ] Selecting a pinned card shows its numbers in the readout; typing a new time afterwards changes the live scenario and selects it.
 - [ ] Works on mock data today; nothing in these folders needs changing when real data lands.
 - [ ] `npm test` and `npm run build` pass.
 

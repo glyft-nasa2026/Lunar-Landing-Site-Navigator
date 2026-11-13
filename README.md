@@ -1,7 +1,7 @@
-# CLPS-Lunar-Mission-Browser
+# Lunar Landing Site Navigator
 
-Team GLYFT's submission for NASA Space Apps Challenge 2026, Kuala Lumpur. Challenge: Lunar Landing
-Site Navigator (called "CLPS Lunar Mission Browser" until 28 Oct 2026, hence the repo name).
+Team GLYFT's submission for [NASA Space Apps Challenge 2026: Lunar Landing Site Navigator](https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/),
+Kuala Lumpur. The repo is `glyft-nasa2026/Lunar-Landing-Site-Navigator`.
 
 **What it is:** pick lunar landing sites and dates, and see side by side when each has sunlight
 (power) and a line to Earth (radio), measured against the real terrain skyline.
@@ -21,6 +21,10 @@ Site Navigator (called "CLPS Lunar Mission Browser" until 28 Oct 2026, hence the
 | `docs/ai-use/` | One file per task: how AI was used (the submission needs this) | Each owner writes their own |
 | `docs/sources/` | One file per task: every data source and library used | Each owner writes their own |
 | `docs/decisions.md` | Decisions and why | P1 writes it |
+| `history.md` | What a rule or fact used to say, and why it changed | Read before changing a rule |
+| `docs/design.md`, `docs/design/` | The look: palette, type, one picture per part of the screen | Everyone building a UI module |
+| `docs/mcp-and-skills.md` | Which MCP servers and skills each person installs; the Figma rules | Everyone, once; the UI designer closely |
+| `workflow-audit.md` | A dated audit of this workflow and what was done about each finding | Nobody needs to; it's a record |
 
 ## Layout
 

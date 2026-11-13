@@ -6,23 +6,24 @@ Status: not started
 |---|---|
 | Owner | P1 |
 | Tier | must |
-| Waits for | T00 (tests go green after T01) |
+| Waits for | T00, T01 |
 | Branch | `t02-geometry` |
 
 ## Goal
 
-`sunAltAz`, `earthAltAz` and `destination` exactly as contract section 3.
+`sunAltAz`, `earthAltAz` and `destination` proven against Skyfield. T00 wrote a first pass from the contract's formulas; this task adds the real tests and fixes whatever they find.
 
 ## Files you own
 
-- `web/src/core/geometry.ts` (replace the stub), `web/src/core/geometry.test.ts`
+- `web/src/core/geometry.ts` (taken over from T00's first pass), `web/src/core/geometry.test.ts`
 - `docs/ai-use/T02.md`, `docs/sources/T02.md`, this file's `Status:` line
 
 ## Steps
 
-1. Implement the formulas in the contract's Geometry block.
+1. Check the first pass against the contract's Geometry block, line by line. Keep every name and signature.
 2. `destination` is the standard great-circle "start point, bearing, distance" formula on a sphere of radius R.
-3. Tests read `__fixtures__/altaz.json` and compare.
+3. Tests read `__fixtures__/altaz.json` and compare, using the real table built with `parseEphemeris`.
+4. If T01 isn't merged yet, do T06 or T12 first and come back.
 
 ## Done when
 

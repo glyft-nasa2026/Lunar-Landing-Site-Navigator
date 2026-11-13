@@ -20,9 +20,10 @@ Spec features F6 and F7.
 
 ## Steps
 
-1. Table: first column is row names, then one column per pinned scenario in its colour. Rows and order exactly as F6. Highlight the better value in each row.
-2. Strips (Plotly): two bars per scenario, Sun and Earth, on one axis of days 0-30 since each scenario's own time. Filled where `sunFrac > 0` or `earthUp`.
+1. Table: first column is row names, then one column per pinned scenario in its colour. Rows and order exactly as F6, from `samplesFor`, `summaryFor`, `flipFor` and `countdownText`. Highlight the better value in each row.
+2. Strips (Plotly): two bars per scenario, Sun and Earth, on one axis of days 0-30 since each scenario's own time. Filled where `sunFrac > 0` or `earthUp`. Bar colours come from `themeColor(sc.color)`; the Earth bar is the same colour at half opacity.
 3. With nothing pinned, show one line: "Pin a scenario to compare".
+4. Build the insides from `docs/design/compare.png` if T22 has merged; if not, use the shared classes plainly. The CSS file goes to T23 once this merges.
 
 ## Done when
 

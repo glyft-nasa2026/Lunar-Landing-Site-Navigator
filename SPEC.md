@@ -27,18 +27,25 @@ seconds, and showing how much a 1 km move or a 1 day slip changes the answer.
 ## 3. Screen
 
 ```
++--------------------------------------------------------------------+
+|  ABOUT BAR: name · "Checked against JPL Horizons" badge · [About]  |
 +--------------------------------------------------+-----------------+
 |                                                  | SCENARIOS       |
-|            MAP / 3D VIEW  (one scene)            | (o) A  ...      |
-|         pins: A orange, B blue, C green          | (o) B  ...      |
-|   [2D|3D]                          [site v]      | [ + Pin this ]  |
-+--------------------------------------------------+ READOUT (live)  |
+|            MAP / 3D VIEW  (one scene)            | (o) Live  ...   |
+|         pins: A orange, B blue, C green          | (o) A  ...      |
+|   [2D|3D]                                        | [ + Pin this ]  |
++--------------------------------------------------+ READOUT         |
 |  COMPARE: table, one column per scenario         | Sun, Earth,     |
 |  STRIPS: Sun and Earth bars per scenario         | countdowns      |
+|                                                  | NUDGE buttons   |
 +--------------------------------------------------+-----------------+
 |  TIMELINE (selected scenario)  |  SKY PANORAMA (selected scenario) |
 +--------------------------------------------------------------------+
 ```
+
+The readout, timeline, sky panorama and the Sun in the 3D view show the selected scenario: the
+live one, or a pinned one after its card is clicked. Pinned scenarios never change. Any edit
+(map click, coordinate or time box, timeline drag) changes the live scenario and selects it.
 
 ## 4. Features
 
@@ -49,12 +56,12 @@ can be pinned.
 |---|---|---|---|
 | F1 | Pick a site | Click the map, choose from the curated list, or type latitude and longitude | All three set the same live site |
 | F2 | Pick a time | UTC date and time box, plus dragging on the timeline. Range 2026 to 2035 | A time outside the range shows a message, not a crash |
-| F3 | Readout | Sun: altitude, azimuth, degrees above the skyline, fraction of disc visible. Earth: altitude, azimuth, visible or hidden | Matches the fixtures to 0.02 degrees |
-| F4 | Countdowns | "Sunset in 3 d 4 h" or "Sunrise in ..."; same for Earth. Special wording: "No sunset in the next 60 days", "Earth always visible", "Earth never visible", "Permanently shadowed (2026-2035)" | The countdown ends where the strip ends |
+| F3 | Readout | For the selected scenario. Sun: altitude, azimuth, degrees above the skyline, fraction of disc visible. Earth: altitude, azimuth, visible or hidden | Matches the fixtures to 0.02 degrees |
+| F4 | Countdowns | "Sunset in 3 d 4 h" or "Sunrise in ..."; same for Earth. Special wording: "No sunset in the next 60 days", "No sunrise in the next 60 days", "Earth always visible", "Earth never visible", "Permanently shadowed (2026-2035)". The exact table is in contract section 3 | The countdown ends where the strip ends |
 | F5 | Scenarios | Pin the live scenario (max 3). Colours: A `#E69F00`, B `#0072B2`, C `#009E73`. Click a card to select it; remove with x | Pin, select, remove work; the same colour appears on pin, card and strips |
 | F6 | Compare table | One column per pinned scenario, same rows in the same order: Sun now, sunset in, Earth now, Earthset in, lit % (next 30 days), longest unbroken light, longest dark, Earth contact %, longest gap in contact. Best value per row highlighted | Two pinned scenarios show two columns with every row filled |
 | F7 | Strips | Two bars per scenario (Sun, Earth) on one shared axis: days since each scenario's own time, 0 to 30. Filled where up, empty where hidden | Strips agree with the countdowns |
-| F8 | Timeline | For the selected scenario: degrees above the skyline against time, one line for Sun, one for Earth, shaded below zero. Range buttons: 30 days, 90 days, 1 year. Dragging sets the time | Dragging updates readout and 3D view |
+| F8 | Timeline | For the selected scenario: degrees above the skyline against time, one line for Sun, one for Earth, shaded below zero. Range buttons: 30 days, 90 days, 1 year; earlier and later buttons. Dragging sets the live time, and the chart stays still while the marker moves | Dragging updates readout and 3D view |
 | F9 | Sky panorama | Azimuth 0-360 across, elevation up. The terrain skyline as a filled shape, the Sun's and Earth's paths over the next 30 days, and their positions now | The Sun marker sits below the skyline exactly when the readout says "hidden" |
 | F10 | 3D scene | South-pole terrain from LOLA. The Sun is the light, placed from the computed direction. Earth is drawn in the sky. Pins for scenarios and curated sites. Two cameras: top-down (the "2D map") and orbit ("3D"). Clicking the terrain sets the live site | Click returns latitude and longitude within one grid cell of the true point |
 | F11 | Nudge | Buttons: 1 km north, south, east, west; +1 day, -1 day. Makes a ghost scenario and states the difference in words: "+31 h of sunlight", "loses Earth 2 days earlier" | A nudge off a crater rim onto its floor shows a large loss of sunlight |
@@ -97,9 +104,12 @@ the same for every site. Only the site's own "up" differs. So one table serves e
 | Check | Pass |
 |---|---|
 | Our angles against Skyfield's own surface-point calculation | 0.02 degrees |
-| Our angles against JPL Horizons, 3 sites x 3 times | 0.1 degrees |
+| Skyfield's surface-point calculation against JPL Horizons, 3 sites x 3 times | 0.1 degrees |
+| The browser's own maths against the same Horizons numbers (a test on every pull request) | 0.1 degrees |
 | Terrain: floor of Shackleton crater | Never lit, 2026-2035 |
 | Terrain: a point on Shackleton's rim | Lit more than half the time |
+
+The two terrain rows are tests owned by T24.
 
 ## 8. Known limits (shown on the About page)
 
@@ -115,7 +125,7 @@ Fill in the clock times once the submission deadline is known.
 
 | | When | What is true |
 |---|---|---|
-| M0 | Start + 2 h | T00 merged. Everyone runs the site with mock data |
+| M0 | Start + 2 h | T00, T20 and T21 merged; first design pictures in (T22). Everyone runs the site with live numbers on mock data |
 | M1 | Saturday evening | On a smooth Moon: pick site and time, readout, countdowns, compare table and strips. Deployed |
 | M2 | Sunday morning | Real terrain skyline, sky panorama, 3D scene with click-to-pick, Horizons check passed |
 | M3 | Deadline - 5 h | **Freeze.** No new features. Bugs, video, write-up only |
@@ -131,3 +141,6 @@ Fill in the clock times once the submission deadline is known.
 | Team agrees the cut line (refraction and GPS removed) | All | blocks T08 onward |
 | Project name | P5 | cosmetic |
 | Names against P2-P5 on the board | P1 | blocks delegation |
+| Repo made public (GitHub refuses the branch rule and Pages on a private repo in a free organisation) | P1 | blocks T21 |
+| Figma seat for the designer: Full or Dev on Professional or Education | P5 | costs time (a fallback is in `docs/mcp-and-skills.md`) |
+| Demo format and length, read from the submission form | P4 | blocks T17 |

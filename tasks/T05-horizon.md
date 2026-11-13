@@ -6,7 +6,7 @@ Status: not started
 |---|---|
 | Owner | P2 |
 | Tier | must |
-| Waits for | T00 (real-data check after T04) |
+| Waits for | T00 |
 | Branch | `t05-horizon` |
 
 ## Goal
@@ -15,13 +15,13 @@ Status: not started
 
 ## Files you own
 
-- `web/src/core/horizon.ts` (replace the stub), `web/src/core/horizon.test.ts`
+- `web/src/core/horizon.ts` (taken over from T00's flat skyline), `web/src/core/horizon.test.ts`
 - `docs/ai-use/T05.md`, `docs/sources/T05.md`, this file's `Status:` line
 
 ## Steps
 
 1. Implement the walk in the contract's Skyline block, using `destination` from `geometry.ts` for each step and `dem.heightAt` for the ground.
-2. Tests build small made-up height grids in memory; they don't need the real file.
+2. Tests build small made-up height grids in memory with `parseDem`; they don't need the real file. `destination` already works: T00 wrote it.
 
 ## Done when
 
@@ -29,8 +29,12 @@ Status: not started
 - [ ] Flat grid with a wall 1,000 m high, 10 km to the north: the value at azimuth 0 matches the contract formula (about 5.53 degrees) within 0.1; the value at azimuth 180 is about 0.
 - [ ] Site north of 85 S, or `dem` null: `terrain` is false and all values are 0.
 - [ ] One skyline takes under 100 ms on a laptop (print the timing in the test).
-- [ ] After T04: at the centre of Shackleton's floor, the lowest of the 360 values is above 5 degrees.
+- [ ] In a made-up grid with a bowl crater 10 km in radius and 3,000 m deep, seen from its centre, the lowest of the 360 values is above 10 degrees.
 - [ ] `npm test` and `npm run build` pass.
+
+## Notes
+
+The check on the real Shackleton floor is T24's, once T04 has merged.
 
 ## Prompt to paste into Claude Code
 

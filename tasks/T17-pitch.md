@@ -4,7 +4,7 @@ Status: not started
 
 | | |
 |---|---|
-| Owner | P5 |
+| Owner | P4 |
 | Tier | must |
 | Waits for | M1 for screenshots, M2 for the video |
 | Branch | `t17-pitch` |
@@ -20,7 +20,7 @@ Everything the submission form asks for, ready before the freeze ends.
 
 ## Steps
 
-1. Read the submission form on day one and list every field and its limit in `pitch/checklist.md`.
+1. Read the submission form on day one and list every field and its limit in `pitch/checklist.md`. The demo limit decides the whole plan (search results on 14 Nov 2026 said a video of 30 seconds or less, or at most 7 slides; confirm it on the form itself).
 2. Story in order: the problem (a slipped launch date, an hour across three tools) -> our answer (two scenarios compared in seconds) -> the 1 km nudge -> the Horizons check -> who it's for.
 3. Demo video script built around one moment: move the pin 1 km, the sunlight collapses.
 4. The AI-use paragraph and the source list, collected from `docs/ai-use/` and `docs/sources/`.
@@ -30,7 +30,7 @@ Everything the submission form asks for, ready before the freeze ends.
 - [ ] Every field in `pitch/checklist.md` has its text or file.
 - [ ] The video runs within the form's time limit and shows compare, nudge and the Horizons badge.
 - [ ] Someone outside the team can say what the tool does after watching it once.
-- [ ] `npm test` and `npm run build` pass.
+- [ ] Slides use the palette in `docs/design.md`; ask P5 for the two site screenshots.
 
 ## Prompt to paste into Claude Code
 

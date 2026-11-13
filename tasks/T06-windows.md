@@ -6,31 +6,36 @@ Status: not started
 |---|---|
 | Owner | P1 |
 | Tier | must |
-| Waits for | T02 |
+| Waits for | T00 |
 | Branch | `t06-windows` |
 
 ## Goal
 
-`series`, `nextFlip`, `summary`, `countdownText` exactly as contract section 3.
+`series`, `nextFlip`, `summary` and `countdownText` proven by tests. T00 wrote a first pass from the contract; this task adds the real tests and fixes whatever they find.
 
 ## Files you own
 
-- `web/src/core/windows.ts` (replace the stub), `web/src/core/windows.test.ts`
+- `web/src/core/windows.ts` (taken over from T00's first pass), `web/src/core/windows.test.ts`
 - `docs/ai-use/T06.md`, `docs/sources/T06.md`, this file's `Status:` line
 
 ## Steps
 
-1. Implement the contract's Visibility block.
-2. `countdownText` returns the F4 wording from the spec, including the four special cases.
-3. T00 left this file as a stub with the right function names; replace the bodies, keep the names, and `state.ts` picks them up unchanged.
+1. Check the first pass against the contract's Visibility block, line by line.
+2. `countdownText` returns exactly the wording in the contract's table, one test per row.
+3. Keep every name and signature; `state.ts` and three UI modules already call them.
+4. Tests build a small made-up table in memory with `parseEphemeris` (a Sun that circles once per 29.53 days), so they don't depend on which data file is in the repo.
 
 ## Done when
 
 - [ ] With a made-up skyline of 0 everywhere at the equator, lit time is 50 % within 2 % over 60 days.
 - [ ] `nextFlip` lands within 1 minute of the moment `sunFrac` crosses zero in a finely sampled series.
-- [ ] A skyline of 30 degrees everywhere gives lit 0 % and the text "Permanently shadowed" when no rise is found.
-- [ ] After T04 and T05: Shackleton's floor is never lit across 2026-2035, and a rim point is lit more than half the time.
+- [ ] A skyline of 30 degrees everywhere gives lit 0 %, and `countdownText` with `neverLit` true reads "Permanently shadowed (2026-2035)".
+- [ ] Every row of the contract's wording table has a passing test.
 - [ ] `npm test` and `npm run build` pass.
+
+## Notes
+
+The checks on the real Shackleton floor and rim are T24's, once T04 and T05 have merged.
 
 ## Prompt to paste into Claude Code
 

@@ -4,9 +4,9 @@ Status: not started
 
 | | |
 |---|---|
-| Owner | P1 |
+| Owner | P4 |
 | Tier | must |
-| Waits for | T00 |
+| Waits for | T20 |
 | Branch | `t01-ephemeris` |
 
 ## Goal
@@ -15,8 +15,8 @@ The real table (contract section 2) and the fixtures that prove the browser math
 
 ## Files you own
 
-- `data-prep/make_ephemeris.py`, `data-prep/requirements.txt`
-- `web/public/data/ephemeris.bin`, `ephemeris.json`
+- `data-prep/make_ephemeris.py`
+- `web/public/data/ephemeris.bin`, `ephemeris.json` (taken over from T20's mock)
 - `web/src/core/__fixtures__/altaz.json`
 - `docs/ai-use/T01.md`, `docs/sources/T01.md`, this file's `Status:` line
 
@@ -26,6 +26,7 @@ The real table (contract section 2) and the fixtures that prove the browser math
 2. For each hour 2026-01-01 to 2036-01-01 UTC: the apparent position of the Sun and of Earth as seen from the Moon's centre, expressed in that frame. Store the Sun as a unit vector and Earth in km.
 3. Fixtures: for at least 20 site-and-time cases (a polar site, a mid-latitude site, an equatorial site; times spread over the ten years), ask Skyfield directly for the altitude and azimuth of the Sun and Earth from that point on the Moon's surface. This path must not use our table.
 4. Vectorise with NumPy; don't loop hour by hour in Python.
+5. `ephemeris.json` carries `"source": "JPL DE421 via Skyfield"`. That replaces the mock marker, and the real-data tests switch themselves on.
 
 ## Done when
 
@@ -35,11 +36,15 @@ The real table (contract section 2) and the fixtures that prove the browser math
 - [ ] The Sun's latitude on the Moon, `asin(sun_z)`, stays within +-1.6 degrees in every row.
 - [ ] The point on the Moon directly under Earth stays within +-8.2 degrees of longitude and +-6.9 degrees of latitude (Earth's wobble).
 - [ ] `altaz.json` has 20 or more cases in the contract's format.
-- [ ] `npm test` and `npm run build` pass.
+- [ ] If T00 has merged: `npm test` and `npm run build` pass.
 
 ## Notes
 
 Skyfield downloads its own data files (about 20 MB) on first run. Keep them in `data-prep/raw/`, which is git-ignored.
+
+The packages are already in `data-prep/requirements.txt` (T20). While T20 is still open, set up Python, read the Skyfield page and start that download; make the branch once T20 has merged.
+
+P1's T02 waits for the fixtures. Merge this as soon as its checks pass.
 
 ## Prompt to paste into Claude Code
 

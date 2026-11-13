@@ -6,7 +6,7 @@ Status: not started
 |---|---|
 | Owner | P1 |
 | Tier | must |
-| Waits for | T00 (real terrain after T04) |
+| Waits for | T00 |
 | Branch | `t12-scene` |
 
 ## Goal
@@ -21,17 +21,17 @@ Spec feature F10, and F1's click-to-pick.
 
 ## Steps
 
-1. Build the terrain mesh from `dem`: a reduced grid for the whole region (about 512 x 512 points), plus a full-detail patch around the selected site. Colour by height; a vertical stretch slider (1x to 5x).
+1. Build the terrain mesh from `dem`: a reduced grid for the whole region (about 512 x 512 points), plus a full-detail patch around the selected site. Colour by height between `themeColor('--terrain-lo')` and `themeColor('--terrain-hi')`; a vertical stretch slider (1x to 5x).
 2. One scene, two cameras: top-down for the "2D map", orbit for "3D". `setMode` switches.
-3. Sun: a directional light placed from `eph.vectorsAt(tMs).sun`, converted into the scene's axes. Shadows on if they look right; the lit/dark answer always comes from `core/`, never from the rendered shadow.
+3. Sun: a directional light placed from `eph.vectorsAt(tMs).sun` at the selected scenario's time, converted into the scene's axes. Shadows on if they look right; the lit/dark answer always comes from `core/`, never from the rendered shadow.
 4. Earth: a small textured sphere or sprite placed far away in its computed direction.
-5. Pins: curated sites in grey, scenarios in their colours, the selected one larger.
+5. Pins: curated sites in `themeColor('--muted')`, scenarios in `themeColor(sc.color)`, the selected one larger. No colour code in this folder.
 6. Click: raycast to the mesh, convert the hit to latitude and longitude with the contract's inverse projection, call `setLiveSite`.
 7. North of 80 S there is no mesh: show a plain Moon sphere with pins, so Apollo sites can still be selected from the list.
 
 ## Done when
 
-- [ ] Clicking a known mock feature returns its latitude and longitude within one grid cell.
+- [ ] Clicking the centre of the mock crater returns latitude -88.0, longitude 45.0 within one grid cell.
 - [ ] Scrubbing time moves the light; at a time when the readout says "Sun hidden" for a crater floor, the floor is visibly dark.
 - [ ] The 2D/3D switch works and keeps the same site centred.
 - [ ] Stays above 30 frames per second on a mid-range laptop.
@@ -41,6 +41,8 @@ Spec feature F10, and F1's click-to-pick.
 ## Notes
 
 Biggest task in the project. Get click-to-pick and the light working before anything decorative.
+
+The folder's CSS file goes to T23 once this merges.
 
 ## Prompt to paste into Claude Code
 
