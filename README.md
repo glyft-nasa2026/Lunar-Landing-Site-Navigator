@@ -18,6 +18,7 @@ Kuala Lumpur. The repo is `glyft-nasa2026/Lunar-Landing-Site-Navigator`.
 | `docs/team-workflow.md` | How to take a task: branch, Claude, pull request | Everyone, once |
 | `tasks/README.md` | The board: every task, its owner, what it waits for | Everyone, often |
 | `tasks/Txx-*.md` | One task each, with its own "done when" tests | The task's owner |
+| `tickets-summary.md` | Every task in one line, grouped by what it produces | Anyone who wants the plan at a glance |
 | `docs/ai-use/` | One file per task: how AI was used (the submission needs this) | Each owner writes their own |
 | `docs/sources/` | One file per task: every data source and library used | Each owner writes their own |
 | `docs/decisions.md` | Decisions and why | P1 writes it |
