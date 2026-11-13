@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Lunar Landing Site Navigator</title>
+  </head>
+  <body>
+    <!-- The eight slots of docs/data-contract.md section 5. Only P1 edits this file.
+         Each slot is filled by its module's mount(el); web/src/ui/layout.css places them.
+         #status is not a slot: main.ts writes the data-loading message there. -->
+    <div id="app">
+      <header id="about"></header>
+      <div id="status" role="status"></div>
+      <section id="scene" aria-label="Map and 3D view"></section>
+      <aside id="side">
+        <section id="scenarios" class="card" aria-label="Scenarios"></section>
+        <section id="readout" class="card" aria-label="Readout"></section>
+        <section id="nudge" class="card" aria-label="Nudge"></section>
+      </aside>
+      <section id="compare" class="card" aria-label="Compare"></section>
+      <div id="bottom">
+        <section id="timeline" class="card" aria-label="Timeline"></section>
+        <section id="sky" class="card" aria-label="Sky panorama"></section>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

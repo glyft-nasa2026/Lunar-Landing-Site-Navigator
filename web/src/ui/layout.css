@@ -1,0 +1,98 @@
+/* Places the slots of web/index.html (docs/data-contract.md section 5, spec section 3).
+   T00 made a basic grid; T19 owns this file. Modules style only their own insides. */
+
+#app {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22rem;
+  grid-template-areas:
+    'about   about'
+    'status  status'
+    'scene   side'
+    'compare side'
+    'bottom  bottom';
+  gap: var(--space-3);
+  padding: var(--space-3);
+  min-height: 100vh;
+  align-content: start;
+}
+
+#about {
+  grid-area: about;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+#status {
+  grid-area: status;
+  padding: var(--space-2) var(--space-4);
+  color: var(--warn);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+#status:empty {
+  display: none;
+}
+
+#scene {
+  grid-area: scene;
+  position: relative;
+  min-height: 26rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+#side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+#compare {
+  grid-area: compare;
+  min-width: 0;
+}
+
+#bottom {
+  grid-area: bottom;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+#timeline,
+#sky {
+  min-width: 0;
+}
+
+/* Phone: one column, in page order: about, scene, scenarios, readout, nudge, compare,
+   timeline, sky. */
+@media (max-width: 800px) {
+  #app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'about'
+      'status'
+      'scene'
+      'side'
+      'compare'
+      'bottom';
+  }
+
+  #scene {
+    min-height: 18rem;
+  }
+
+  #bottom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

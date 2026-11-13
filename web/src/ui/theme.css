@@ -1,0 +1,157 @@
+/* The shared look (docs/data-contract.md section 6).
+   T00 made every name with plain placeholder values; T19 owns this file and sets the real ones.
+   Don't rename or remove a name: every module depends on them. */
+
+:root {
+  color-scheme: dark;
+
+  /* Page, cards, raised cards, lines */
+  --bg: #0e1116;
+  --panel: #171b22;
+  --panel-2: #1f2530;
+  --border: #303846;
+
+  /* Main text, secondary text */
+  --text: #e6e9ee;
+  --muted: #a3acb9;
+
+  /* Primary button, selection */
+  --accent: #8ab4f8;
+
+  /* Best value in a row, caution, error message */
+  --ok: #7bd88f;
+  --warn: #f2c94c;
+  --bad: #ff8a80;
+
+  /* Scenario colours. Fixed: chosen to stay distinct for colour-blind users. */
+  --scn-a: #E69F00;
+  --scn-b: #0072B2;
+  --scn-c: #009E73;
+  --scn-ghost: #8a8f98;
+
+  /* Sun and Earth in charts. Fixed. */
+  --sun: #F0E442;
+  --earth: #56B4E9;
+
+  /* Filled and empty parts of the strips */
+  --lit: #e6e9ee;
+  --dark: #262c36;
+
+  /* The two ends of the height colour ramp in the 3D scene */
+  --terrain-lo: #3a3f47;
+  --terrain-hi: #d9dce1;
+
+  /* Gaps */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  /* Corner rounding */
+  --radius: 6px;
+
+  /* Text; fixed-width digits for numbers */
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-num: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* Type sizes */
+  --fs-sm: 0.8125rem;
+  --fs-md: 0.9375rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.5rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs-md);
+  line-height: 1.4;
+}
+
+h1, h2, h3, p {
+  margin: 0;
+}
+
+h2 {
+  font-size: var(--fs-lg);
+}
+
+a {
+  color: var(--accent);
+}
+
+/* Shared classes */
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+}
+
+.btn {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+}
+
+.btn:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.field {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-2);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.badge {
+  display: inline-block;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 var(--space-2);
+}
+
+.muted {
+  color: var(--muted);
+}
