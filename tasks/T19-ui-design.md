@@ -1,0 +1,57 @@
+# T19: Theme, layout, chart style
+
+Status: not started
+
+| | |
+|---|---|
+| Owner | P5 (UI designer) |
+| Tier | must |
+| Waits for | T00, T22 |
+| Branch | `t19-ui-design` |
+
+## Goal
+
+The design from T22, built into the three shared files, so five people's modules read as one
+product. This task sets the values; every other UI task only uses the names (contract
+section 6). **Before starting, read `docs/mcp-and-skills.md` section 3.**
+
+## Files you own
+
+- `web/src/ui/theme.css`, `web/src/ui/layout.css`, `web/src/ui/plotTheme.ts` (taken over from T00, which made them with placeholder values)
+- `docs/ai-use/T19.md`, `docs/sources/T19.md`, this file's `Status:` line
+
+## Steps
+
+1. `theme.css`: set every variable named in contract section 6 to the value in `docs/design.md` (or pull them from Figma with `get_variable_defs`). **Don't rename or remove a variable; other modules depend on the names.** A new variable needs P1 to add it to the contract first.
+2. Colours that are fixed and must not change: scenario A `#E69F00`, B `#0072B2`, C `#009E73` (chosen to stay distinct for colour-blind users). The Sun is yellow `#F0E442` and Earth is light blue `#56B4E9` in the charts.
+3. `layout.css`: the page grid from spec section 3 for the slots in `index.html`. Desktop from 1280 px wide. Below 800 px, the slots stack in this order: about, scene, scenarios, readout, nudge, compare, timeline, sky.
+4. Shared pieces as classes in `theme.css`: `.card`, `.btn`, `.btn-primary`, `.field`, `.table`, `.badge`, `.muted`. Numbers in readouts and tables use fixed-width digits so they don't jitter as time moves.
+5. `plotTheme.ts`: `plotLayout()`, which every Plotly chart spreads into its layout (background, grid lines, fonts, margins), and `themeColor()`, both reading the same variables. No second copy of a colour.
+6. Use the system font stack. No web-font download.
+7. Take two screenshots of the deployed site, desktop and phone, and post them in the chat for the pitch (T17 uses the same palette for the slides).
+
+## Done when
+
+- [ ] Every variable in contract section 6 is set; none renamed or removed.
+- [ ] On the built site, text against its background passes a contrast check of 4.5 to 1 or better (name the checker used in the pull request).
+- [ ] Searching `web/src/ui/` and `web/src/scene/` for `#` colour codes finds them only in `theme.css`. List any others in the pull request for their owners to fix.
+- [ ] At 1280 px wide nothing overlaps or scrolls sideways; at 390 px wide every slot is reachable by scrolling down.
+- [ ] `npm test` and `npm run build` pass.
+
+## Notes
+
+This task changes values in three files and nothing else. If a module looks wrong because it
+hard-coded a colour or a size, that's a fix in the module: by its owner in `index.ts`, by you in
+its CSS file once T23 has taken it over.
+
+## Prompt to paste into Claude Code
+
+```text
+Read CLAUDE.md, docs/data-contract.md, docs/design.md, docs/mcp-and-skills.md section 3 and tasks/T19-ui-design.md. Do only that task, on branch t19-ui-design. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+
+Figma rules for this repo:
+- Fetch one frame per call, from the link I give you. Don't walk the whole file: read calls are limited to 200 a day.
+- get_design_context returns React and Tailwind by default. This repo uses neither. Ask for plain HTML and CSS, and treat the result as a picture of the design, not as code to paste.
+- Write no colour code, font or pixel size outside theme.css. Map every value to a variable from contract section 6. If none fits, stop and tell me.
+- Don't download fonts or add packages. Don't write design-system rules into CLAUDE.md, and don't use the Code Connect tools.
+```
