@@ -1,6 +1,6 @@
 # T06: Countdowns and percentages: windows.ts
 
-Status: not started
+Status: done, in review (pull request #5)
 
 | | |
 |---|---|
