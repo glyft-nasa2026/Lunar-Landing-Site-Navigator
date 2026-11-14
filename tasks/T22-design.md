@@ -1,6 +1,6 @@
 # T22: Design in Figma
 
-Status: in review. docs/design.md and pictures done from the brief, PDF and SVG (no Figma link yet); waiting for the team's yes in the chat
+Status: done (pull request #22). The team said yes, confirmed by P1 on 14 Nov 2026. No Figma link: the pictures were made from the brief
 
 | | |
 |---|---|
@@ -43,6 +43,14 @@ T00. **Before starting, read `docs/mcp-and-skills.md` section 3.**
 
 Mock-up numbers are made up. Nobody copies an angle or a time from a picture into code: every
 number on the real site comes from `web/src/core/`.
+
+## After the merge
+
+- 14 Nov 2026: P1 confirmed that everyone on the team said yes to the design.
+- 14 Nov 2026, audit of the merged tickets: every contrast and colour-blindness figure in `docs/design.md` was worked out again and matches. `mockup.html` uses only the contract's variable names. No defect found. Open, for P5 and P1:
+  - *costs time*: the six items under "Needs P1" in `docs/design.md` have no answer yet. T19 and T23 need them.
+  - *cosmetic*: there is no picture for `#panel`, the ninth slot, added later by T15.
+  - *cosmetic*: `docs/design.md`, under "Rules the pictures follow", calls the live colour "the accent green". `--accent` is blue, in the palette table and in the pictures.
 
 ## Prompt to paste into Claude Code
 

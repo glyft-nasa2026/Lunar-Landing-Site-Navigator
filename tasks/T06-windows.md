@@ -1,6 +1,6 @@
 # T06: Countdowns and percentages: windows.ts
 
-Status: done, in review (pull request #5)
+Status: done (pull request #5)
 
 | | |
 |---|---|
@@ -36,6 +36,11 @@ Status: done, in review (pull request #5)
 ## Notes
 
 The checks on the real Shackleton floor and rim are T24's, once T04 and T05 have merged.
+
+## After the merge
+
+- 14 Nov 2026, pull request #31: "Permanently shadowed" now means no sunlight from the chosen time to the end of the table, and reads "Permanently shadowed (until 2100)". `state.ts` decides it (`neverLitFor`); the wording stays in `windows.ts`.
+- 14 Nov 2026, audit of the merged tickets: `windows.ts` was reviewed against the contract and its tests. No defect found.
 
 ## Prompt to paste into Claude Code
 

@@ -1,6 +1,6 @@
 # T04: South-pole height map from LOLA
 
-Status: done, pull request open (grey image to attach; Quickmap comparison by eye)
+Status: done (pull request #13)
 
 | | |
 |---|---|
@@ -36,6 +36,11 @@ The real height grid in our own projection and format (contract section 2).
 - [ ] Reading a height at the exact south pole and at 85 S, longitude 0 / 90 / 180 / -90, gives a number, not no-data.
 - [ ] The image is the right way round: compare crater positions with Quickmap's south-pole view.
 - [ ] `npm test` and `npm run build` pass.
+
+## After the merge
+
+- 14 Nov 2026, audit of the merged tickets, on the shipped `dem.bin`: the size, the height range, the south pole and the four points at 85 S, and Shackleton's floor against its rim (more than 2,500 m) all pass. Part of the grid was worked out again from the LOLA source file and matched exactly. No defect found.
+- The Quickmap comparison by eye is not recorded as done. *cosmetic*: the Shackleton line above already shows the grid is the right way round, since a mirrored grid would have no crater at those coordinates.
 
 ## Prompt to paste into Claude Code
 

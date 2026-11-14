@@ -3,6 +3,40 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: audit of the merged tickets
+
+P1 asked for every merged ticket to be checked: is the work correct, and does the paperwork
+match. This entry covers the files changed for the tickets that needed no code fix. The tickets
+that did (T00, T02, T03, T05, T08, T10, T12, T20) carry their own "After the merge" notes, in
+their own pull requests.
+
+### SPEC.md, section 5 (Where each number comes from)
+
+- The Hosting row said "GitHub Pages at darksight.space; mirror on rickphobia.com". GitHub
+  Pages was never used: `docs/decisions.md` records Cloudflare Pages for `main` and for pull
+  request previews, and the `deploy` branch for the homelab. The mirror is T28 and has not
+  started. Now: the row says what serves the site today.
+
+### tasks/: `Status:` lines
+
+Six merged tickets still read as unfinished, because the line was written before the merge and
+never updated. Each now says done with its pull request numbers, and each file has an "After the
+merge" section with what changed since and what the audit found. The old lines:
+
+| Task | The line said |
+|---|---|
+| T01 | done (npm test and npm run build left to CI: Node not installed locally) |
+| T04 | done, pull request open (grey image to attach; Quickmap comparison by eye) |
+| T06 | done, in review (pull request #5) |
+| T11 | done, pull request open (chart to be looked at in the browser) |
+| T21 | done |
+| T22 | in review. docs/design.md and pictures done from the brief, PDF and SVG (no Figma link yet); waiting for the team's yes in the chat |
+
+- T22's "waiting for the team's yes" is closed on P1's word (14 Nov 2026) that everyone said
+  yes. There is still no Figma link.
+- The steps and "Done when" lists in those files are left as written: they are the plan as it
+  was. What differs today is in each "After the merge" section.
+
 ## 14 Nov 2026: `#panel` beside Scenarios in T19's layout step
 
 ### tasks/T19-ui-design.md
