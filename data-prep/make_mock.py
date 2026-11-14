@@ -1,8 +1,12 @@
 """T20: write mock data files in the real formats (docs/data-contract.md, section 2).
 
-Run from anywhere:  python data-prep/make_mock.py
+Run from anywhere:  python data-prep/make_mock.py [--force]
 NumPy only. No downloads. Writes into web/public/data/, then reads the files back and prints
 the "Done when" checks from tasks/T20-mock-data.md. Exits with code 1 if any check fails.
+
+It won't replace real data. If a later task has put its real file in web/public/data/ (T01's
+table, T04's height map, T03's validation, T07's sites), it lists those files, changes nothing
+and exits with code 2. --force writes the mock files over them anyway.
 
 Every file says it is mock: "source": "mock" in ephemeris.json and dem.json, and
 "checked_at": null in validation.json. Tests that need real data skip when they see this.
@@ -23,7 +27,8 @@ OUT = Path(__file__).resolve().parent.parent / "web" / "public" / "data"
 R_M = 1737.4e3  # Moon radius, metres
 DAY_S = 86400.0
 
-# --- Ephemeris: same dates as the real table, hourly -------------------------------------------
+# --- Ephemeris: 2026-2035, hourly, in one file ------------------------------------------------
+# The real table is one file per decade now (contract section 2); the one-file form still loads.
 START = datetime(2026, 1, 1, tzinfo=timezone.utc)
 END = datetime(2036, 1, 1, tzinfo=timezone.utc)
 STEP_S = 3600
@@ -292,7 +297,47 @@ def check() -> bool:
     return ok
 
 
+def real_files() -> list[str]:
+    """What in web/public/data/ is real data, by the mock markers of contract section 2. A file
+    that can't be read counts as real: better to stop than to write over it."""
+    def read(name: str):
+        path = OUT / name
+        if not path.exists():
+            return None
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return "unreadable"
+
+    def is_mock(data, test) -> bool:
+        try:
+            return bool(test(data))
+        except (AttributeError, KeyError, TypeError):
+            return False
+
+    mock_ids = [s["id"] for s in SITES]
+    found = []
+    for name, shown, test in [
+        ("ephemeris.json", "ephemeris.json and the Sun and Earth table", lambda d: d["source"] == "mock"),
+        ("dem.json", "dem.json and dem.bin", lambda d: d["source"] == "mock"),
+        ("validation.json", "validation.json", lambda d: d["checked_at"] is None),
+        ("sites.json", "sites.json", lambda d: [s["id"] for s in d] == mock_ids),
+    ]:
+        data = read(name)
+        if data is not None and not is_mock(data, test):
+            found.append(shown)
+    return found
+
+
 def main() -> int:
+    real = real_files()
+    if real and "--force" not in sys.argv[1:]:
+        print(f"Not written. These files in {OUT} hold real data, and the mock would replace them:")
+        for name in real:
+            print(f"  {name}")
+        print("Nothing was changed. To write the mock files over them anyway:")
+        print("  python data-prep/make_mock.py --force")
+        return 2
     OUT.mkdir(parents=True, exist_ok=True)
     rows = make_ephemeris()
     make_dem()
