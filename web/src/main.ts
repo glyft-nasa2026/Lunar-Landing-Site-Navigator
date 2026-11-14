@@ -1,4 +1,4 @@
-// Entry point. Only P1 edits this file.
+// Entry point.
 // Mounts every module into its slot (docs/data-contract.md section 5) and loads the data files.
 // A later task replaces the inside of its own module folder; nothing here needs to change.
 
