@@ -1,6 +1,6 @@
 # T08: Scenario panel, readout, share link
 
-Status: in progress
+Status: in progress, draft pull request #14
 
 | | |
 |---|---|
