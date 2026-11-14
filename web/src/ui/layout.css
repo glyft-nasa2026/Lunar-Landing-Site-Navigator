@@ -6,14 +6,16 @@
      about     about       top bar: logo, tabs, UTC date and time, pointer coordinates
      scene     readout     the map or 3D Moon, with the data column beside it
      scene     nudge       nudge sits under readout (contract section 5)
-     scenarios scenarios   chosen sites (max 4) and Proceed, under the map
+     scenarios panel       chosen sites under the map; the Solar panel card (T15) beside them,
+                           in the right-hand column under nudge
      compare   compare     the comparison, full width
      timeline  timeline    timeline of the selected scenario, full width
      sky       sky         sky panorama of the selected scenario: 360 degrees wide, so full width
 
    #side and #bottom are only wrappers in index.html; `display: contents` lets their children
    take part in this grid directly.
-   Phone (800 px and under): one column, in page order. */
+   Phone (800 px and under): one column, in page order.
+   Every slot has a named area: without one, a card is auto-placed at the top of the page. */
 
 #app {
   display: grid;
@@ -23,7 +25,7 @@
     'status    status'
     'scene     readout'
     'scene     nudge'
-    'scenarios scenarios'
+    'scenarios panel'
     'compare   compare'
     'timeline  timeline'
     'sky       sky';
@@ -89,6 +91,11 @@
   align-self: start;
 }
 
+#panel {
+  grid-area: panel;
+  align-self: start;
+}
+
 #scenarios {
   grid-area: scenarios;
 }
@@ -109,13 +116,14 @@
 #scenarios,
 #readout,
 #nudge,
+#panel,
 #compare,
 #timeline,
 #sky {
   min-width: 0;
 }
 
-/* Phone: one column, in page order: about, scene, scenarios, readout, nudge, compare,
+/* Phone: one column, in page order: about, scene, scenarios, readout, nudge, panel, compare,
    timeline, sky. */
 @media (max-width: 800px) {
   #app {
@@ -127,6 +135,7 @@
       'scenarios'
       'readout'
       'nudge'
+      'panel'
       'compare'
       'timeline'
       'sky';

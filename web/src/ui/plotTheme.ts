@@ -16,7 +16,11 @@ function prefersReducedMotion(): boolean {
 /**
  * The animation Plotly.react plays when a chart gets new data: lines and bars glide from the old
  * values to the new ones instead of jumping. Plotly falls back to an instant redraw when it
- * can't animate a change (for example a different number of traces). Off with reduced motion.
+ * can't animate a change (for example a different number of traces).
+ *
+ * Only for a chart whose height comes from CSS. With any `transition` in the layout, Plotly's
+ * react can skip sizing the chart's box, so a chart that sets `layout.height` itself (the
+ * compare strips) can collapse to 0 px. Use it through plotLayout({ animate: true }).
  */
 export function chartTransition(): Transition {
   return {
@@ -49,8 +53,9 @@ function themePx(name: string): number {
  * Every Plotly chart spreads this into its layout: { ...plotLayout(), title: ... }.
  * The look follows the design's diagrams: the chart sits on its card, slate grid lines,
  * small fixed-width tick labels in the secondary text colour.
+ * A chart whose height is set in CSS can ask for the update animation: plotLayout({ animate: true }).
  */
-export function plotLayout(): Partial<Layout> {
+export function plotLayout(options: { animate?: boolean } = {}): Partial<Layout> {
   const grid = themeColor('--border');
   const muted = themeColor('--muted');
   const num = themeColor('--font-num');
@@ -83,6 +88,8 @@ export function plotLayout(): Partial<Layout> {
       bordercolor: grid,
       font: { family: num, size: small, color: themeColor('--text') },
     },
-    transition: chartTransition(),
+    // Opt-in, and left out entirely under reduced motion: even a 0 ms transition changes how
+    // react sizes the chart (see chartTransition).
+    ...(options.animate && !prefersReducedMotion() ? { transition: chartTransition() } : {}),
   };
 }

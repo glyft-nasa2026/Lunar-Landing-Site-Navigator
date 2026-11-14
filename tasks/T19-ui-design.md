@@ -1,6 +1,6 @@
 # T19: Theme, layout, chart style
 
-Status: in review. Palette from docs/design.md (main's slate and soft blue), --dark #0e1116, chart transitions; deployed-site screenshots after merge
+Status: in review (#23). Palette from docs/design.md, --dark #0e1116, #panel placed beside scenarios, chart animation opt-in; deployed-site screenshots after merge
 
 | | |
 |---|---|
