@@ -1,1 +1,93 @@
-/* Styles for #compare. Written by T09; use only the variables and classes of ui/theme.css. */
+/* Styles for #compare. Written by T09; use only the variables and classes of ui/theme.css.
+   Once T09 has merged, this file belongs to T23. */
+
+#compare {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cmp-table-wrap {
+  /* The positioned parent of the hidden "(best)" labels, so they scroll with the table and
+     can't widen the page on a phone. */
+  position: relative;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.cmp-table th,
+.cmp-table td {
+  vertical-align: top;
+}
+
+.cmp-col {
+  border-top: var(--space-1) solid var(--scn-color);
+}
+
+.cmp-col > .cmp-where,
+.cmp-col > .cmp-when {
+  display: block;
+}
+
+.cmp-dot {
+  display: inline-block;
+  width: var(--space-3);
+  height: var(--space-3);
+  margin-right: var(--space-1);
+  border-radius: 50%;
+  background: var(--scn-color);
+}
+
+.cmp-label {
+  font-family: var(--font);
+  font-weight: 600;
+}
+
+.cmp-where {
+  font-family: var(--font);
+  font-weight: normal;
+}
+
+.cmp-when {
+  font-size: var(--fs-sm);
+  font-weight: normal;
+}
+
+.cmp-row {
+  font-family: var(--font);
+  font-weight: normal;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.cmp-best {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.cmp-sub {
+  font-size: var(--fs-md);
+}
+
+.cmp-strips {
+  width: 100%;
+  min-width: 0;
+}
+
+.cmp-note {
+  font-size: var(--fs-sm);
+}
+
+/* Read by screen readers, not shown. */
+.cmp-hidden {
+  position: absolute;
+  width: var(--space-1);
+  height: var(--space-1);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+#compare [hidden] {
+  display: none;
+}
