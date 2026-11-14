@@ -4,9 +4,13 @@
 
 export type Checked<T> = { ok: true; value: T } | { ok: false; message: string };
 
+// A plain decimal number: an optional sign, digits, an optional point. Number() alone would
+// also read "0x10" as 16, "0b11" as 3 and "1e1" as 10, and move the site there.
+const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)$/;
+
 function parseNumber(text: string): number | null {
   const t = text.trim();
-  if (t === '') return null;
+  if (!DECIMAL.test(t)) return null;
   const v = Number(t);
   return Number.isFinite(v) ? v : null;
 }

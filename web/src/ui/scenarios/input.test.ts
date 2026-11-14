@@ -16,6 +16,22 @@ describe('checkLat', () => {
     expect(checkLat('north').ok).toBe(false);
     expect(checkLat('Infinity').ok).toBe(false);
   });
+  it('reads plain decimal numbers only: no hex, binary, octal or exponent', () => {
+    // Number() alone reads "0x10" as 16 and "1e1" as 10, which would move the site.
+    for (const text of ['0x10', '0X10', '0b11', '0o7', '1e1', '1E1', '1e-3', '1_0', '12abc', '1,5', '--5', '+-5', '.', '-', '+', '5..', '1.2.3', 'NaN']) {
+      expect(checkLat(text), text).toMatchObject({ ok: false, message: 'Type a number of degrees, for example -89.5' });
+    }
+  });
+  it('still reads a sign, a leading or trailing point, spaces around, and -0', () => {
+    expect(checkLat('+5')).toEqual({ ok: true, value: 5 });
+    expect(checkLat('.5')).toEqual({ ok: true, value: 0.5 });
+    expect(checkLat('-.5')).toEqual({ ok: true, value: -0.5 });
+    expect(checkLat('5.')).toEqual({ ok: true, value: 5 });
+    expect(checkLat('  -89.5\t')).toEqual({ ok: true, value: -89.5 });
+    expect(checkLat('007')).toEqual({ ok: true, value: 7 });
+    const zero = checkLat('-0');
+    expect(zero.ok && Object.is(zero.value, -0)).toBe(true);
+  });
 });
 
 describe('checkLon', () => {
@@ -28,6 +44,13 @@ describe('checkLon', () => {
     expect(checkLon('270')).toMatchObject({ ok: false, message: 'Longitude must be between -180 and 180' });
     expect(checkLon('-181').ok).toBe(false);
     expect(checkLon(' ').ok).toBe(false);
+  });
+  it('reads plain decimal numbers only: no hex, binary or exponent', () => {
+    for (const text of ['0x7f', '0b11', '1e2', '1e-2']) {
+      expect(checkLon(text), text).toMatchObject({ ok: false, message: 'Type a number of degrees, for example 45' });
+    }
+    expect(checkLon('+45.')).toEqual({ ok: true, value: 45 });
+    expect(checkLon(' -.25 ')).toEqual({ ok: true, value: -0.25 });
   });
 });
 
