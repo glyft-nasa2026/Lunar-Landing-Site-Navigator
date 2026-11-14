@@ -3,6 +3,21 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: T13's first "Done when" line is checked on real terrain
+
+### tasks/T13-nudge.md
+
+- **Done when, line 1** was "On the mock grid, starting at the crater rim (-87.67, 45.0) and
+  nudging 1 km south, down the inside wall, reports a large loss of sunlight." It could not
+  pass. `make_mock.py` keeps the mock rim crest flat for 1.5 km either side of the rim
+  (`FLAT_M`, there so a read between cells sees the exact height), so 1 km south is still on
+  the crest and the nudge rightly says "No meaningful change"; the loss starts 2 km in (pull
+  request #35). Now the line starts at -89.45, -137.3 on the real height map, which `main` has
+  served since T04 merged, so T13 can check it before it merges. P1 saw "−14 days of sunlight
+  in 30 days" and "sunset 17 days earlier" there on pull request #35's preview. Not chosen:
+  two nudges on the mock (the site no longer serves the mock crater), or a narrower `FLAT_M`
+  (P2's file, and the mock files and their tests would have to be made again).
+
 ## 14 Nov 2026: T15 taken by P1, `#panel` slot
 
 ### docs/data-contract.md
