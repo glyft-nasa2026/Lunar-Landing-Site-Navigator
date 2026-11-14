@@ -26,6 +26,29 @@ section 6). **Before starting, read `docs/mcp-and-skills.md` section 3.**
 2. Colours that are fixed and must not change: scenario A `#E69F00`, B `#0072B2`, C `#009E73` (chosen to stay distinct for colour-blind users). The Sun is yellow `#F0E442` and Earth is light blue `#56B4E9` in the charts.
 3. `layout.css`: the page grid from spec section 3 for the slots in `index.html`. Desktop from 1280 px wide. Below 800 px, the slots stack in this order: about, scene, scenarios, readout, nudge, panel, compare, timeline, sky.
    - `#panel` is T15's Solar panel card (pull request #36), inside `#side` right after `#nudge` in `index.html`. Give it its own place in the grid like the other slots: on desktop in the right-hand column under `#nudge`, beside `#scenarios`; on phone after `#nudge`. If the grid places slots by name (`grid-template-areas`, with `#side` as `display: contents`), that means the Scenarios row becomes `'scenarios panel'`, `panel` comes after `nudge` on phone, and `#panel { grid-area: panel; }`. Not a row of its own beside the scene: that stretches the map card, whose viewport has a fixed height, and leaves an empty band under the map. Without an area of its own the card is auto-placed at the top of the page, above the map.
+
+     The changes to `layout.css`, also posted on pull request #23 as suggestions (tested on that
+     branch merged with `main`):
+
+     ```css
+     /* #app, desktop grid-template-areas: the Scenarios row */
+         'scenarios panel'
+
+     /* beside the #nudge rule */
+     #panel {
+       grid-area: panel;
+       align-self: start;
+     }
+
+     /* add #panel to the list of slots that get min-width: 0 */
+     #nudge,
+     #panel,
+
+     /* @media (max-width: 800px), #app grid-template-areas: after 'nudge' */
+           'panel'
+     ```
+
+     Also add `panel` after `nudge` in the phone-order comment above the media query.
 4. Shared pieces as classes in `theme.css`: `.card`, `.btn`, `.btn-primary`, `.field`, `.table`, `.badge`, `.muted`. Numbers in readouts and tables use fixed-width digits so they don't jitter as time moves.
 5. `plotTheme.ts`: `plotLayout()`, which every Plotly chart spreads into its layout (background, grid lines, fonts, margins), and `themeColor()`, both reading the same variables. No second copy of a colour.
 6. Use the system font stack. No web-font download.
