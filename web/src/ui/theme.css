@@ -40,7 +40,7 @@
 
   /* Filled and empty parts of the strips */
   --lit: #EAFFF4;         /* accent/soft */
-  --dark: #2E6E80;        /* accent/deep */
+  --dark: #1B1B1B;        /* bg/base, per docs/design.md (T22). Not accent/deep: scn-b on #2E6E80 is 1.11:1 */
 
   /* The two ends of the height colour ramp in the 3D scene. Not in the brief: neutral lunar greys */
   --terrain-lo: #2B2E33;
@@ -157,7 +157,7 @@ a {
   cursor: not-allowed;
 }
 
-/* Selected state for a toggle or segmented button: the design marks it with a red outline. */
+/* Selected state for a toggle or segmented button: the design marks it with an accent outline. */
 .btn[aria-pressed='true'],
 .btn[aria-selected='true'] {
   border-color: var(--accent);
