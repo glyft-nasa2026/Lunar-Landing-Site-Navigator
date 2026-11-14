@@ -75,6 +75,16 @@ def wait_state(page, test, timeout_s=60):
                          'the page then holds a different copy of state.ts than /src/state.ts')
 
 
+def enter(page):
+    """Past the main page and the loading screen (web/src/ui/intro/), which cover the site.
+    Some links close the layer by themselves once the data files are in, others wait for
+    "Start exploring": click it if it shows, then wait until the layer is gone."""
+    page.wait_for_function("""() => {
+      document.querySelector('.intro .intro-start')?.click();
+      return !document.querySelector('.intro');
+    }""", timeout=120000)
+
+
 def passed(name, detail):
     checks.append({'check': name, 'result': 'PASS', 'output': detail})
     print(json.dumps(checks[-1]), flush=True)
@@ -91,6 +101,7 @@ with sync_playwright() as p:
     if '--public' in sys.argv or '--t20' in sys.argv:
         page.goto(BASE + '/#live=-88.4,45,2026-01-01T00:00:00Z')
         wait_state(page, 's.eph && s.dem && s.sites.length')
+        enter(page)
         actual = page.evaluate("""async () => {
           const s=(await import('/src/state.ts')).getState();
           const served=await fetch('/data/dem.json').then(r=>r.json());
@@ -168,6 +179,7 @@ with sync_playwright() as p:
     page.goto(BASE + '/#live=-88.4,45,2026-01-01T00:00:00Z')
     page.wait_for_selector('.map-canvas')
     wait_state(page, 's.dem')
+    enter(page)
     page.wait_for_timeout(700)
     canvas = page.locator('.scene-canvas')       # the 3D view
     map_canvas = page.locator('.map-canvas')     # the flat 2D map
@@ -470,6 +482,7 @@ with sync_playwright() as p:
       };""")
     fallback.goto(BASE)
     fallback.wait_for_function("document.querySelector('.scene-help')?.textContent.includes('needs WebGL')")
+    enter(fallback)
     assert fallback.get_by_role('button', name='3D orbit', exact=True).is_disabled()
     # The flat map needs no WebGL: it still draws and still picks.
     fallback.wait_for_timeout(500)
