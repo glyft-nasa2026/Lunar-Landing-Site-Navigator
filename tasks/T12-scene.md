@@ -1,6 +1,6 @@
 # T12: 3D scene and map
 
-Status: implemented, in review (pull request #7); real LOLA terrain verified after T04; laptop measured 30 FPS (requirement is above 30)
+Status: done (pull requests #7 and #18; drag-to-pan and outside-table fixes in #52). Above 30 FPS on the laptop, confirmed by P1 on 14 Nov 2026
 
 | | |
 |---|---|
@@ -43,6 +43,16 @@ Spec feature F10, and F1's click-to-pick.
 Biggest task in the project. Get click-to-pick and the light working before anything decorative.
 
 The folder's CSS file goes to T23 once this merges.
+
+## After the merge
+
+- 14 Nov 2026, pull request #7 also put readable headings on five other modules' placeholders (Compare, Timeline, Sky, Nudge, About), at P1's request. Those folders belong to their own tasks.
+- 14 Nov 2026, pull request #18 (`t12-scene-b`): the Moon sphere is always drawn with the terrain set into it, globe drags turn the Moon about its centre, and the Sun's shadow box is fitted to the visible terrain on the real height map.
+- 14 Nov 2026: the "above 30 frames per second" line. An earlier measurement read exactly 30; P1 confirmed on 14 Nov 2026 that the laptop runs above 30.
+- 14 Nov 2026, pull request #52 (`t12-scene-c`), from the audit of merged tickets:
+  - A plain left-drag or one-finger drag pans the 2D map. Before, it did nothing.
+  - With no table row for the selected time, the scene goes dark and says "This time is outside the Sun and Earth table". Before, it was lit from the nearest row.
+  - `browser-check.py` has 15 checks, not 13, and its drag check starts away from the selected pin.
 
 ## Prompt to paste into Claude Code
 
