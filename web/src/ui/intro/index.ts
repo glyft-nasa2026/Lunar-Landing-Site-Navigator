@@ -4,14 +4,19 @@
 //      logo sits, in the middle, and glides out to the right. The data files load behind it.
 //   2. "Start exploring": if the data is still loading, the big logo glides back to the middle
 //      and the loading screen shows how far the data is.
-//   3. When every file has loaded (or failed: the page's status line says which), the site.
+//   3. When the Sun and Earth table and the site list have loaded (or failed: the page's status
+//      line says which), the site. The height map keeps loading behind it, and the status line
+//      shows how far. After LOADING_MAX_MS the site opens anyway, so a stalled download never
+//      locks the page: there is no Skip button.
 // Not a slot of contract section 5: main.ts starts it and feeds it the loading progress.
 import './intro.css';
 import { logo } from './logo';
-import { allSettled, loadFraction, type LoadProgress } from './model';
+import { loadFraction, readyToOpen, type LoadProgress } from './model';
 
 const GLIDE_MS = 900;
 const GLIDE_EASE = 'cubic-bezier(0.2, 0.7, 0.2, 1)';
+/** The longest the loading screen stays up. The modules show "Loading" for a file not yet in. */
+const LOADING_MAX_MS = 10_000;
 
 function make<K extends keyof HTMLElementTagNameMap>(
   tag: K, className = '', text = '',
@@ -151,42 +156,53 @@ export function startIntro(): Intro {
     // The fade lasts as long as intro.css says; under reduced motion there is none.
     if (reducedMotion()) remove();
     else {
-      root.addEventListener('transitionend', remove, { once: true });
+      // Only the layer's own fade: the loading bar's shorter width transition bubbles up too.
+      root.addEventListener('transitionend', (e) => {
+        if (e.target === root) remove();
+      });
       setTimeout(remove, 1000); // in case the transition never fires
     }
   }
 
   function showLoading(): void {
-    if (latest && allSettled(latest)) {
+    if (latest && readyToOpen(latest)) {
       close(); // the data finished while the logo was gliding back
       return;
     }
     drawProgress();
     page.replaceWith(loading);
     bar.focus();
+    setTimeout(close, LOADING_MAX_MS);
   }
 
   start.addEventListener('click', () => {
     if (started) return;
     started = true;
-    settleAnimations(page);
-    if (latest && allSettled(latest)) {
+    if (latest && readyToOpen(latest)) {
       close();
       return;
     }
-    if (reducedMotion()) {
-      showLoading();
-      return;
+    // From here on a failure must not leave the button dead (it already counts as pressed):
+    // anything that throws skips the glide and goes straight to the loading screen.
+    try {
+      settleAnimations(page);
+      if (reducedMotion()) {
+        showLoading();
+        return;
+      }
+      // The big logo glides back to the middle and shrinks to the loading screen's logo.
+      const to = smallLogoBox();
+      const from = bigLogo.getBoundingClientRect();
+      const fade = { duration: GLIDE_MS / 2, easing: 'ease-out', fill: 'forwards' } as const;
+      for (const el of [text, mark, glow]) el.animate([{ opacity: 1 }, { opacity: 0 }], fade);
+      bigLogo.animate(
+        [{ transform: 'none', opacity: getComputedStyle(bigLogo).opacity }, { transform: boxToBox(from, to), opacity: 1 }],
+        { duration: GLIDE_MS, easing: GLIDE_EASE, fill: 'forwards' },
+      ).finished.then(showLoading, showLoading);
+    } catch (err) {
+      console.error('Intro: the glide failed, showing the loading screen', err);
+      if (!loading.isConnected) showLoading();
     }
-    // The big logo glides back to the middle and shrinks to the loading screen's logo.
-    const to = smallLogoBox();
-    const from = bigLogo.getBoundingClientRect();
-    const fade = { duration: GLIDE_MS / 2, easing: 'ease-out', fill: 'forwards' } as const;
-    for (const el of [text, mark, glow]) el.animate([{ opacity: 1 }, { opacity: 0 }], fade);
-    bigLogo.animate(
-      [{ transform: 'none', opacity: getComputedStyle(bigLogo).opacity }, { transform: boxToBox(from, to), opacity: 1 }],
-      { duration: GLIDE_MS, easing: GLIDE_EASE, fill: 'forwards' },
-    ).finished.then(showLoading, showLoading);
   });
 
   root.append(stars(60), page);
@@ -212,7 +228,7 @@ export function startIntro(): Intro {
       latest = progress;
       if (closed || !started || !loading.isConnected) return;
       drawProgress();
-      if (allSettled(progress)) close();
+      if (readyToOpen(progress)) close();
     },
   };
 }

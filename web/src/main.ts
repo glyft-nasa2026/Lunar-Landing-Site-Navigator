@@ -44,7 +44,8 @@ for (const [id, mount] of slots) {
   }
 }
 
-// Main page first; after "Start exploring", the loading screen until the data is in (T22 hero.png, loading.png).
+// Main page first; after "Start exploring", the loading screen until the Sun and Earth table and
+// the site list are in (T22 hero.png, loading.png). The height map keeps loading behind the site.
 const intro = startIntro();
 
 // --- Data loading ---------------------------------------------------------------------------

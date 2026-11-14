@@ -12,19 +12,19 @@ export interface LoadProgress {
   demFraction: number;
 }
 
-// The height map is by far the largest file, so it carries most of the bar.
-const WEIGHTS = { eph: 0.15, sites: 0.05, dem: 0.8 } as const;
+// The loading screen waits for the two files the numbers need: the Sun and Earth table and the
+// site list. The 12.8 MB height map is not one of them: until it arrives the site gives the
+// smooth-Moon answer and the page's status line shows how far the height map is (T27 step 3).
+// The table carries most of the bar because it is the larger of the two.
+const WEIGHTS = { eph: 0.8, sites: 0.2 } as const;
 
 /** How full the loading bar is, 0 to 1. A file that failed counts as finished. */
 export function loadFraction(p: LoadProgress): number {
-  const part = (s: FileState, partial = 0): number =>
-    s === 'loading' ? Math.min(1, Math.max(0, partial)) : 1;
-  const f = WEIGHTS.eph * part(p.eph) + WEIGHTS.sites * part(p.sites)
-    + WEIGHTS.dem * part(p.dem, p.demFraction);
-  return Math.min(1, Math.max(0, f));
+  const part = (s: FileState): number => (s === 'loading' ? 0 : 1);
+  return WEIGHTS.eph * part(p.eph) + WEIGHTS.sites * part(p.sites);
 }
 
-/** True once every file has loaded or failed: the loading screen has nothing left to wait for. */
-export function allSettled(p: LoadProgress): boolean {
-  return p.eph !== 'loading' && p.sites !== 'loading' && p.dem !== 'loading';
+/** True once the Sun and Earth table and the site list have loaded or failed, whatever the height map is doing. */
+export function readyToOpen(p: LoadProgress): boolean {
+  return p.eph !== 'loading' && p.sites !== 'loading';
 }
