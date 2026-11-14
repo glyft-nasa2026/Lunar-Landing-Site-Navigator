@@ -186,4 +186,23 @@ describe('loadEphemerisChunk keeps decades on the device', () => {
     await expect(loadEphemerisChunk(indexEphemeris(meta), 0)).rejects.toThrow(/404/);
     expect(store.size).toBe(0);
   });
+
+  it('refuses, and does not keep, a file that is too short (a web page sent with "200 OK")', async () => {
+    const store = fakeCaches();
+    vi.stubGlobal('fetch', async () => new Response('<!doctype html><title>Not the file</title>'));
+    await expect(loadEphemerisChunk(indexEphemeris(meta), 0)).rejects.toThrow(/42 bytes, expected 48/);
+    expect(store.size).toBe(0);
+  });
+
+  it('downloads again when the kept copy is too short, and keeps the good file in its place', async () => {
+    const store = fakeCaches();
+    const key = '/data/ephemeris/2020.bin?v=abc123';
+    store.set(key, new Response('<!doctype html><title>Not the file</title>'));
+    const asked: string[] = [];
+    vi.stubGlobal('fetch', async (url: string) => { asked.push(url); return new Response(bytes.slice(0)); });
+    expect((await loadEphemerisChunk(indexEphemeris(meta), 0)).byteLength).toBe(48);
+    expect(asked).toEqual([key]);
+    await new Promise((r) => setTimeout(r, 0));   // the copy is kept without waiting
+    expect((await (store.get(key) as Response).clone().arrayBuffer()).byteLength).toBe(48);
+  });
 });
