@@ -59,3 +59,56 @@ The folder's CSS file goes to T23 once this merges.
 ```text
 Read CLAUDE.md, docs/data-contract.md and tasks/T12-scene.md. Do only that task, on branch t12-scene. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```
+
+## Issue #77 handoff (branch `t12-scene-d`, no code written yet)
+
+Issue #77: in the 3D view, orbit around the selected site, "Centre selected site" and the
+vertical stretch do not work north of 80 S. Investigated on 14 Nov 2026; nothing implemented.
+Whoever picks this up continues on `t12-scene-d` (branched from `main` at dac2a21).
+
+### Cause (all in `web/src/scene/index.ts`)
+
+Not a crash: outside the south-pole height map (`polar === false`) the scene deliberately uses a
+different view, from pull request #18 and #71.
+
+- `centre()`: the `else` branch makes globe controls (`makeOrbitControls(true, …)`), target the
+  Moon's centre, camera 3.5 Moon radii out. So the reset shows the whole Moon, not the site.
+- `makeOrbitControls(globeView)` / `onOrbitChange()` / `follow()`: with `orbitGlobe` a drag turns
+  the Moon about its centre; pan is off.
+- `update()`: `slider.disabled = !polar || mode === '2d'`.
+- `patch.ts` `patchGeometry`: the detail patch round a non-polar site (±6°, 385 x 385 points)
+  lies flat on the sphere; heights only shade it. So there is nothing for a stretch to raise.
+- North of 80 N: `northGeometry` (terrain.ts) is built at stretch 1 and no patch is drawn.
+
+### Planned fix (not started)
+
+1. One orbit behaviour everywhere: drop `orbitGlobe` and the `globeView` parameter. Non-polar
+   `centre()`: controls with `up = siteUp(site)`, target = `target`, camera offset in the site's
+   own frame (`east*0.6 + up*0.9 - north*1.1`, times a span of about 150 km; `siteNorth` is in
+   coordinates.ts, east = north × up). Leave the polar branch as it is.
+2. `follow()` for a non-polar site: `up` changes a lot between sites and OrbitControls reads
+   `camera.up` only when created. Rotate the camera offset by
+   `Quaternion.setFromUnitVectors(orbitCamera.up, newUp)`, dispose and recreate the controls.
+3. Stretch: enable the slider whenever `dem` is loaded and mode is 3D.
+   - patch.ts: `patchGeometry` keeps flat positions by default (existing tests rely on it) but
+     stores in `userData` the flat positions and a per-vertex lift in km:
+     `(h - lowest h in the window) / 1000`, times the same smoothstep edge fade the normals use
+     (`FADE`), so the patch never dips under the globe and meets it at its edge. Add
+     `stretchPatch(geometry, stretch)` (position = flat * (1 + lift * stretch / R), bounding
+     volumes recomputed) and `patchLiftAt(geometry, win, index, lat, lon)` (bilinear, 0 outside
+     the window, longitude wrapped). Tests for both in patch.test.ts.
+   - index.ts: call `stretchPatch` when the patch is built and when the stretch changes; use
+     `patchLiftAt` for `target` and for pin heights (`addPin`), add the patch mesh to `pinKey`,
+     call `update(getState())` instead of `invalidate()` when a patch arrives and `follow()` when
+     the patch changed; count the patch's highest lift in the near-plane `relief`.
+   - North cap: give `northGeometry` a stretch argument, rebuild on stretch change (reset
+     `northKey` so it is recoloured), use `north.heightAt(-lat, lon)` for `target`.
+4. Help text: one 3D line ("drag to orbit · right-drag to pan"); remove "drag to turn the Moon".
+5. `browser-check.py` lines 316-370 assert the old behaviour (slider disabled outside the height
+   map at line 327, the "globe drag" check, the 'turn the Moon' text). Update them. Pull request
+   #76 (`t31-flat-map-c`) also edits this file, in other hunks: agree the merge order first.
+6. Records: `docs/ai-use/T12.md`, `docs/sources/T12.md`, the line under "After the merge" here,
+   then `npm test` and `npm run build`.
+
+Open point for the human: this replaces the "turn the whole Moon" drag from pull request #18.
+The whole Moon is still reachable by zooming out.
