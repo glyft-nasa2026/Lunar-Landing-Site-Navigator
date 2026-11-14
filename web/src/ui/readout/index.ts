@@ -5,7 +5,7 @@ import { flipFor, getState, neverLitFor, samplesFor, selected, subscribe } from 
 
 export function mount(el: HTMLElement): void {
   const title = document.createElement('h2');
-  title.textContent = 'Current conditions';
+  title.textContent = '#readout';
   const value = document.createElement('p');
   value.className = 'muted';
   el.replaceChildren(title, value);

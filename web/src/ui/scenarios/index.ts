@@ -7,7 +7,7 @@ const HOUR_MS = 3_600_000;
 
 export function mount(el: HTMLElement): void {
   const title = document.createElement('h2');
-  title.textContent = 'Scenarios';
+  title.textContent = '#scenarios';
   const value = document.createElement('p');
   value.className = 'muted';
 
