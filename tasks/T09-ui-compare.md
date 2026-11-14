@@ -1,6 +1,6 @@
 # T09: Compare table and strips
 
-Status: done (pull request #21)
+Status: done (second delivery, pull request #47; first delivery #21)
 
 | | |
 |---|---|
