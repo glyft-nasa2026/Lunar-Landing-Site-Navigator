@@ -141,10 +141,17 @@ describe('shadePolar', () => {
     const big: DemMeta = { ...META, size: 2534, pixel_m: 240, x_min_m: -304080, y_max_m: 304080 };
     const real = parseDem(big, new ArrayBuffer(2534 * 2534 * 2));
     shadePolar(real, sunFrom(0, 1)); // builds the cached ground once
-    const t0 = performance.now();
-    const s = shadePolar(real, sunFrom(77, 1));
-    expect(s.stride).toBe(2);
-    expect(performance.now() - t0).toBeLessThan(400);
+    // The fastest of three. Other work on the machine only ever adds time, and one reading
+    // failed this in a full `npm test` on a busy machine with the code unchanged (issue #67).
+    let fastest = Infinity;
+    let stride = 0;
+    for (const az of [77, 78, 79]) {
+      const t0 = performance.now();
+      stride = shadePolar(real, sunFrom(az, 1)).stride;
+      fastest = Math.min(fastest, performance.now() - t0);
+    }
+    expect(stride).toBe(2);
+    expect(fastest).toBeLessThan(400);
   });
 });
 
