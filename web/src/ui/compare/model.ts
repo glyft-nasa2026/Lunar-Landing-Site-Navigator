@@ -46,11 +46,11 @@ export function runs(
 
 /**
  * The columns holding the best value in a row. Empty when there is nothing to compare: fewer
- * than two columns, or every column the same.
+ * than two columns with a value, or every column the same.
  */
 export function best(values: (number | null)[], higherIsBetter: boolean): Set<number> {
   const real = values.filter((v): v is number => v !== null && !Number.isNaN(v));
-  if (values.length < 2 || real.length === 0) return new Set();
+  if (real.length < 2) return new Set();
   const top = higherIsBetter ? Math.max(...real) : Math.min(...real);
   if (real.length === values.length && real.every((v) => v === top)) return new Set();
   const out = new Set<number>();
@@ -79,4 +79,28 @@ export function hoursText(h: number): string {
 /** A percentage to one decimal: "73.4 %". */
 export function pctText(p: number): string {
   return `${p.toFixed(1)} %`;
+}
+
+/**
+ * The share of the Sun's disc in view, 0 to 1, as a whole percentage: "73 %". Rounded as the
+ * readout rounds it, so the two agree: a sliver is never "0 %" and a disc with a nick out of
+ * it is never "100 %".
+ */
+export function discPctText(frac: number): string {
+  const f = Math.min(1, Math.max(0, frac));
+  let p = Math.round(f * 100);
+  if (p === 0 && f > 0) p = 1;
+  if (p === 100 && f < 1) p = 99;
+  return `${p} %`;
+}
+
+/**
+ * How many days from the first sample an evenly stepped series covers: 720 hourly samples are
+ * 30 days. Fewer than the span asked for means the table ran out (its end, or a decade that
+ * failed to download).
+ */
+export function daysCovered(samples: Sample[]): number {
+  if (samples.length === 0) return 0;
+  const stepMs = samples.length > 1 ? samples[1].tMs - samples[0].tMs : HOUR_MS;
+  return (samples.length * stepMs) / DAY_MS;
 }

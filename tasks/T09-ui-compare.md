@@ -1,6 +1,6 @@
 # T09: Compare table and strips
 
-Status: done (resize fix for issue #49, pull request #64; second delivery #47; first delivery #21)
+Status: done (first delivery #21; Live column #47; resize fix for issue #49, #64; cut-short window and sliver fixes #74)
 
 | | |
 |---|---|
@@ -31,6 +31,15 @@ Spec features F6 and F7.
 - [ ] Unpinning removes the column and bars with no leftover gap.
 - [ ] Readable at 1280 px wide with three scenarios.
 - [ ] `npm test` and `npm run build` pass.
+
+## After the merge
+
+- 14 Nov 2026, pull request #47 (issue #45): a Live column comes first, before the pinned ones. Steps 1 and 2 above say "one column per pinned scenario"; `SPEC.md` F6 and F7 still say so too (issue #51, waiting on P1).
+- 14 Nov 2026, pull request #64 (issue #49): the strips are redrawn at the box's width on every draw and on every change of width.
+- 14 Nov 2026, pull request #74 (`t09-ui-compare-d`), from the audit of merged tickets:
+  - A scenario with fewer than 30 days of table after it shows a dash in the five 30-day rows, and its strip stops where the data stops. Before, the short window was ranked as if whole.
+  - One value beside a dash is not marked best.
+  - "Sun now" rounds the disc as the readout does: a sliver reads 1 %, not 0 %.
 
 ## Prompt to paste into Claude Code
 
