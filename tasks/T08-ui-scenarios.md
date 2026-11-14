@@ -1,6 +1,6 @@
 # T08: Scenario panel, readout, share link
 
-Status: done (pull requests #14, #20); follow-up on t08-ui-scenarios-c
+Status: done (pull requests #14, #20, #25)
 
 | | |
 |---|---|
