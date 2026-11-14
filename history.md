@@ -3,6 +3,30 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: the 2D map becomes a flat map (issue #39, T31)
+
+P1 approved issue #39. The "2D map" was the 3D scene through a second, orthographic camera.
+
+### SPEC.md, F10 and F16
+
+- F10 said "Two cameras: top-down (the "2D map") and orbit ("3D")". An orthographic camera over a
+  sphere is an orthographic azimuthal view: distorted toward the edge, no grid to read a
+  coordinate from, and it carried the shadow map and raycasting into the "flat" view. Now: two
+  views, a flat map (polar stereographic on the height map, equidistant cylindrical elsewhere,
+  with a latitude-longitude grid) and the orbit scene.
+- F16 said "The camera glides between top-down and orbit". With no 2D camera there is nothing to
+  glide. Now: the flat map and the 3D scene cross-fade, the 3D camera easing onto the site.
+
+### tasks/T29-transition.md
+
+- Was "Camera glide", moving one camera between the two views. Now a cross-fade, waiting for T31
+  as well, and sharing `web/src/map/index.ts`.
+
+### tasks/T12-scene.md
+
+- Step 2 ("One scene, two cameras") and step 6 (picking by raycast in both views) describe the
+  scene as T12 built it. Since T31 they hold for the 3D view only; the file is left as written.
+
 ## 14 Nov 2026: audit of the merged tickets
 
 P1 asked for every merged ticket to be checked: is the work correct, and does the paperwork
