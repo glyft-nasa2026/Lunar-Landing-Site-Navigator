@@ -36,25 +36,12 @@ body.intro-open {
   background: var(--text);
 }
 
-/* The mark: ring in --lit, orbit and tip in --accent, as in the design's logo. */
-.intro-logo .ring {
-  fill: none;
-  stroke: var(--lit);
-  stroke-width: 8;
-}
-
-.intro-logo .orbit {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 5;
-  stroke-linecap: round;
-}
-
-.intro-logo .tip {
-  fill: var(--accent);
-}
-
 /* Loading view */
+
+/* Laid out but unseen, so the main page can measure where the loading logo sits. */
+.intro-loading.intro-measure {
+  visibility: hidden;
+}
 
 .intro-loading {
   position: relative;
