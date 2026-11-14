@@ -1,6 +1,6 @@
 # T09: Compare table and strips
 
-Status: done (second delivery, pull request #47; first delivery #21)
+Status: done (resize fix for issue #49, pull request #64; second delivery #47; first delivery #21)
 
 | | |
 |---|---|
