@@ -1,6 +1,6 @@
 # T02: Angles for any site: geometry.ts
 
-Status: done, in review (pull request #26)
+Status: done (pull request #26; `destination` from a pole fixed in #40)
 
 | | |
 |---|---|
