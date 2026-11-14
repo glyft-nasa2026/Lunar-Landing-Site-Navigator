@@ -322,6 +322,13 @@ never change. `setLiveSite` and `setLiveTime` change the live scenario and selec
 edit made anywhere (map click, coordinate boxes, time box, timeline drag, nudge "Keep") lands
 on live, and the view follows.
 
+**First open (F19, T25).** When the page address names no scenario (no live one, none pinned)
+and the site list arrives, state builds an example: live at the crater rim, the rim pinned as
+A, the crater floor pinned as B, all at the current hour, live selected. The two sites are
+found by id (section 2: `shackleton-rim` and `shackleton-floor`, or `mock-rim` and `mock-floor`).
+An address that names any scenario opens exactly what it says. So a module may find two
+scenarios pinned before the user has touched anything.
+
 **Decades.** `eph` is null until the table has loaded, and null again while a decade that the
 live scenario (its time plus 60 days, and its timeline window) or a pinned scenario (its time
 plus 60 days or the range, whichever is longer) needs is still downloading. So a module that
