@@ -54,8 +54,11 @@ export function mount(el: HTMLElement): void {
   lonBox.inputMode = 'decimal';
   lonBox.autocomplete = 'off';
   const timeBox = make('input', 'field scn-num');
-  timeBox.type = 'datetime-local';
-  timeBox.step = '60';
+  // A text box, not datetime-local: the browser shows a date box in its own locale's order
+  // (often MM/DD/YYYY), and the page always writes dates YYYY-MM-DD.
+  timeBox.placeholder = 'YYYY-MM-DD HH:MM';
+  timeBox.autocomplete = 'off';
+  timeBox.spellcheck = false;
 
   const siteField = field('Site', siteBox, 'scn-site');
   const latField = field('Latitude (°, north +)', latBox, 'scn-lat');
@@ -103,34 +106,10 @@ export function mount(el: HTMLElement): void {
     apply(checkLat(latBox.value), latField.setError, (lat) => setLiveSite({ ...getState().live.site, lat })));
   lonBox.addEventListener('change', () =>
     apply(checkLon(lonBox.value), lonField.setError, (lon) => setLiveSite({ ...getState().live.site, lon })));
-  // The time box waits until the person has finished typing. Chromium fires 'change' after each
-  // part of a date box (month, day, year, hour, minute) once every part is filled, so applying
-  // on 'change' moved the live time through half-typed dates. While keys are being typed into
-  // the box, 'change' is held back and the value applies on Enter or when the box loses focus.
-  // A value set in one go (the calendar picker, a paste, a script) still applies at once.
-  const applyTime = (): void =>
-    apply(checkUtc(timeBox.value, getState().eph), timeField.setError, (tMs) => setLiveTime(tMs));
-  let typing = false;
-  const finishTyping = (): void => {
-    if (!typing) return;
-    typing = false;
-    applyTime();
-  };
-  timeBox.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      if (typing) e.preventDefault();
-      finishTyping();
-      return;
-    }
-    // Keys that change a part's value. Left, right and Tab only move between parts or out.
-    if (e.key.length === 1 || ['Backspace', 'Delete', 'ArrowUp', 'ArrowDown'].includes(e.key)) typing = true;
-  });
-  timeBox.addEventListener('blur', finishTyping);
-  // A click (on a part, or to open the picker) starts fresh: what was typed so far applies first.
-  timeBox.addEventListener('pointerdown', finishTyping);
-  timeBox.addEventListener('change', () => {
-    if (!typing) applyTime();
-  });
+  // A text box fires 'change' only on Enter or when it loses focus, so a half-typed time
+  // never moves the live scenario.
+  timeBox.addEventListener('change', () =>
+    apply(checkUtc(timeBox.value, getState().eph), timeField.setError, (tMs) => setLiveTime(tMs)));
   siteBox.addEventListener('change', () => {
     const c = getState().sites.find((s) => s.id === siteBox.value);
     if (!c) return;
@@ -168,10 +147,6 @@ export function mount(el: HTMLElement): void {
   // view with its message until the scenario moves some other way.
   const shown = { lat: '', lon: '', time: '' };
   let shownSites: CuratedSite[] | null = null;
-  // Chromium commits a date box part by part as it is typed, and drops focus from it when its
-  // min or max is written mid-typing. So the bounds are written only when the table's range
-  // changes, and a box isn't rewritten with the value it already shows.
-  let shownRange = '';
 
   const sync = (box: HTMLInputElement, key: keyof typeof shown, value: string, setError: (m: string) => void): void => {
     if (shown[key] === value) return;
@@ -241,14 +216,6 @@ export function mount(el: HTMLElement): void {
     sync(latBox, 'lat', String(live.site.lat), latField.setError);
     sync(lonBox, 'lon', String(live.site.lon), lonField.setError);
     sync(timeBox, 'time', toBoxValue(live.tMs), timeField.setError);
-    if (s.eph) {
-      const min = toBoxValue(s.eph.startMs), max = toBoxValue(s.eph.endMs - 60_000);
-      if (`${min}|${max}` !== shownRange) {
-        shownRange = `${min}|${max}`;
-        timeBox.min = min;
-        timeBox.max = max;
-      }
-    }
 
     list.replaceChildren(
       card(live, s.selectedId === LIVE_ID, s.sites),

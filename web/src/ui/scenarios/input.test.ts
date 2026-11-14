@@ -32,30 +32,34 @@ describe('checkLon', () => {
 });
 
 describe('checkUtc', () => {
-  it('reads the box value as UTC', () => {
+  it('reads YYYY-MM-DD HH:MM as UTC', () => {
+    expect(checkUtc('2027-01-01 06:30', table)).toEqual({ ok: true, value: Date.parse('2027-01-01T06:30:00Z') });
+    expect(checkUtc(' 2027-01-01 06:30:15 ', table)).toEqual({ ok: true, value: Date.parse('2027-01-01T06:30:15Z') });
     expect(checkUtc('2027-01-01T06:30', table)).toEqual({ ok: true, value: Date.parse('2027-01-01T06:30:00Z') });
-    expect(checkUtc('2027-01-01T06:30:15', table)).toEqual({ ok: true, value: Date.parse('2027-01-01T06:30:15Z') });
   });
-  it('rejects a half-typed or empty box', () => {
-    expect(checkUtc('', table)).toMatchObject({ ok: false, message: 'Enter a full UTC date and time' });
+  it('rejects a half-typed, empty or other-order box', () => {
+    expect(checkUtc('', table)).toMatchObject({ ok: false, message: 'Enter a UTC date and time as YYYY-MM-DD HH:MM' });
     expect(checkUtc('2027-01-01', table).ok).toBe(false);
-    expect(checkUtc('2027-13-01T00:00', table).ok).toBe(false);
+    expect(checkUtc('2027-13-01 00:00', table).ok).toBe(false);
+    expect(checkUtc('2027-02-30 00:00', table).ok).toBe(false);
+    expect(checkUtc('2027-01-01 24:00', table).ok).toBe(false);
+    expect(checkUtc('01/02/2027 06:30', table).ok).toBe(false);
   });
   it('rejects a time outside the table, including its last row', () => {
-    const before = checkUtc('2025-12-31T23:00', table);
+    const before = checkUtc('2025-12-31 23:00', table);
     expect(before).toMatchObject({ ok: false, message: 'The table covers 2026-01-01 00:00 to 2036-01-01 00:00 UTC' });
-    expect(checkUtc('2036-01-01T00:00', table).ok).toBe(false);
-    expect(checkUtc('2026-01-01T00:00', table).ok).toBe(true);
+    expect(checkUtc('2036-01-01 00:00', table).ok).toBe(false);
+    expect(checkUtc('2026-01-01 00:00', table).ok).toBe(true);
   });
   it('skips the range check while the table is loading', () => {
-    expect(checkUtc('2040-01-01T00:00', null).ok).toBe(true);
+    expect(checkUtc('2040-01-01 00:00', null).ok).toBe(true);
   });
 });
 
 describe('formatting', () => {
   const t = Date.parse('2027-03-04T05:06:07Z');
   it('round-trips through the box value to the minute', () => {
-    expect(toBoxValue(t)).toBe('2027-03-04T05:06');
+    expect(toBoxValue(t)).toBe('2027-03-04 05:06');
     expect(checkUtc(toBoxValue(t), table)).toEqual({ ok: true, value: Date.parse('2027-03-04T05:06:00Z') });
   });
   it('writes times and coordinates for reading', () => {
