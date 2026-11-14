@@ -1,6 +1,6 @@
 # T21: CI, deploy and repo settings
 
-Status: in progress (waiting for settings clicks and merge)
+Status: done
 
 | | |
 |---|---|
