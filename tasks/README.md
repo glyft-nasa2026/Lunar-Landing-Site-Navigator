@@ -8,10 +8,10 @@ first push) and on its `Status:` line, so this file never causes a merge conflic
 | | Name | Plan | Role |
 |---|---|---|---|
 | P1 | Yi Hung | Claude Max | Site skeleton, engine tests, 3D scene, the contract |
-| P2 | [name] | Claude Pro | Mock data, terrain, skyline, sky panorama |
-| P3 | [name] | Claude Pro | CI and deploy, interface: scenarios, compare, timeline, nudge |
-| P4 | [name] | Claude Pro | Sun and Earth table, Horizons check, site list, testing, pitch |
-| P5 | [name] | Claude Pro | UI designer, in Figma: design, theme, About, polish. UI only |
+| P2 | Leon | Claude Pro | Mock data, terrain, skyline, sky panorama |
+| P3 | Yu An | Deepseek | CI and deploy, interface: scenarios, compare, timeline, nudge |
+| P4 | Fabian | Claude Pro | Sun and Earth table, Horizons check, site list, testing, pitch |
+| P5 | Hao Zhe | Claude Pro | UI designer, in Figma: design, theme, About, polish. UI only |
 
 ## Who does what, in order
 
