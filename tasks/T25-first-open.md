@@ -1,6 +1,6 @@
 # T25: Example on first open
 
-Status: in progress (Yi Hung, branch `t25-first-open`, draft pull request #72)
+Status: done (pull request #72, with the example changed by issue #51)
 
 | | |
 |---|---|
