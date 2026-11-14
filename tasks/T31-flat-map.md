@@ -1,6 +1,6 @@
 # T31: A true flat 2D map
 
-Status: done (zoom and pan limits for issue #65, pull request #69, in review; first delivery #59); 19 of 19 browser checks pass on fixture and real data
+Status: done (first delivery #59; zoom and pan limits for issue #65, #69; the whole Moon's relief, #71; browser check past the main page, #76); 18 of 18 browser checks pass on fixture and real data
 
 | | |
 |---|---|
@@ -93,6 +93,22 @@ map is as before. The reading code is `web/src/scene/globeHeights.ts`, which has
 
 F16 (T29) used to be a camera glide between the two cameras. With a flat map there is no camera
 to glide; T29 becomes a cross-fade. P1 chose the flat map over the easy glide.
+
+## After the merge
+
+14 Nov 2026, audit of the merged tickets, in headless Chromium on the real data. **Measured on `main` before #71** (the whole Moon's relief), which changed `web/src/map/index.ts` and `core/shade.ts`; nothing below was looked at again after it.
+
+Checked and correct: "Done when" lines 1 to 6; no WebGL call in 2D; 49 clicks at 1280 and 390 px against a separate projection, the worst 0.38 px off (poles, both sides of 180°, the equator, the edges, after wheel, drag, pinch, resize and arrow keys); longitude always within -180 to 180; east right, north up; the zoom and pan limits of #69; 26 pins and both overhead markers at the predicted pixels; whole-Moon day and night 306 of 306 against `sunAltAz`; south of 85° S the shadow layer matches the readout's rule at 1011 of 1015 cells.
+
+Open, for whoever works on the map next. Not fixed here: `web/src/map/index.ts` was being changed by #71.
+
+- *costs time*: **between 80° S and 85° S the map draws terrain shadow where the readout says the Sun is up.** The map shades wherever the height map covers (to 80° S); the engine uses a flat skyline north of 85° S. 174 of 573 sampled cells were dark with the Sun up by the readout's rule, none the other way. Seen at -83.2103, 22.235: caption "Sun visible", readout "Disc visible 100 %", 38 of 40 cells round the pin dark. One limit for both, or no cast shadows in that band.
+- *cosmetic*: a click on the bare background beside the polar map picks a site (30 px left of the square, zoomed right out: live became -78.62, -89.98 and the view jumped to the whole Moon).
+- *cosmetic*: a pinned scenario that sits on a curated site can't be selected from the map: the curated pin is tested first and wins the tie.
+- *cosmetic*: without WebGL the map never shows the "outside the table" message, and the caption stays as it was.
+- *cosmetic*: five changes to `core/shade.ts` that break it pass its tests (all 26 to `projection.ts` are caught): `shadeGlobal` mirrored east to west, a Sun of radius 0, the disc's upper limb only, `rise` without the diagonal, `cosI` not normalised. A Sun at 90° E and a half-disc test would catch four of them.
+- *cosmetic*: at 1920 px the whole-Moon map shows 1.46 Moons with pins on one copy; at 390 px the labels "90°W" and "90°E" are cut by 6 to 8 px; map labels are faint on lit ground (see T19).
+- The status line said 19 browser checks. `browser-check.py` has 18.
 
 ## Prompt to paste into Claude Code
 

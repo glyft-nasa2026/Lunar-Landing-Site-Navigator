@@ -4,6 +4,27 @@ What a rule or fact in this repo's notes used to say, and why it changed. Newest
 files say what is true now; decisions are in `docs/decisions.md`. Anyone can record a change;
 coordinate overlapping edits.
 
+## 14 Nov 2026: audit of the tickets merged since the first audit
+
+P1 asked for the newly merged tickets to be checked the same way as the first eleven. The fixes
+are in their own pull requests: T07 #82, T13 #87, T31's browser check #76, T08 #55, T09 #74.
+This entry covers the task files that only needed their status and notes brought up to date.
+
+### tasks/: `Status:` lines
+
+| Task | Was | Why it changed |
+|---|---|---|
+| T19 | "in review (#23). … deployed-site screenshots after merge", every "Done when" box unticked | #23 merged. Five of six lines pass; line 2 (contrast on the built site) does not, and the line now says so |
+| T22 | "… T22-b in review: solar panel slot and battery proposal" | #62 merged |
+| T31 | "done (zoom and pan limits for issue #65, pull request #69, in review; first delivery #59); 19 of 19 browser checks pass" | #69, #71 and #76 merged. The check has 18 checks; 19 was a miscount |
+
+### tasks/T19-ui-design.md, tasks/T22-design.md, tasks/T31-flat-map.md: "After the merge"
+
+New sections (T22's gains a second entry) with what the audit checked and what it left open.
+Nothing in them was fixed: the T19 items change how the whole site looks and are the theme
+owner's and the team's to decide, and the T31 items are in a file another pull request (#71)
+was changing at the time.
+
 ## 14 Nov 2026: four south-pole sites moved onto the crests (T07, #82)
 
 The audit of the merged tickets ran every south-pole site through the engine. Four sat on
