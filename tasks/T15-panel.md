@@ -1,6 +1,6 @@
 # T15: Solar panel choice
 
-Status: done, pull request open
+Status: done, in review (pull request #36)
 
 | | |
 |---|---|
