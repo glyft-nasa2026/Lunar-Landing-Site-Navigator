@@ -85,6 +85,12 @@ The light layer is an illustration, like the 3D scene's shadows: the lit/dark an
 from `windows.ts` through the readout. It is computed on the height map's grid (or a stride of
 it), not by the skyline walk, so near a shadow's edge the two may differ by a cell.
 
+Since issue #66 (14 Nov 2026, branch `issue-66-moon-model`) the whole-Moon map is no longer grey
+outside the polar grid: it is coloured by height from `globe.bin` (contract section 2) and its
+relief is lit, with slopes drawn 6 times steeper as on the 3D globe. Day and night still come
+from `shadeGlobal`; daylight comes in over the first 5 degrees of Sun. Without `globe.bin` the
+map is as before. The reading code is `web/src/scene/globeHeights.ts`, which has no three.js.
+
 F16 (T29) used to be a camera glide between the two cameras. With a flat map there is no camera
 to glide; T29 becomes a cross-fade. P1 chose the flat map over the easy glide.
 

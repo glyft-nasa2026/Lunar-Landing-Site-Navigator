@@ -125,6 +125,74 @@ Inverse: `r = hypot(x, y)`, `lat = 2 * atan(r / (2R)) - 90`, `lon = atan2(x, y)`
 `size` and `pixel_m` may change if T04 needs it; code reads them from `dem.json`, never
 hard-codes them. File budget: 15 MB.
 
+### `globe.bin` + `globe.json`, `north.bin` + `north.json` (made by `data-prep/make_globe.py`, issue #66)
+
+Heights of the Moon north of the south-pole height map, for the picture on the 3D globe only.
+No number shown to the user comes from them, and nothing in `core/` loads them:
+`web/src/scene/globe.ts` fetches them by itself, beside the other files, and the globe is a
+plain sphere until they arrive or when they are missing (the mock data set has none). Both come
+from the same LOLA gridded data record as `dem.bin`.
+
+`globe.json`:
+
+```json
+{
+  "width": 2880,
+  "height": 1440,
+  "height_scale": 0.5,
+  "source": "LOLA product name and version here"
+}
+```
+
+Read by the 3D globe and by the whole-Moon 2D map (one download, `sharedGlobe()` in
+`web/src/scene/globeHeights.ts`); both only illustrate.
+
+`globe.bin`: little-endian int16, `width * height` values, row by row. Height in metres =
+`value * height_scale`, above the `R` sphere. A latitude-longitude grid laid out like
+`shadeGlobal`'s: cell (row `j`, column `i`) is centred on latitude `90 - (j + 0.5) * 180 / height`
+and longitude `-180 + (i + 0.5) * 360 / width`. So row 0 is at 90 N and column 0 starts at
+180 W. 0.125 degrees a cell (3.8 km at the equator); 8.29 MB. File budget: 9 MB.
+
+`north.json` has the fields of `dem.json`, with `min_lat` 80 (the southern limit of the data).
+`north.bin`: little-endian int16, `size * size` values, row by row from the top. The grid is the
+mirror image of `dem.bin`'s, about the north pole, because a latitude-longitude grid pinches
+together at a pole:
+
+```
+c   = 90 - lat                      degrees from the north pole
+r   = 2 * R * tan(c / 2)            metres
+x   = r * sin(lon)
+y   = r * cos(lon)                  longitude 0 points up, 90 E points right
+col = (x - x_min_m) / pixel_m
+row = (y_max_m - y) / pixel_m
+```
+
+`size` 509, `pixel_m` 1200; 0.52 MB. File budget: 1 MB.
+
+### `tiles.json` + `tiles/rRRcCC.bin` (made by `data-prep/make_globe.py`, issue #66)
+
+Level of detail for the 3D globe: finer whole-Moon heights, cut into tiles so the page fetches
+only the one to four under the selected site, when a site is picked in the 3D globe view. For
+the picture only, like `globe.bin`, and loaded by `web/src/scene/patch.ts`. From the same LOLA
+gridded data record as `dem.bin`.
+
+`tiles.json`:
+
+```json
+{
+  "cells_per_deg": 32,
+  "tile_deg": 15,
+  "height_scale": 0.5,
+  "source": "LOLA product name and version here"
+}
+```
+
+The whole grid is laid out like `globe.bin` at `cells_per_deg` cells a degree (about 950 m at the
+equator). Tile row `RR` counts from 90 N and tile column `CC` from 180 W, each `tile_deg`
+degrees: 12 rows of 24. A tile is little-endian int16, `(tile_deg * cells_per_deg)` squared
+values (480 x 480, 0.46 MB), row by row from its north edge. 288 tiles, 132.7 MB in all, of
+which a visit downloads only what it looks at. Budget: 140 MB in all.
+
 ### `sites.json` (made by T07)
 
 ```json
@@ -327,11 +395,14 @@ edit made anywhere (map click, coordinate boxes, time box, timeline drag, nudge 
 on live, and the view follows.
 
 **First open (F19, T25).** When the page address names no scenario (no live one, none pinned)
-and the site list arrives, state builds an example: live at the crater rim, the rim pinned as
-A, the crater floor pinned as B, all at the current hour, live selected. The two sites are
-found by id (section 2: `shackleton-rim` and `shackleton-floor`, or `mock-rim` and `mock-floor`).
-An address that names any scenario opens exactly what it says. So a module may find two
-scenarios pinned before the user has touched anything.
+and the site list arrives, state builds an example: live at the crater rim and the crater floor
+pinned as A, both at the current hour, live selected. Don't also pin the rim: compare shows a
+Live column, so the page would open on two identical columns. The two sites are found by id
+(section 2: `shackleton-rim` and `shackleton-floor`, or `mock-rim` and `mock-floor`). An address
+that names any scenario opens exactly what it says. An edit to live or a pin made before the
+list arrives cancels the example, so an early click is never overwritten. The example goes into
+the page address like any other change. So a module may find a scenario pinned before the user
+has touched anything.
 
 **Decades.** `eph` is null until the table has loaded, and null again while a decade that the
 live scenario (its time plus 60 days, and its timeline window) or a pinned scenario (its time

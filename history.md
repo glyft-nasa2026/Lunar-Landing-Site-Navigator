@@ -4,6 +4,35 @@ What a rule or fact in this repo's notes used to say, and why it changed. Newest
 files say what is true now; decisions are in `docs/decisions.md`. Anyone can record a change;
 coordinate overlapping edits.
 
+## 14 Nov 2026: compare has a Live column; first-open example is rim (live) against floor (A)
+
+#47 added a Live column to the compare table and strips. Yi Hung approved both follow-ups there
+("lgtm"); issue #51 listed them.
+
+### SPEC.md, F6, F7 and F19
+
+- **F6** said "One column per pinned scenario", tested by "Two pinned scenarios show two
+  columns". Now a Live column comes first, so two pinned scenarios show three columns.
+- **F7** said "Two bars per scenario"; it now says Live included.
+- **F19** said "the crater rim (live, and pinned as A) against the crater floor (pinned as B)",
+  tested by "The plain link shows two columns ... unpinning both and reloading leaves nothing
+  pinned". With a Live column that opened on two identical columns (Live and A, both at the
+  rim), and the best-value mark landed on both wherever they tied. Now the floor is pinned as
+  A and the rim is not pinned; the two columns are Live and A, and the test unpins A.
+
+### docs/data-contract.md, section 4: First open
+
+- Was "live at the crater rim, the rim pinned as A, the crater floor pinned as B, all at the
+  current hour", and "a module may find two scenarios pinned". Now the floor alone is pinned,
+  as A, with a "don't also pin the rim" guard. Two rules were added: an edit to live or a pin
+  before the site list arrives cancels the example (sites can arrive after a first click), and
+  the example goes into the page address.
+
+### tasks/T25-first-open.md
+
+- Step 3, "Done when" lines 1 and 5, and the Notes followed F19's old example ("A is the rim, B
+  is the floor", "Unpin both", "three scenarios"). They now follow the new one.
+
 ## 14 Nov 2026: anyone can take any task
 
 Yi Hung asked: "change the ownership thing, no need to arrange tasks to specific person anymore,

@@ -1,0 +1,22 @@
+/* The Darksight mark (logo.ts). Theme variables only. */
+
+.ds-logo {
+  flex: none;
+}
+
+.ds-logo .ring {
+  fill: none;
+  stroke: var(--lit);
+  stroke-width: 8;
+}
+
+.ds-logo .orbit {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.ds-logo .tip {
+  fill: var(--accent);
+}
