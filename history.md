@@ -3,6 +3,48 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: T13's first "Done when" line is checked on real terrain
+
+### tasks/T13-nudge.md
+
+- **Done when, line 1** was "On the mock grid, starting at the crater rim (-87.67, 45.0) and
+  nudging 1 km south, down the inside wall, reports a large loss of sunlight." It could not
+  pass. `make_mock.py` keeps the mock rim crest flat for 1.5 km either side of the rim
+  (`FLAT_M`, there so a read between cells sees the exact height), so 1 km south is still on
+  the crest and the nudge rightly says "No meaningful change"; the loss starts 2 km in (pull
+  request #35). Now the line starts at -89.45, -137.3 on the real height map, which `main` has
+  served since T04 merged, so T13 can check it before it merges. P1 saw "−14 days of sunlight
+  in 30 days" and "sunset 17 days earlier" there on pull request #35's preview. Not chosen:
+  two nudges on the mock (the site no longer serves the mock crater), or a narrower `FLAT_M`
+  (P2's file, and the mock files and their tests would have to be made again).
+
+## 14 Nov 2026: T15 taken by P1, `#panel` slot
+
+### docs/data-contract.md
+
+- **5. Page slots:** said "T00 wires all of them in `main.ts` with placeholders, so no later
+  task needs to touch `main.ts` or `index.html`." T15 needs a slot T00 didn't make. Now P1 adds
+  the slot for an "if time" task, and the module's own task still never touches those files.
+  The `#panel` row and the `panel.ts` row of section 3 are new.
+
+### tasks/README.md and tasks/T15-panel.md
+
+- T15's owner was "unassigned". Now P1 (Yi Hung), whose other tasks are merged.
+- T15's files were only `web/src/ui/panel/`, but its percentages are numbers the user sees,
+  which must come from `core/`. Now `core/panel.ts` and its test are T15's too.
+- Step 3 was "Needs a slot in `index.html`: agree with P1." P1 owns the task, so it now says
+  where the slot is. Step 2 adds the 30-day average, which shows the difference between the
+  panels even at an hour when the Sun is down.
+
+## 14 Nov 2026: `#panel` slot in T19's layout step
+
+### tasks/T19-ui-design.md
+
+- Step 3's phone order was "about, scene, scenarios, readout, nudge, compare, timeline, sky".
+  Now `panel` comes after `nudge`, and the step says where `#panel` (T15's Solar panel card,
+  pull request #36) goes on desktop. A new Done-when line checks it. T19's grid (pull request
+  #23) places every slot by name, so a slot it doesn't name would land in a stray cell.
+
 ## 14 Nov 2026: dates 1900-2100, one file per decade, DE440
 
 From pull request #31 (MarsRon). The team asked to pick any date over a much wider span. One

@@ -13,6 +13,7 @@ import { setData } from './state';
 import { mount as mountAbout } from './ui/about/index';
 import { mount as mountCompare } from './ui/compare/index';
 import { mount as mountNudge } from './ui/nudge/index';
+import { mount as mountPanel } from './ui/panel/index';
 import { mount as mountReadout } from './ui/readout/index';
 import { mount as mountScenarios } from './ui/scenarios/index';
 import { mount as mountSky } from './ui/sky/index';
@@ -24,6 +25,7 @@ const slots: [id: string, mount: (el: HTMLElement) => void][] = [
   ['scenarios', mountScenarios],
   ['readout', mountReadout],
   ['nudge', mountNudge],
+  ['panel', mountPanel],
   ['compare', mountCompare],
   ['timeline', mountTimeline],
   ['sky', mountSky],
@@ -35,7 +37,7 @@ for (const [id, mount] of slots) {
   try {
     mount(el);
   } catch (err) {
-    // One broken module must not blank the other seven.
+    // One broken module must not blank the others.
     console.error(`#${id} failed to mount`, err);
     el.textContent = `#${id} failed to start`;
   }
