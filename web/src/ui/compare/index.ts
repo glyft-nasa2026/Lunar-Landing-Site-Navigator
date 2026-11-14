@@ -176,11 +176,13 @@ function stripData(cols: Column[]): { data: Data[]; rows: string[] } {
   return { data, rows };
 }
 
-function stripLayout(rows: string[]): Partial<Layout> {
+/** `width` is the strips box's own width, measured just before drawing. */
+function stripLayout(rows: string[], width: number): Partial<Layout> {
   const base = plotLayout();
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
   return {
     ...base,
+    width,
     height: (rows.length * 2 + 5) * rem,
     barmode: 'overlay',
     bargap: 0.3,
@@ -214,6 +216,20 @@ export function mount(el: HTMLElement): void {
   let shown: Shown | null = null;
   let drawId = 0;
   let frame = 0;
+  // The strips last drawn, and the width they were drawn at, so a resize can draw them again.
+  let plotted: { data: Data[]; rows: string[] } | null = null;
+  let plottedWidth = 0;
+
+  // Plotly sizes a plot to its box only on the first draw: later draws without a width keep
+  // the old one, so the strips stuck at one width and spilled over the page (#49). Every draw
+  // therefore passes the box's width as measured now.
+  const plot = (id: number): void => {
+    void loadPlotly().then((P) => {
+      if (id !== drawId || !plotted || strips.hidden) return;
+      plottedWidth = Math.floor(strips.getBoundingClientRect().width);
+      void P.react(strips, plotted.data, stripLayout(plotted.rows, plottedWidth), { displayModeBar: false });
+    });
+  };
 
   const showParts = (on: boolean): void => {
     tableWrap.hidden = !on;
@@ -237,6 +253,7 @@ export function mount(el: HTMLElement): void {
       hint.hidden = true;
       showParts(false);
       tableWrap.replaceChildren();
+      plotted = null;
       void loadPlotly().then((P) => { if (id === drawId) P.purge(strips); });
       return;
     }
@@ -254,11 +271,8 @@ export function mount(el: HTMLElement): void {
     strips.setAttribute('aria-label',
       `Strips for ${cols.map((c) => c.sc.label).join(', ')}: when the Sun and Earth are up over the next 30 days`);
 
-    const { data, rows } = stripData(cols);
-    void loadPlotly().then((P) => {
-      if (id !== drawId) return;
-      void P.react(strips, data, stripLayout(rows), { displayModeBar: false, responsive: true });
-    });
+    plotted = stripData(cols);
+    plot(id);
   };
 
   // A timeline drag changes live many times a frame: draw at most once per animation frame.
@@ -267,5 +281,17 @@ export function mount(el: HTMLElement): void {
   };
 
   subscribe(render);
+  // Redraw the strips when the box's width changes, at most once per animation frame. Height
+  // changes are skipped: drawing the strips changes the box's height itself.
+  let resizeFrame = 0;
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => {
+      if (resizeFrame || !plotted) return;
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = 0;
+        if (Math.floor(strips.getBoundingClientRect().width) !== plottedWidth) plot(drawId);
+      });
+    }).observe(strips);
+  }
   render();
 }
