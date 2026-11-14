@@ -39,31 +39,40 @@ When a task says "crater floor" or "crater rim", it means these points on mock d
 
 ### `ephemeris.json` + `ephemeris/<decade>.bin` (made by T01)
 
-Hourly, 1950-01-01T00Z to 2051-01-01T00Z, split into one file per decade so the page downloads
+One row every 3 hours, 1900-01-01T00Z to 2101-01-01T00Z, split into one file per decade so the page downloads
 only what it needs: the 2020s (`home`) on load, any other decade the first time a scenario's
 time needs it. `ephemeris.json` is the index:
 
 ```json
 {
-  "start": "1950-01-01T00:00:00Z",
-  "step_s": 3600,
-  "rows": 885361,
+  "start": "1900-01-01T00:00:00Z",
+  "step_s": 10800,
+  "rows": 587313,
   "frame": "MOON_ME_DE440_ME421",
   "columns": ["sun_x", "sun_y", "sun_z", "earth_x_km", "earth_y_km", "earth_z_km"],
   "source": "JPL DE440 via Skyfield",
-  "home": 7,
+  "home": 12,
   "chunks": [
-    { "file": "ephemeris/1950.bin", "start": "1950-01-01T00:00:00Z", "rows": 87649 },
-    "... one per decade, 1950 to 2040 ...",
-    { "file": "ephemeris/2040.bin", "start": "2040-01-01T00:00:00Z", "rows": 96433 }
+    { "file": "ephemeris/1900.bin", "start": "1900-01-01T00:00:00Z", "rows": 29217, "hash": "4087c9f312215c1f" },
+    "... one per decade, 1900 to 2090 ...",
+    { "file": "ephemeris/2090.bin", "start": "2090-01-01T00:00:00Z", "rows": 32137, "hash": "cfcf9e643a152242" }
   ]
 }
 ```
 
 Each decade file runs from its decade's first hour to the next decade's first hour inclusive,
 so neighbouring files share one row and a time inside a decade needs that file alone. The
-2040s file runs to 2051-01-01T00Z. `rows` counts each shared row once. Row `i` of a file is at
-its `start` + `i` hours of Unix time (no leap seconds). About 2.1 MB per file.
+2090s file runs to 2101-01-01T00Z. `rows` counts each shared row once. Row `i` of a file is at
+its `start` + `i` * `step_s` of Unix time (no leap seconds). About 0.7 MB per file, 14.1 MB in
+all. `hash` is the first 16 hex digits of the file's SHA-256.
+
+The browser keeps each decade file it downloads in Cache Storage, under the file's URL plus
+`?v=<hash>`, and reads it from there on later visits; copies the index no longer lists are
+removed. `ephemeris.json` itself is always asked for again (`no-cache`), so a regenerated table
+is picked up on the next visit.
+
+A 3-hour step is accurate enough: with the browser's straight-line step and re-normalised Sun,
+the table agrees with Skyfield's own surface alt/az to 0.001 degrees (T02 allows 0.02).
 
 A table without `chunks` is one file, `ephemeris.bin`, holding all `rows` (T20's mock and the
 tests use this form).
@@ -228,7 +237,7 @@ file: it adds the real tests and fixes what they find. Names and signatures neve
 | Sun down, a rise found | `Sunrise in 3 d 4 h` |
 | Sun up, no set found | `No sunset in the next 60 days` |
 | Sun down, no rise found | `No sunrise in the next 60 days` |
-| Sun down, `neverLit` true | `Permanently shadowed (2020-2029)` |
+| Sun down, `neverLit` true | `Permanently shadowed (until 2100)` |
 | Earth up or down, a flip found | `Earthset in 3 d 4 h` or `Earthrise in 3 d 4 h` |
 | Earth up, no flip found | `Earth always visible` |
 | Earth down, no flip found | `Earth never visible` |
@@ -303,7 +312,7 @@ samplesFor(sc: Scenario, range: Range): Sample[]     // hourly from sc.tMs: stri
 timelineFor(sc: Scenario, range: Range): Sample[]    // hourly from the window start: timeline
 summaryFor(sc: Scenario): Summary                     // over 30 days from sc.tMs
 flipFor(sc: Scenario, body: Body): Flip               // next rise or set after sc.tMs
-neverLitFor(sc: Scenario): boolean                    // no sunlight there in the home decade, 2020-2029
+neverLitFor(sc: Scenario): boolean                    // no sunlight there from sc.tMs to the end of 2100
 ```
 
 **Selected and live.** `selectedId` is the live scenario's id or a pinned one's. The readout,
@@ -316,8 +325,16 @@ on live, and the view follows.
 live scenario (its time plus 60 days, and its timeline window) or a pinned scenario (its time
 plus 60 days or the range, whichever is longer) needs is still downloading. So a module that
 shows "Loading" while `eph` is null needs nothing more. `state.ts` fetches each decade once; one
-that fails to download reads as outside the table. `neverLitFor` looks only at the home decade,
-which is always loaded, so its answer doesn't change as more decades arrive.
+that fails to download reads as outside the table.
+
+**Never lit.** `neverLitFor` is true when no part of the Sun's disc clears the skyline at any
+hour from the scenario's time to the end of the table (2100-12-31), whatever time is chosen. It
+is false at once, with no download, when the Sun is up or rises within 60 days. Otherwise it
+needs every decade from the scenario's time to 2100: they download in the background without
+holding the page on "Loading", and it reads false ("No sunrise in the next 60 days") until they
+are in. It is also false within 60 days of the end of the table, where a few dark hours prove
+nothing. The scan runs back from 2100 and is remembered per site, so a later call for an
+earlier time only scans the new hours.
 
 **Timeline window.** `timelineFor` starts at the scenario's own time for a pinned scenario and
 at `windowStartMs` for live. `setLiveTime` leaves the window alone while the new time is inside
