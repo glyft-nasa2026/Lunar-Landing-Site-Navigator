@@ -41,6 +41,30 @@
   font-variant-numeric: tabular-nums;
 }
 
+.scn-time-row {
+  position: relative;
+  display: flex;
+  gap: var(--space-1);
+}
+
+.scn-time-row .field {
+  flex: 1;
+}
+
+/* The hidden datetime-local box behind the calendar button. It stays rendered, with no size,
+   at the button's corner, so showPicker() works and the picker opens next to the button. */
+.scn-picker {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .scn-error {
   font-size: var(--fs-sm);
   color: var(--bad);

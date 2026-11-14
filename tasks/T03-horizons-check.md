@@ -1,6 +1,6 @@
 # T03: Check our numbers against JPL Horizons
 
-Status: not started
+Status: in progress (data and test written; waiting on npm test, npm run build and the hand check in the Horizons web app)
 
 | | |
 |---|---|

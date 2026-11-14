@@ -1,6 +1,6 @@
 # T09: Compare table and strips
 
-Status: not started
+Status: done (pull request #21)
 
 | | |
 |---|---|
