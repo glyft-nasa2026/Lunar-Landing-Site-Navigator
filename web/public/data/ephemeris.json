@@ -1,8 +1,8 @@
 {
-  "start": "2026-01-01T00:00:00Z",
+  "start": "1950-01-01T00:00:00Z",
   "step_s": 3600,
-  "rows": 87649,
-  "frame": "MOON_ME_DE421",
+  "rows": 885361,
+  "frame": "MOON_ME_DE440_ME421",
   "columns": [
     "sun_x",
     "sun_y",
@@ -11,5 +11,58 @@
     "earth_y_km",
     "earth_z_km"
   ],
-  "source": "JPL DE421 via Skyfield"
+  "source": "JPL DE440 via Skyfield",
+  "home": 7,
+  "chunks": [
+    {
+      "file": "ephemeris/1950.bin",
+      "start": "1950-01-01T00:00:00Z",
+      "rows": 87649
+    },
+    {
+      "file": "ephemeris/1960.bin",
+      "start": "1960-01-01T00:00:00Z",
+      "rows": 87673
+    },
+    {
+      "file": "ephemeris/1970.bin",
+      "start": "1970-01-01T00:00:00Z",
+      "rows": 87649
+    },
+    {
+      "file": "ephemeris/1980.bin",
+      "start": "1980-01-01T00:00:00Z",
+      "rows": 87673
+    },
+    {
+      "file": "ephemeris/1990.bin",
+      "start": "1990-01-01T00:00:00Z",
+      "rows": 87649
+    },
+    {
+      "file": "ephemeris/2000.bin",
+      "start": "2000-01-01T00:00:00Z",
+      "rows": 87673
+    },
+    {
+      "file": "ephemeris/2010.bin",
+      "start": "2010-01-01T00:00:00Z",
+      "rows": 87649
+    },
+    {
+      "file": "ephemeris/2020.bin",
+      "start": "2020-01-01T00:00:00Z",
+      "rows": 87673
+    },
+    {
+      "file": "ephemeris/2030.bin",
+      "start": "2030-01-01T00:00:00Z",
+      "rows": 87649
+    },
+    {
+      "file": "ephemeris/2040.bin",
+      "start": "2040-01-01T00:00:00Z",
+      "rows": 96433
+    }
+  ]
 }

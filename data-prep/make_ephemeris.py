@@ -1,21 +1,27 @@
 """T01: hourly Sun and Earth table from Skyfield, plus altitude/azimuth fixtures.
 
 Run from anywhere:  python data-prep/make_ephemeris.py
-Needs skyfield and numpy (data-prep/requirements.txt). On first run Skyfield downloads its
-JPL/NAIF kernels (about 20 MB) into data-prep/raw/, which is git-ignored.
+Needs skyfield and numpy (data-prep/requirements.txt). On first run it downloads the JPL/NAIF
+kernels (about 50 MB) into data-prep/raw/, which is git-ignored.
 
 Writes (docs/data-contract.md, section 2):
-  web/public/data/ephemeris.bin + ephemeris.json
+  web/public/data/ephemeris.json            the index: whole span plus one entry per decade
+  web/public/data/ephemeris/<decade>.bin    1950.bin .. 2040.bin, hourly rows
   web/src/core/__fixtures__/altaz.json
 then reads them back and prints the "Done when" checks from tasks/T01-ephemeris.md.
 Exits with code 1 if any check fails.
 
-The Moon frame is built exactly as on the Skyfield page "Planetary Reference Frames"
-(https://rhodesmill.org/skyfield/planetary.html): moon_080317.tf + pck00008.tpc +
-moon_pa_de421_1900-2050.bpc, then pc.build_frame_named('MOON_ME_DE421').
+The table covers 1950-01-01T00Z to 2051-01-01T00Z. It is split by decade so the browser
+downloads only the decades it needs (2020s first). Each decade's file ends with the first hour
+of the next decade, so any time inside a decade is served by that one file alone.
 
-The whole decade is computed in one vectorised Skyfield call (a Time array of 87,649 hours);
-there is no Python loop over hours.
+The Moon frame is built as on the Skyfield page "Planetary Reference Frames"
+(https://rhodesmill.org/skyfield/planetary.html), with the DE440 kernels in place of DE421:
+moon_de440_250416.tf + pck00011.tpc + moon_pa_de440_200625.bpc, frame MOON_ME_DE440_ME421
+(the mean-Earth frame LOLA uses). DE421's Moon orientation file stops in 2050; DE440's runs
+1550-2650.
+
+Each decade is computed in one vectorised Skyfield call; there is no Python loop over hours.
 """
 
 from __future__ import annotations
@@ -23,6 +29,7 @@ from __future__ import annotations
 import json
 import math
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -33,13 +40,24 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 RAW = HERE / "raw"
 OUT = ROOT / "web" / "public" / "data"
+CHUNK_DIR = "ephemeris"
 FIX = ROOT / "web" / "src" / "core" / "__fixtures__"
 
-FRAME = "MOON_ME_DE421"
-START = (2026, 1, 1)
+NAIF = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/"
+KERNELS = {
+    "de440s.bsp": NAIF + "spk/planets/de440s.bsp",
+    "moon_de440_250416.tf": NAIF + "fk/satellites/moon_de440_250416.tf",
+    "pck00011.tpc": NAIF + "pck/pck00011.tpc",
+    "moon_pa_de440_200625.bpc": NAIF + "pck/moon_pa_de440_200625.bpc",
+}
+FRAME = "MOON_ME_DE440_ME421"
+SOURCE = "JPL DE440 via Skyfield"
+FIRST_YEAR, LAST_YEAR = 1950, 2050        # inclusive; the table ends 2051-01-01T00Z
+DECADES = list(range(FIRST_YEAR, LAST_YEAR, 10))  # 1950 .. 2040; the 2040s file runs to 2051
+HOME = 2020                               # the decade the page loads first
 STEP_S = 3600
-ROWS = 87649  # 2026-01-01T00Z .. 2036-01-01T00Z inclusive: 3652 days * 24 + 1
 R_KM = 1737.4
+COLUMNS = ["sun_x", "sun_y", "sun_z", "earth_x_km", "earth_y_km", "earth_z_km"]
 
 # Fixture sites: polar, mid-latitude (both hemispheres) and equatorial, near and far side.
 FIXTURE_SITES = [
@@ -49,40 +67,71 @@ FIXTURE_SITES = [
     (0.0, 0.0),       # equatorial, sub-Earth
     (1.0, 23.0),      # equatorial (the mock-equator site)
 ]
-FIXTURE_TIMES_PER_SITE = 5  # 25 cases
+FIXTURE_TIMES_PER_SITE = 6  # 30 cases, spread over the century
+
+
+def utc(year: int) -> datetime:
+    return datetime(year, 1, 1, tzinfo=timezone.utc)
+
+
+def iso(year: int) -> str:
+    return f"{year:04d}-01-01T00:00:00Z"
+
+
+def decade_end(start: int) -> int:
+    return LAST_YEAR + 1 if start == DECADES[-1] else start + 10
+
+
+def hours_between(a: int, b: int) -> int:
+    return int((utc(b) - utc(a)).total_seconds() // STEP_S)
+
+
+TOTAL_ROWS = hours_between(FIRST_YEAR, LAST_YEAR + 1) + 1
 
 
 def load_skyfield():
     RAW.mkdir(parents=True, exist_ok=True)
     load = Loader(str(RAW))
+    for name, url in KERNELS.items():
+        if not (RAW / name).exists():
+            load.download(url, filename=name)
     ts = load.timescale()
-    eph = load("de421.bsp")
+    eph = load("de440s.bsp")
     pc = PlanetaryConstants()
-    pc.read_text(load("moon_080317.tf"))
-    pc.read_text(load("pck00008.tpc"))
-    pc.read_binary(load("moon_pa_de421_1900-2050.bpc"))
-    frame = pc.build_frame_named(FRAME)
+    pc.read_text(load("moon_de440_250416.tf"))
+    pc.read_text(load("pck00011.tpc"))
+    pc.read_binary(load("moon_pa_de440_200625.bpc"))
+    # The .bpc holds two segments (1550-2426 and 2426-2650). Skyfield keeps only the last one
+    # per body, so hand it the segment that covers our span.
+    pa = pc._get_assignment("FRAME_MOON_PA_DE440")
+    t0, t1 = ts.utc(FIRST_YEAR - 1, 1, 1).tdb, ts.utc(LAST_YEAR + 2, 1, 1).tdb
+    segment = next(s for s in pc._segment_list
+                   if s.body == pa and s.initial_jd <= t0 and s.final_jd >= t1)
+    frame = pc.build_frame(pc._get_assignment(f"FRAME_{FRAME}"), _segment=segment)
     return ts, eph, pc, frame
 
 
-def make_table(ts, eph, frame) -> np.ndarray:
-    """(ROWS, 6) float64: Sun unit vector, Earth vector in km, Moon-fixed frame."""
-    hours = np.arange(ROWS, dtype=np.float64)
-    t = ts.utc(*START, hours)  # one Time object holding every hour
+def make_table(ts, eph, frame, start: int, end: int) -> np.ndarray:
+    """(rows, 6) float64 for start-01-01T00Z .. end-01-01T00Z inclusive, Moon-fixed frame."""
+    hours = np.arange(hours_between(start, end) + 1)
+    # Calendar day plus hour of day, not "hours since start": Skyfield counts an hour offset in
+    # elapsed seconds, which would slip each row off the UTC hour by every leap second (9 s by
+    # 1980). The browser reads row i as start + i * 3600 s of Unix time, which has no leap seconds.
+    t = ts.utc(start, 1, 1 + hours // 24, hours % 24)  # one Time object holding every hour
     moon = eph["moon"].at(t)
     # Apparent (light-time, aberration, deflection) positions from the Moon's centre.
-    sun = moon.observe(eph["sun"]).apparent().frame_xyz(frame).km      # (3, ROWS)
-    earth = moon.observe(eph["earth"]).apparent().frame_xyz(frame).km  # (3, ROWS)
+    sun = moon.observe(eph["sun"]).apparent().frame_xyz(frame).km      # (3, rows)
+    earth = moon.observe(eph["earth"]).apparent().frame_xyz(frame).km  # (3, rows)
     sun_unit = sun / np.linalg.norm(sun, axis=0)
     return np.vstack([sun_unit, earth]).T
 
 
 def fixture_times(ts):
-    """Spread over the ten years, deliberately off the hour so they land between table rows."""
+    """Spread over the century, deliberately off the hour so they land between table rows."""
     n = len(FIXTURE_SITES) * FIXTURE_TIMES_PER_SITE
-    span_h = (ROWS - 1) - 48
+    span_h = (TOTAL_ROWS - 1) - 48
     minutes = np.round((24 + np.linspace(0, span_h, n) + 0.37) * 60.0 + 13.0 * np.arange(n) % 60)
-    return ts.utc(*START, 0, minutes)
+    return ts.utc(FIRST_YEAR, 1, 1 + minutes // 1440, 0, minutes % 1440)
 
 
 def make_fixtures(ts, eph, pc, frame) -> list[dict]:
@@ -92,14 +141,14 @@ def make_fixtures(ts, eph, pc, frame) -> list[dict]:
     cases = []
     k = len(FIXTURE_SITES)
     for i, (lat, lon) in enumerate(FIXTURE_SITES):  # loop over 5 sites, each vectorised in time
-        t = t_all[i::k]  # interleaved, so every site's cases span the whole decade
+        t = t_all[i::k]  # interleaved, so every site's cases span the whole century
         place = moon + pc.build_latlon_degrees(frame, lat, lon, elevation_m=0.0)
         obs = place.at(t)
         s_alt, s_az, _ = obs.observe(sun).apparent().altaz()
         e_alt, e_az, _ = obs.observe(earth).apparent().altaz()
-        for j, iso in enumerate(t.utc_strftime("%Y-%m-%dT%H:%M:%SZ")):
+        for j, stamp in enumerate(t.utc_strftime("%Y-%m-%dT%H:%M:%SZ")):
             cases.append({
-                "lat": lat, "lon": lon, "t": iso,
+                "lat": lat, "lon": lon, "t": stamp,
                 "sun": {"alt": round(float(s_alt.degrees[j]), 6), "az": round(float(s_az.degrees[j]), 6)},
                 "earth": {"alt": round(float(e_alt.degrees[j]), 6), "az": round(float(e_az.degrees[j]), 6)},
             })
@@ -107,20 +156,29 @@ def make_fixtures(ts, eph, pc, frame) -> list[dict]:
     return cases
 
 
-def write(table: np.ndarray, cases: list[dict]) -> None:
-    OUT.mkdir(parents=True, exist_ok=True)
+def write_chunk(start: int, table: np.ndarray) -> dict:
+    (OUT / CHUNK_DIR).mkdir(parents=True, exist_ok=True)
+    table.astype("<f4").tofile(OUT / CHUNK_DIR / f"{start}.bin")
+    return {"file": f"{CHUNK_DIR}/{start}.bin", "start": iso(start), "rows": len(table)}
+
+
+def write_index(chunks: list[dict], cases: list[dict]) -> None:
     FIX.mkdir(parents=True, exist_ok=True)
-    table.astype("<f4").tofile(OUT / "ephemeris.bin")
     meta = {
-        "start": "2026-01-01T00:00:00Z",
+        "start": iso(FIRST_YEAR),
         "step_s": STEP_S,
-        "rows": ROWS,
+        "rows": TOTAL_ROWS,
         "frame": FRAME,
-        "columns": ["sun_x", "sun_y", "sun_z", "earth_x_km", "earth_y_km", "earth_z_km"],
-        "source": "JPL DE421 via Skyfield",
+        "columns": COLUMNS,
+        "source": SOURCE,
+        "home": DECADES.index(HOME),
+        "chunks": chunks,
     }
     (OUT / "ephemeris.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8", newline="\n")
     (FIX / "altaz.json").write_text(json.dumps(cases, indent=2) + "\n", encoding="utf-8", newline="\n")
+    old = OUT / "ephemeris.bin"  # the single-file table this split replaces
+    if old.exists():
+        old.unlink()
 
 
 # --- Checks ("Done when" in tasks/T01-ephemeris.md), on the files as written --------------------
@@ -149,11 +207,27 @@ def check() -> bool:
         print(f"[{'PASS' if ok else 'FAIL'}] {text}")
 
     meta = json.loads((OUT / "ephemeris.json").read_text(encoding="utf-8"))
-    raw = (OUT / "ephemeris.bin").read_bytes()
-    rows = meta["rows"]
-    report(len(raw) == rows * 24 and rows == ROWS,
-           f"ephemeris.bin is {len(raw)} bytes = rows {rows} * 24 = {rows * 24}")
-    a = np.frombuffer(raw, dtype="<f4").reshape(rows, 6).astype(np.float64)
+    chunks = meta["chunks"]
+    parts = []
+    joined = True
+    expect_start = meta["start"]
+    for c in chunks:
+        raw = (OUT / c["file"]).read_bytes()
+        ok = len(raw) == c["rows"] * 24 and c["start"] == expect_start
+        joined &= ok
+        if not ok:
+            print(f"       {c['file']}: {len(raw)} bytes, rows {c['rows']}, start {c['start']}")
+        parts.append(np.frombuffer(raw, dtype="<f4").reshape(c["rows"], 6).astype(np.float64))
+        expect_start = iso(decade_end(int(c["start"][:4])))
+    report(joined and len(chunks) == len(DECADES),
+           f"{len(chunks)} decade files, each rows * 24 bytes, each starting where the last ends")
+    # Neighbouring files share their boundary row: the last row of one is the first of the next.
+    seams = max(float(np.abs(a[-1] - b[0]).max()) for a, b in zip(parts, parts[1:]))
+    report(seams == 0.0, f"boundary rows match between decades (max difference {seams})")
+    a = np.vstack([parts[0]] + [p[1:] for p in parts[1:]])
+    report(len(a) == meta["rows"] == TOTAL_ROWS,
+           f"{len(a)} rows in all = index rows {meta['rows']} ({iso(FIRST_YEAR)} .. {iso(LAST_YEAR + 1)})")
+    report(chunks[meta["home"]]["start"] == iso(HOME), f"home decade starts {chunks[meta['home']]['start']}")
     sun, earth = a[:, :3], a[:, 3:]
 
     sun_len = np.linalg.norm(sun, axis=1)
@@ -186,7 +260,7 @@ def check() -> bool:
     # Extra (not in "Done when"): the table + contract geometry, interpolated the way the browser
     # does it, against Skyfield's own surface alt/az. Shows the two paths agree.
     worst = 0.0
-    t0 = np.datetime64("2026-01-01T00:00:00")
+    t0 = np.datetime64(iso(FIRST_YEAR)[:-1])
     for c in cases:
         h = (np.datetime64(c["t"][:-1]) - t0) / np.timedelta64(1, "s") / STEP_S
         i, f = int(h), h - int(h)
@@ -205,11 +279,14 @@ def check() -> bool:
 
 def main() -> int:
     ts, eph, pc, frame = load_skyfield()
-    table = make_table(ts, eph, frame)
+    chunks = []
+    for start in DECADES:
+        table = make_table(ts, eph, frame, start, decade_end(start))
+        chunks.append(write_chunk(start, table))
+        print(f"wrote {OUT / chunks[-1]['file']} ({len(table)} rows)")
     cases = make_fixtures(ts, eph, pc, frame)
-    write(table, cases)
-    print(f"wrote {OUT / 'ephemeris.bin'} ({ROWS} rows), {OUT / 'ephemeris.json'}, "
-          f"{FIX / 'altaz.json'} ({len(cases)} cases)")
+    write_index(chunks, cases)
+    print(f"wrote {OUT / 'ephemeris.json'}, {FIX / 'altaz.json'} ({len(cases)} cases)")
     return 0 if check() else 1
 
 
