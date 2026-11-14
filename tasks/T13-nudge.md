@@ -1,6 +1,6 @@
 # T13: Nudge: small move, big change
 
-Status: done, in review (pull request #35)
+Status: done
 
 | | |
 |---|---|
