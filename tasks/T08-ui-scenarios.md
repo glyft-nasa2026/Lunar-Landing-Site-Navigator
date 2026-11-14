@@ -1,6 +1,6 @@
 # T08: Scenario panel, readout, share link
 
-Status: done (pull request #14)
+Status: done (pull requests #14, #20, #25)
 
 | | |
 |---|---|
