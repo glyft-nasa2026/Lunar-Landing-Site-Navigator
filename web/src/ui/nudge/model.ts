@@ -159,8 +159,19 @@ function flipLine(upL: boolean, upG: boolean, fL: Flip, fG: Flip, w: Words): Lin
   return { text: w.rise[dh < 0 ? 0 : 1].replace('{t}', amountText(dh)), tone: dh < 0 ? 'ok' : 'bad' };
 }
 
-/** The difference in plain words, the most important first. */
-export function compare(live: Facts, ghost: Facts): Line[] {
+/** Shown in place of the comparison when one point has terrain and the other doesn't. */
+export const ACROSS_EDGE =
+  'This step crosses 85° S, where the terrain model stops: one point has real terrain, the other a '
+  + 'smooth Moon. The difference between them is the model changing, not the ground.';
+
+/**
+ * The difference in plain words, the most important first. heightMapLoaded is false while the
+ * height map is missing, when every point is a smooth Moon whatever its latitude.
+ */
+export function compare(live: Facts, ghost: Facts, heightMapLoaded = true): Line[] {
+  // Across the edge of the terrain model the two skylines aren't the same kind of thing: a
+  // step of 1 km north from 85.01 S read as "+11.5 days of sunlight". No gain or loss is claimed.
+  if (live.terrain !== ghost.terrain) return [{ text: ACROSS_EDGE, tone: 'muted' }];
   const lines: Line[] = [];
   const add = (l: Line | null): void => {
     if (l) lines.push(l);
@@ -172,9 +183,11 @@ export function compare(live: Facts, ghost: Facts): Line[] {
   if (lines.length === 0) {
     lines.push({ text: `No meaningful change (under ${MEANINGFUL_H} h)`, tone: 'muted' });
   }
-  if (!live.terrain || !ghost.terrain) {
+  if (!live.terrain) {
     lines.push({
-      text: 'Terrain isn\'t modelled north of 85° S, so the ground here is a smooth Moon.',
+      text: heightMapLoaded
+        ? 'Terrain isn\'t modelled north of 85° S, so the ground here is a smooth Moon.'
+        : 'The height map isn\'t loaded, so the ground here is a smooth Moon.',
       tone: 'muted',
     });
   }
