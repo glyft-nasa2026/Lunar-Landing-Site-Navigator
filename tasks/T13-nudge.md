@@ -1,6 +1,6 @@
 # T13: Nudge: small move, big change
 
-Status: in progress, pull request open ("Done when" line 1 needs P1, see docs/ai-use/T13.md)
+Status: done, in review (pull request #35)
 
 | | |
 |---|---|
