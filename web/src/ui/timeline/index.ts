@@ -11,7 +11,7 @@ import {
 } from '../../state';
 import type { Sample } from '../../core/types';
 import { plotLayout, themeColor } from '../plotTheme';
-import { throttle, timeAtPx, timelineModel, type TimelineModel } from './model';
+import { emptyNote, plotTime, throttle, timeAtPx, timelineModel, type TimelineModel } from './model';
 
 const RANGES: { r: Range; text: string }[] = [
   { r: '30d', text: '30 d' },
@@ -39,18 +39,20 @@ function legendItem(colorVar: string, text: string, cls: string): HTMLSpanElemen
   return span;
 }
 
+// Every time handed to Plotly goes through plotTime: a zone-less UTC string, which Plotly shows
+// as written. A number would be shown in the browser's local time under a label that says UTC.
 function traces(m: TimelineModel): Data[] {
   return [
     {
       name: 'Earth',
-      x: m.earth.x, y: m.earth.y,
+      x: m.earth.x.map(plotTime), y: m.earth.y,
       type: 'scatter', mode: 'lines',
       line: { color: themeColor('--earth'), width: 2 },
       hovertemplate: 'Earth %{y:.2f}°<extra></extra>',
     },
     {
       name: 'Sun',
-      x: m.sun.x, y: m.sun.y,
+      x: m.sun.x.map(plotTime), y: m.sun.y,
       type: 'scatter', mode: 'lines',
       line: { color: themeColor('--sun'), width: 2 },
       hovertemplate: 'Top of the Sun %{y:.2f}°<extra></extra>',
@@ -62,6 +64,7 @@ function layout(m: TimelineModel, startMs: number, endMs: number, markerMs: numb
   const base = plotLayout();
   const accent = themeColor('--accent');
   const r = m.yMax;
+  const marker = plotTime(markerMs);
   const shapes: Partial<Shape>[] = [
     // Below the skyline: hidden.
     {
@@ -74,12 +77,12 @@ function layout(m: TimelineModel, startMs: number, endMs: number, markerMs: numb
       line: { color: themeColor('--muted'), width: 1, dash: 'dash' },
     },
     {
-      type: 'line', xref: 'x', yref: 'paper', x0: markerMs, x1: markerMs, y0: 0, y1: 1,
+      type: 'line', xref: 'x', yref: 'paper', x0: marker, x1: marker, y0: 0, y1: 1,
       line: { color: accent, width: 2 },
     },
     {
       type: 'circle', xref: 'x', yref: 'paper', xsizemode: 'pixel', ysizemode: 'pixel',
-      xanchor: markerMs, yanchor: 1, x0: -5, x1: 5, y0: -5, y1: 5,
+      xanchor: marker, yanchor: 1, x0: -5, x1: 5, y0: -5, y1: 5,
       fillcolor: accent, line: { width: 0 },
     },
   ];
@@ -88,7 +91,7 @@ function layout(m: TimelineModel, startMs: number, endMs: number, markerMs: numb
     xaxis: {
       ...base.xaxis,
       type: 'date',
-      range: [startMs, endMs],
+      range: [plotTime(startMs), plotTime(endMs)],
       fixedrange: true,
       showgrid: false,
       zeroline: false,
@@ -179,9 +182,9 @@ export function mount(el: HTMLElement): void {
     if (!st.eph) return clear('Loading');
     const samples: Sample[] = timelineFor(sc, st.range);
     if (samples.length < 2) {
+      // Too few hours for a chart, and not a wait: say why (model.ts, emptyNote).
       const from = isLive ? st.windowStartMs : sc.tMs;
-      const outside = from < st.eph.startMs || from >= st.eph.endMs;
-      return clear(outside ? 'This window is outside the Sun and Earth table (1900 to 2100).' : 'Loading');
+      return clear(emptyNote(samples.length, from, st.eph.startMs, st.eph.endMs));
     }
 
     const startMs = samples[0].tMs;
@@ -220,6 +223,13 @@ export function mount(el: HTMLElement): void {
     if (e.button !== 0) return;
     const t = timeAt(e);
     if (t === null) return;
+    if (selected().id !== LIVE_ID) {
+      // A pinned scenario's chart. Setting the live time selects live, and the chart swaps to
+      // the live window, so a pointer move after this press would be read in a window the press
+      // was not made in. One press sets the time once and is never the start of a drag.
+      setLiveTime(t);
+      return;
+    }
     dragging = e.pointerId;
     chart.setPointerCapture(e.pointerId);
     scrub.push(t);

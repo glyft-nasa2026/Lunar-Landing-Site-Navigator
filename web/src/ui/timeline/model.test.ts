@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Flip, Sample } from '../../core/types';
 import { SUN_RADIUS } from '../../core/windows';
-import { lineOf, sunTop, throttle, timeAtPx, timelineModel, Y_MIN_SPAN, yMaxOf } from './model';
+import {
+  emptyNote, lineOf, plotTime, sunTop, throttle, timeAtPx, timelineModel, Y_MIN_SPAN, yMaxOf,
+} from './model';
 
 const H = 3_600_000;
 
@@ -110,5 +112,66 @@ describe('throttle', () => {
     expect(got).toEqual([3, 4]);
     frames.shift()!(); // the frame scheduled for 4 finds nothing left to do
     expect(got).toEqual([3, 4]);
+  });
+});
+
+describe('plotTime', () => {
+  const T = Date.UTC(2026, 10, 14, 10, 0, 0);   // 2026-11-14 10:00 UTC
+
+  it('writes the UTC time with no zone, so Plotly shows it as written', () => {
+    expect(plotTime(T)).toBe('2026-11-14 10:00:00.000');
+    expect(plotTime(T + 90_500)).toBe('2026-11-14 10:01:30.500');
+    expect(plotTime(Date.UTC(1900, 0, 1))).toBe('1900-01-01 00:00:00.000');
+    expect(plotTime(Date.UTC(2100, 11, 31, 23))).toBe('2100-12-31 23:00:00.000');
+  });
+
+  it('gives the same string whatever time zone the machine is in', () => {
+    const before = process.env.TZ;
+    try {
+      for (const tz of ['Asia/Kuala_Lumpur', 'America/Los_Angeles', 'UTC']) {
+        process.env.TZ = tz;
+        // The zone change is real: local hours differ, the string does not.
+        expect(new Date(T).getHours()).toBe(tz === 'Asia/Kuala_Lumpur' ? 18 : tz === 'UTC' ? 10 : 2);
+        expect(plotTime(T)).toBe('2026-11-14 10:00:00.000');
+      }
+    } finally {
+      if (before === undefined) delete process.env.TZ; else process.env.TZ = before;
+    }
+  });
+
+  it('keeps a crossing between two whole milliseconds in order with its neighbours', () => {
+    expect(plotTime(T + 0.75) >= plotTime(T)).toBe(true);
+    expect(plotTime(T + 0.75) <= plotTime(T + 1)).toBe(true);
+  });
+
+  it('gives no value, without throwing, for a time that is not a date', () => {
+    expect(plotTime(Number.NaN)).toBe('');
+    expect(plotTime(Number.POSITIVE_INFINITY)).toBe('');
+  });
+});
+
+describe('emptyNote', () => {
+  const START = Date.UTC(1900, 0, 1);
+  const END = Date.UTC(2101, 0, 1);
+
+  it('says the window is outside 1900 to 2100 when it starts before or at the end of the table', () => {
+    for (const from of [START - H, END, END + 24 * H, Number.NaN]) {
+      expect(emptyNote(0, from, START, END)).toBe('This window is outside the Sun and Earth table (1900 to 2100).');
+    }
+  });
+
+  it('inside the table with no samples (a decade that did not download): outside the table, no years', () => {
+    expect(emptyNote(0, Date.UTC(2055, 5, 1), START, END)).toBe('This window is outside the Sun and Earth table.');
+  });
+
+  it('one sample: the table ends before a second one', () => {
+    expect(emptyNote(1, END - H, START, END)).toMatch(/ends less than two hours from here/);
+    expect(emptyNote(1, END - H / 2, START, END)).toMatch(/ends less than two hours from here/);
+  });
+
+  it('never says "Loading": none of these is a wait', () => {
+    for (const [n, from] of [[0, START - H], [0, START + H], [1, END - H], [0, END]] as const) {
+      expect(emptyNote(n, from, START, END)).not.toMatch(/Loading/);
+    }
   });
 });
