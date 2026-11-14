@@ -1,6 +1,6 @@
 # T12: 3D scene and map
 
-Status: implemented, in review (pull request #7); laptop FPS verification pending
+Status: implemented, in review (pull request #7); merged T20 integration verified; laptop FPS verification pending
 
 | | |
 |---|---|

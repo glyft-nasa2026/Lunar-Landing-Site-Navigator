@@ -1,6 +1,7 @@
 """T12 integration checks. Uses existing Python Playwright; installs nothing.
 Run against Vite: python3 src/scene/browser-check.py http://127.0.0.1:5173
 Only browser requests are supplied synthetic data; shared public/data files are untouched.
+Add --t20 to also check the app's unmodified, merged T20 mock files before the fixtures.
 """
 import array
 import json
@@ -64,6 +65,63 @@ with sync_playwright() as p:
     graphics_warnings = []
     page.on('pageerror', lambda e: errors.append(str(e)))
     page.on('console', lambda m: graphics_warnings.append(m.text) if m.type in ('error', 'warning') and m.text.startswith('THREE.') else None)
+
+    if '--t20' in sys.argv:
+        page.goto(BASE + '/#live=-88.4,45,2026-01-01T00:00:00Z')
+        page.wait_for_function("async () => { const s=(await import('/src/state.ts')).getState(); return s.eph && s.dem && s.sites.length; }")
+        actual = page.evaluate("""async () => {
+          const s=(await import('/src/state.ts')).getState();
+          return {dem:s.dem.meta, eph:s.eph.meta, sites:s.sites.map(site=>site.id)};
+        }""")
+        assert actual['dem']['source'] == actual['eph']['source'] == 'mock', actual
+        assert {'mock-floor', 'mock-rim', 'mock-equator'} <= set(actual['sites']), actual
+        assert actual['dem']['size'] == 634 and actual['eph']['rows'] == 87649, actual
+        page.wait_for_timeout(500)
+        actual_canvas = page.locator('.scene-canvas')
+        box = actual_canvas.bounding_box()
+        def map_xz(lat, lon):
+            return (1737.4 * math.cos(math.radians(lat)) * math.sin(math.radians(lon)), -1737.4 * math.cos(math.radians(lat)) * math.cos(math.radians(lon)))
+        cx, cz = map_xz(-88, 45)
+        sx, sz = map_xz(-88.4, 45)
+        span = min(80, max(8, actual['dem']['size'] * actual['dem']['pixel_m'] / 8000))
+        page.mouse.click(box['x'] + box['width']/2 + (cx-sx) * box['height']/(2*span), box['y'] + box['height']/2 + (cz-sz) * box['height']/(2*span))
+        actual_site = page.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
+        ax, ay = projected(actual_site['lat'], actual_site['lon'])
+        bx, by = projected(-88, 45)
+        actual_error = math.hypot(ax-bx, ay-by) / actual['dem']['pixel_m']
+        assert actual_error < 1, (actual_site, actual_error)
+        # Choose hidden/visible times from core results for the actual 29.53-day mock Sun.
+        times = page.evaluate("""async () => {
+          const state=await import('/src/state.ts');
+          const samples=state.samplesFor(state.selected(), '30d');
+          const dark=samples.reduce((a,b)=>a.sun.alt < b.sun.alt ? a : b);
+          const lit=samples.reduce((a,b)=>a.sun.alt > b.sun.alt ? a : b);
+          return {dark:dark.tMs, lit:lit.tMs, darkFrac:dark.sunFrac, litFrac:lit.sunFrac};
+        }""")
+        assert times['darkFrac'] == 0 and times['litFrac'] > 0, times
+        from PIL import Image
+        rendered = []
+        for label in ('dark', 'lit'):
+            page.evaluate("async t => (await import('/src/state.ts')).setLiveTime(t)", times[label])
+            page.wait_for_timeout(300)
+            assert ('Sun hidden' if label == 'dark' else 'Sun visible') in page.locator('.scene-caption').inner_text()
+            path = f'/tmp/t12-t20-{label}.png'
+            actual_canvas.screenshot(path=path)
+            rendered.append(Image.open(path).convert('RGB'))
+        w, h = rendered[0].size
+        floor = [rendered[0].getpixel((w//2+x, h//2+y)) for x in range(-10, 11) for y in range(-10, 11) if 6**2 <= x*x+y*y <= 10**2]
+        actual_luma = sum(sum(v)/3 for v in floor) / len(floor)
+        assert actual_luma < 55, actual_luma
+        actual_changed = sum(a != b for a, b in zip(rendered[0].tobytes(), rendered[1].tobytes()))
+        assert actual_changed > 1000, actual_changed
+        page.get_by_role('button', name='3D orbit', exact=True).click()
+        page.wait_for_timeout(250)
+        page.get_by_role('button', name='2D map', exact=True).click()
+        assert page.evaluate("async () => (await import('/src/state.ts')).getState().live.site") == actual_site
+        assert not errors and not graphics_warnings, (errors, graphics_warnings)
+        passed('merged T20 files', {'grid_size': actual['dem']['size'], 'ephemeris_rows': actual['eph']['rows'], 'sites': actual['sites'], 'site': actual_site, 'error_cells': actual_error, 'hidden_floor_mean_rgb': round(actual_luma, 2), 'changed_color_channels': actual_changed, 'camera_switch': 'site preserved'})
+        # A hash-only navigation would retain the actual data and pins instead of loading fixtures.
+        page.goto('about:blank')
 
     def route_data(route):
         name = route.request.url.rsplit('/', 1)[-1]
