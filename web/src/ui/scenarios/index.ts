@@ -1,6 +1,7 @@
 // Scenario panel (T08): F1 curated list and typed coordinates, F2 time box, F5 pinned
 // scenarios, F17 share link. Every edit lands on the live scenario through state.ts actions;
 // the cards and boxes redraw from state, so a reload or a pasted link shows the same panel.
+// The cards are updated in place, never rebuilt, so a click that follows an edit is not lost.
 import './scenarios.css';
 import type { CuratedSite, Site } from '../../core/types';
 import {
@@ -150,12 +151,33 @@ export function mount(el: HTMLElement): void {
   siteBox.addEventListener('change', () => {
     const c = getState().sites.find((s) => s.id === siteBox.value);
     if (!c) return;
-    latField.setError('');
-    lonField.setError('');
+    // Both boxes are written again from the chosen site, with their messages cleared, even
+    // where one coordinate is the same as before: a rejected value must not stay in its box.
+    shown.lat = '';
+    shown.lon = '';
     setLiveSite({ ...getState().live.site, lat: c.lat, lon: c.lon });
   });
 
   pinButton.addEventListener('click', () => pin());
+
+  // A box applies its value on the mouse press that takes the focus away. If that makes a
+  // message line appear or go, everything below it moves, the release lands beside the button
+  // that was pressed, and the browser sends no click. When the pointer is still where that
+  // button was at the press, the click is passed on to it.
+  let pressed: { button: HTMLButtonElement; box: DOMRect } | null = null;
+  el.addEventListener('mousedown', (e) => {
+    const button = e.button === 0 && e.target instanceof Element ? e.target.closest('button') : null;
+    pressed = button ? { button, box: button.getBoundingClientRect() } : null;
+  }, true);
+  document.addEventListener('mouseup', (e) => {
+    const p = pressed;
+    pressed = null;
+    if (!p || !p.button.isConnected) return;
+    if (e.target instanceof Node && p.button.contains(e.target)) return; // the browser clicks it
+    const inBox = e.clientX >= p.box.left && e.clientX <= p.box.right
+      && e.clientY >= p.box.top && e.clientY <= p.box.bottom;
+    if (inBox) p.button.click();
+  }, true);
 
   shareButton.addEventListener('click', () => {
     // Built here rather than read from the address bar, which is written a moment after a change.
@@ -193,7 +215,9 @@ export function mount(el: HTMLElement): void {
   };
 
   const drawSiteOptions = (sites: CuratedSite[]): void => {
-    const custom = make('option', '', sites.length ? 'Typed coordinates' : 'Loading sites');
+    // Shown when the live site is not one from the list. The list may be on its way or may
+    // have failed to load (the status line says which), so this doesn't say "Loading".
+    const custom = make('option', '', 'Typed coordinates');
     custom.value = '';
     custom.disabled = true;
     const groups = new Map<string, CuratedSite[]>();
@@ -212,32 +236,72 @@ export function mount(el: HTMLElement): void {
     siteBox.replaceChildren(...parts);
   };
 
-  const card = (sc: Scenario, isSelected: boolean, sites: CuratedSite[]): HTMLLIElement => {
-    const li = make('li', 'scn-card');
-    if (isSelected) li.classList.add('scn-selected');
-    li.style.setProperty('--scn-color', `var(${sc.color})`);
+  // One card per scenario id, made once and then updated in place. A box applies its value on
+  // 'change', which fires on the mouse press that takes the focus away; if that redraw replaced
+  // the cards, the press and the release would land on different buttons and the click on a
+  // card or its × would be lost.
+  type Card = {
+    li: HTMLLIElement; body: HTMLButtonElement; label: HTMLSpanElement; where: HTMLSpanElement;
+    when: HTMLSpanElement; remove: HTMLButtonElement | null;
+  };
+  const cards = new Map<string, Card>();
 
+  const makeCard = (id: string): Card => {
+    const li = make('li', 'scn-card');
     const body = make('button', 'scn-pick');
     body.type = 'button';
-    body.setAttribute('aria-pressed', String(isSelected));
     const dot = make('span', 'scn-dot');
     dot.setAttribute('aria-hidden', 'true');
-    const label = make('span', 'scn-name', sc.id === LIVE_ID ? 'Live' : sc.label);
-    const where = make('span', 'scn-where', siteAt(sites, sc.site)?.name ?? coordText(sc.site.lat, sc.site.lon));
-    const when = make('span', 'scn-when muted', `${utcText(sc.tMs)} UTC`);
+    const label = make('span', 'scn-name');
+    const where = make('span', 'scn-where');
+    const when = make('span', 'scn-when muted');
     body.append(dot, label, where, when);
-    body.addEventListener('click', () => select(sc.id));
+    body.addEventListener('click', () => select(id));
     li.append(body);
 
-    if (sc.id !== LIVE_ID) {
-      const remove = make('button', 'btn scn-remove', '×');
+    let remove: HTMLButtonElement | null = null;
+    if (id !== LIVE_ID) {
+      remove = make('button', 'btn scn-remove', '×');
       remove.type = 'button';
-      remove.title = `Remove ${sc.label}`;
-      remove.setAttribute('aria-label', `Remove scenario ${sc.label}`);
-      remove.addEventListener('click', () => unpin(sc.id));
+      remove.addEventListener('click', () => unpin(id));
       li.append(remove);
     }
-    return li;
+    return { li, body, label, where, when, remove };
+  };
+
+  const setText = (node: HTMLElement, text: string): void => {
+    if (node.textContent !== text) node.textContent = text;
+  };
+
+  const drawCard = (c: Card, sc: Scenario, isSelected: boolean, sites: CuratedSite[]): void => {
+    c.li.classList.toggle('scn-selected', isSelected);
+    c.li.style.setProperty('--scn-color', `var(${sc.color})`);
+    c.body.setAttribute('aria-pressed', String(isSelected));
+    setText(c.label, sc.id === LIVE_ID ? 'Live' : sc.label);
+    setText(c.where, siteAt(sites, sc.site)?.name ?? coordText(sc.site.lat, sc.site.lon));
+    setText(c.when, `${utcText(sc.tMs)} UTC`);
+    if (c.remove) {
+      c.remove.title = `Remove ${sc.label}`;
+      c.remove.setAttribute('aria-label', `Remove scenario ${sc.label}`);
+    }
+  };
+
+  const drawCards = (scenarios: Scenario[], selectedId: string, sites: CuratedSite[]): void => {
+    for (const [id, c] of cards) {
+      if (scenarios.some((sc) => sc.id === id)) continue;
+      c.li.remove();
+      cards.delete(id);
+    }
+    scenarios.forEach((sc, i) => {
+      let c = cards.get(sc.id);
+      if (!c) {
+        c = makeCard(sc.id);
+        cards.set(sc.id, c);
+      }
+      drawCard(c, sc, sc.id === selectedId, sites);
+      // Live first, then the pins in slot order. A card already in its place is not touched.
+      if (list.children[i] !== c.li) list.insertBefore(c.li, list.children[i] ?? null);
+    });
   };
 
   const render = (): void => {
@@ -254,10 +318,7 @@ export function mount(el: HTMLElement): void {
     sync(lonBox, 'lon', String(live.site.lon), lonField.setError);
     sync(timeBox, 'time', toBoxValue(live.tMs), timeField.setError);
 
-    list.replaceChildren(
-      card(live, s.selectedId === LIVE_ID, s.sites),
-      ...s.pinned.map((p) => card(p, s.selectedId === p.id, s.sites)),
-    );
+    drawCards([live, ...s.pinned], s.selectedId, s.sites);
 
     const full = s.pinned.length >= MAX_PINNED;
     pinButton.disabled = full;
