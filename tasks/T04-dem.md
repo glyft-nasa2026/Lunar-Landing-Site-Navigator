@@ -1,6 +1,6 @@
 # T04: South-pole height map from LOLA
 
-Status: not started
+Status: done, pull request open (grey image to attach; Quickmap comparison by eye)
 
 | | |
 |---|---|
