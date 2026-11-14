@@ -1,6 +1,6 @@
 # T15: Solar panel choice
 
-Status: done, in review (pull request #36)
+Status: done (pull request #36)
 
 | | |
 |---|---|
