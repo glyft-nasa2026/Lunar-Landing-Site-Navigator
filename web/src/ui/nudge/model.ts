@@ -18,14 +18,66 @@ export const MEANINGFUL_H = 6;
 /** One step. Bearings are clockwise from north, as for destination(). */
 export type Nudge = { id: string; text: string; bearing?: number; days?: number };
 export const NUDGES: readonly Nudge[] = [
-  { id: 'n', text: '1 km N', bearing: 0 },
-  { id: 'w', text: '1 km W', bearing: 270 },
-  { id: 's', text: '1 km S', bearing: 180 },
-  { id: 'e', text: '1 km E', bearing: 90 },
+  { id: 'n', text: 'N', bearing: 0 },
+  { id: 'w', text: 'W', bearing: 270 },
+  { id: 's', text: 'S', bearing: 180 },
+  { id: 'e', text: 'E', bearing: 90 },
   { id: 'minus-day', text: '−1 day', days: -1 },
   { id: 'plus-day', text: '+1 day', days: 1 },
 ];
-export const NUDGE_M = 1000;
+
+/** The distance slider, km. */
+export const NUDGE_KM = { min: 0.1, max: 10, step: 0.1, start: 1 } as const;
+
+/** A slider value made safe: inside the range and on a step. Anything unreadable gives the start. */
+export function clampKm(km: number): number {
+  if (!Number.isFinite(km)) return NUDGE_KM.start;
+  const stepped = Math.round(km / NUDGE_KM.step) * NUDGE_KM.step;
+  return Math.min(NUDGE_KM.max, Math.max(NUDGE_KM.min, Math.round(stepped * 10) / 10));
+}
+
+/** "2.5 km", always one decimal, so the digits keep their width as the slider moves. */
+export const kmText = (km: number): string => `${clampKm(km).toFixed(1)} km`;
+
+/** What a step reads as with this distance: "2.5 km S", or "+1 day". */
+export const stepText = (n: Nudge, km: number): string =>
+  n.bearing === undefined ? n.text : `${kmText(km)} ${n.text}`;
+
+/** The same, spelled out for a screen reader. */
+const WORDS: Record<string, string> = { n: 'north', s: 'south', e: 'east', w: 'west' };
+export const stepLabel = (n: Nudge, km: number): string =>
+  n.bearing === undefined
+    ? `Move the live time ${n.text.replace('−', 'back ').replace('+', 'forward ')}`
+    : `Move the live site ${kmText(km)} ${WORDS[n.id]}`;
+
+/** The four corners of the map the panel can sit in, in the order the picker shows them. */
+export type Corner = 'tl' | 'tr' | 'bl' | 'br';
+export const CORNERS: readonly Corner[] = ['tl', 'tr', 'bl', 'br'];
+export const CORNER_NAMES: Record<Corner, string> = {
+  tl: 'top left', tr: 'top right', bl: 'bottom left', br: 'bottom right',
+};
+/** Where the panel starts. */
+export const START_CORNER: Corner = 'bl';
+/** Where to look next when a corner is taken: round the map clockwise from it. */
+const CLOCKWISE: readonly Corner[] = ['tl', 'tr', 'br', 'bl'];
+
+/**
+ * The corner the panel goes to: the wanted one if the map's own controls leave it free,
+ * otherwise the next free one clockwise. Null only if every corner is taken.
+ */
+export function freeCorner(wanted: Corner, taken: ReadonlySet<Corner>): Corner | null {
+  const i = CLOCKWISE.indexOf(wanted);
+  for (let k = 0; k < CLOCKWISE.length; k++) {
+    const c = CLOCKWISE[(i + k) % CLOCKWISE.length];
+    if (!taken.has(c)) return c;
+  }
+  return null;
+}
+
+/** A corner name read back from the page (a data attribute), or null if it isn't one. */
+export const asCorner = (v: string | null | undefined): Corner | null =>
+  (CORNERS as readonly string[]).includes(v ?? '') ? (v as Corner) : null;
+
 export const DAY_MS = 24 * HOUR_MS;
 
 /** What the comparison needs from one scenario. */

@@ -364,7 +364,7 @@ flat skyline and zeros. Modules show "Loading" and must not crash.
 | `#compare` | `web/src/ui/compare/` | T09 |
 | `#timeline` | `web/src/ui/timeline/` | T10 |
 | `#sky` | `web/src/ui/sky/` | T11 |
-| `#nudge` | `web/src/ui/nudge/` | T13 |
+| `#nudge` | `web/src/ui/nudge/` | T13 (made by `#scene`, see below) |
 | `#about` | `web/src/ui/about/` | T16 |
 | `#panel` | `web/src/ui/panel/` | T15 |
 
@@ -373,7 +373,15 @@ one. T00 wired the first eight with placeholders; a slot for an "if time" task (
 added by P1, so a module's own task still never touches `main.ts` or `index.html`.
 
 `#about` is a thin bar across the top: the product name, the Horizons badge and an About button
-that opens the About panel. `#nudge` sits under `#readout`, and `#panel` under `#nudge`.
+that opens the About panel. `#panel` sits under `#readout`.
+
+`#nudge` (issue #58) is not in `index.html`. The scene creates it inside its map viewport (the
+`position: relative` box that holds the map canvas), before `main.ts` reaches it, so the nudge
+panel is ordinary HTML floating over the map, never drawn in the canvas. The nudge places itself
+in one of the viewport's four corners (`data-corner="tl" | "tr" | "bl" | "br"`, bottom left to
+start). Any map control the scene puts inside the viewport marks its corner with
+`data-map-corner="tl"` (and so on); the nudge then skips that corner for the next free one,
+clockwise. The scene's toolbar sits above the viewport and claims no corner.
 
 ## 6. Look: `web/src/ui/theme.css` (T00 creates, then T19 owns)
 
