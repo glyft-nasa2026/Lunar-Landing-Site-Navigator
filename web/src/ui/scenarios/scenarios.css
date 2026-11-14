@@ -1,1 +1,149 @@
-/* Styles for #scenarios. Written by T08; use only the variables and classes of ui/theme.css. */
+/* Styles for #scenarios. Written by T08; use only the variables and classes of ui/theme.css.
+   Once T08 has merged, this file belongs to T23. */
+
+#scenarios {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.scn-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.scn-coords {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.scn-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.scn-field .field {
+  width: 100%;
+  min-width: 0;
+}
+
+.scn-label {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+
+.scn-num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+.scn-error {
+  font-size: var(--fs-sm);
+  color: var(--bad);
+}
+
+.scn-error:empty {
+  display: none;
+}
+
+.scn-field [aria-invalid='true'] {
+  border-color: var(--bad);
+}
+
+.scn-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.scn-card {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1);
+  background: var(--panel-2);
+  border: thin solid var(--border);
+  border-left: var(--space-1) solid var(--scn-color);
+  border-radius: var(--radius);
+}
+
+.scn-card.scn-selected {
+  border-color: var(--accent);
+  border-left-color: var(--scn-color);
+}
+
+.scn-pick {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  grid-template-areas:
+    'dot name where'
+    '.   when when';
+  align-items: center;
+  column-gap: var(--space-2);
+  padding: var(--space-2);
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.scn-dot {
+  grid-area: dot;
+  width: var(--space-3);
+  height: var(--space-3);
+  border-radius: 50%;
+  background: var(--scn-color);
+}
+
+.scn-name {
+  grid-area: name;
+  font-weight: 600;
+}
+
+.scn-where {
+  grid-area: where;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scn-when {
+  grid-area: when;
+  font-family: var(--font-num);
+  font-size: var(--fs-sm);
+}
+
+.scn-remove {
+  align-self: center;
+  margin-right: var(--space-2);
+}
+
+.scn-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.scn-note {
+  font-size: var(--fs-sm);
+}
+
+.scn-note:empty {
+  display: none;
+}
+
+.scn-link {
+  width: 100%;
+  font-family: var(--font-num);
+  font-size: var(--fs-sm);
+}
