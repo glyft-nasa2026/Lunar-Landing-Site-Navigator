@@ -9,8 +9,8 @@ above that sphere; no atmospheric refraction.
 
 ## 1. Moon-fixed frame
 
-All vectors are in the Moon's mean-Earth frame (Skyfield name `MOON_ME_DE421`), the frame LOLA
-maps use.
+All vectors are in the Moon's mean-Earth frame (Skyfield name `MOON_ME_DE440_ME421`, built from
+the DE440 kernels), the frame LOLA maps use.
 
 - `+x` points at latitude 0, longitude 0 (the middle of the side facing Earth)
 - `+y` points at latitude 0, longitude 90 E
@@ -37,22 +37,38 @@ A mock file says so: `"source": "mock"` in `ephemeris.json` and `dem.json`, and
 When a task says "crater floor" or "crater rim", it means these points on mock data, and
 `shackleton-floor` and `shackleton-rim` from `sites.json` on real data.
 
-### `ephemeris.bin` + `ephemeris.json` (made by T01)
+### `ephemeris.json` + `ephemeris/<decade>.bin` (made by T01)
 
-`ephemeris.json`:
+Hourly, 1950-01-01T00Z to 2051-01-01T00Z, split into one file per decade so the page downloads
+only what it needs: the 2020s (`home`) on load, any other decade the first time a scenario's
+time needs it. `ephemeris.json` is the index:
 
 ```json
 {
-  "start": "2026-01-01T00:00:00Z",
+  "start": "1950-01-01T00:00:00Z",
   "step_s": 3600,
-  "rows": 87649,
-  "frame": "MOON_ME_DE421",
+  "rows": 885361,
+  "frame": "MOON_ME_DE440_ME421",
   "columns": ["sun_x", "sun_y", "sun_z", "earth_x_km", "earth_y_km", "earth_z_km"],
-  "source": "JPL DE421 via Skyfield"
+  "source": "JPL DE440 via Skyfield",
+  "home": 7,
+  "chunks": [
+    { "file": "ephemeris/1950.bin", "start": "1950-01-01T00:00:00Z", "rows": 87649 },
+    "... one per decade, 1950 to 2040 ...",
+    { "file": "ephemeris/2040.bin", "start": "2040-01-01T00:00:00Z", "rows": 96433 }
+  ]
 }
 ```
 
-`ephemeris.bin`: little-endian float32, 6 values per row, rows in time order.
+Each decade file runs from its decade's first hour to the next decade's first hour inclusive,
+so neighbouring files share one row and a time inside a decade needs that file alone. The
+2040s file runs to 2051-01-01T00Z. `rows` counts each shared row once. Row `i` of a file is at
+its `start` + `i` hours of Unix time (no leap seconds). About 2.1 MB per file.
+
+A table without `chunks` is one file, `ephemeris.bin`, holding all `rows` (T20's mock and the
+tests use this form).
+
+Each `.bin`: little-endian float32, 6 values per row, rows in time order.
 
 - `sun_*`: unit vector from the Moon's centre to the Sun (apparent, light-time corrected)
 - `earth_*_km`: vector from the Moon's centre to Earth's centre, in km
@@ -194,7 +210,7 @@ export type CuratedSite = { id: string; name: string; lat: number; lon: number; 
 
 | File | Task | Functions |
 |---|---|---|
-| `ephemeris.ts` | T00 | `loadEphemeris(): Promise<Ephemeris>` · `parseEphemeris(meta, buffer: ArrayBuffer): Ephemeris` (no network; tests use it) · `eph.startMs`, `eph.endMs`, `eph.meta` · `eph.vectorsAt(tMs): { sun: [x,y,z]; earthKm: [x,y,z] }` (straight-line step between rows; Sun re-normalised) |
+| `ephemeris.ts` | T00 | `loadEphemeris(): Promise<Ephemeris>` (index + home decade) · `loadEphemerisChunk(eph, i): Promise<ArrayBuffer>` · `indexEphemeris(meta): Ephemeris` and `parseEphemeris(meta, buffer: ArrayBuffer): Ephemeris` (no network; tests use them) · `eph.startMs`, `eph.endMs` (whole table), `eph.homeStartMs`, `eph.homeEndMs`, `eph.meta` · `eph.vectorsAt(tMs): { sun: [x,y,z]; earthKm: [x,y,z] }` (straight-line step between rows; Sun re-normalised) · `eph.missing(fromMs, toMs): number[]` (decades not yet loaded) · `eph.withChunk(i, buffer): Ephemeris` (a new value, one more decade) |
 | `dem.ts` | T00 | `loadDem(onProgress?): Promise<Dem>` · `parseDem(meta, buffer: ArrayBuffer): Dem` (no network; tests use it) · `dem.covers(lat, lon): boolean` · `dem.heightAt(lat, lon): number` (bilinear, metres; 0 outside) · `dem.meta` |
 | `geometry.ts` | T00 first pass, then T02 | `sunAltAz(eph, site, groundM, tMs): AltAz` · `earthAltAz(eph, site, groundM, tMs): AltAz` · `destination(lat, lon, bearingDeg, distM): { lat, lon }` |
 | `horizon.ts` | T00 flat skyline, then T05 | `skylineAt(dem: Dem | null, site: Site): Skyline` · `skylineElev(s: Skyline, az: number): number` (interpolated) |
@@ -212,7 +228,7 @@ file: it adds the real tests and fixes what they find. Names and signatures neve
 | Sun down, a rise found | `Sunrise in 3 d 4 h` |
 | Sun up, no set found | `No sunset in the next 60 days` |
 | Sun down, no rise found | `No sunrise in the next 60 days` |
-| Sun down, `neverLit` true | `Permanently shadowed (2026-2035)` |
+| Sun down, `neverLit` true | `Permanently shadowed (2020-2029)` |
 | Earth up or down, a flip found | `Earthset in 3 d 4 h` or `Earthrise in 3 d 4 h` |
 | Earth up, no flip found | `Earth always visible` |
 | Earth down, no flip found | `Earth never visible` |
@@ -287,7 +303,7 @@ samplesFor(sc: Scenario, range: Range): Sample[]     // hourly from sc.tMs: stri
 timelineFor(sc: Scenario, range: Range): Sample[]    // hourly from the window start: timeline
 summaryFor(sc: Scenario): Summary                     // over 30 days from sc.tMs
 flipFor(sc: Scenario, body: Body): Flip               // next rise or set after sc.tMs
-neverLitFor(sc: Scenario): boolean                    // no sunlight there in the whole table
+neverLitFor(sc: Scenario): boolean                    // no sunlight there in the home decade, 2020-2029
 ```
 
 **Selected and live.** `selectedId` is the live scenario's id or a pinned one's. The readout,
@@ -295,6 +311,13 @@ timeline, sky panorama and the 3D scene's Sun all show the selected scenario. Pi
 never change. `setLiveSite` and `setLiveTime` change the live scenario and select it. So an
 edit made anywhere (map click, coordinate boxes, time box, timeline drag, nudge "Keep") lands
 on live, and the view follows.
+
+**Decades.** `eph` is null until the table has loaded, and null again while a decade that the
+live scenario (its time plus 60 days, and its timeline window) or a pinned scenario (its time
+plus 60 days or the range, whichever is longer) needs is still downloading. So a module that
+shows "Loading" while `eph` is null needs nothing more. `state.ts` fetches each decade once; one
+that fails to download reads as outside the table. `neverLitFor` looks only at the home decade,
+which is always loaded, so its answer doesn't change as more decades arrive.
 
 **Timeline window.** `timelineFor` starts at the scenario's own time for a pinned scenario and
 at `windowStartMs` for live. `setLiveTime` leaves the window alone while the new time is inside
