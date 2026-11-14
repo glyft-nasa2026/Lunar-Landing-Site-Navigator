@@ -223,6 +223,7 @@ export type CuratedSite = { id: string; name: string; lat: number; lon: number; 
 | `dem.ts` | T00 | `loadDem(onProgress?): Promise<Dem>` · `parseDem(meta, buffer: ArrayBuffer): Dem` (no network; tests use it) · `dem.covers(lat, lon): boolean` · `dem.heightAt(lat, lon): number` (bilinear, metres; 0 outside) · `dem.meta` |
 | `geometry.ts` | T00 first pass, then T02 | `sunAltAz(eph, site, groundM, tMs): AltAz` · `earthAltAz(eph, site, groundM, tMs): AltAz` · `destination(lat, lon, bearingDeg, distM): { lat, lon }` |
 | `horizon.ts` | T00 flat skyline, then T05 | `skylineAt(dem: Dem | null, site: Site): Skyline` · `skylineElev(s: Skyline, az: number): number` (interpolated) |
+| `panel.ts` | T15 | `panelPower(sample): { flat, upright }` (each 0..1 of full power: flat = `sunFrac * sin(alt)`, none below 0 degrees; upright and turned to the Sun = `sunFrac * cos(alt)`) · `panelAverage(samples): { flat, upright }` (mean, dark hours count as 0) |
 | `windows.ts` | T00 first pass, then T06 | `series(eph, site, groundM, skyline, startMs, endMs, stepMs): Sample[]` · `nextFlip(eph, site, groundM, skyline, tMs, body: Body, maxDays = 60): Flip` · `summary(samples: Sample[]): Summary` · `countdownText(body: Body, upNow: boolean, flip: Flip, tMs: number, neverLit = false): string` |
 
 **First pass** means T00 writes the function straight from the formulas below, with a few sanity
@@ -356,12 +357,14 @@ flat skyline and zeros. Modules show "Loading" and must not crash.
 | `#sky` | `web/src/ui/sky/` | T11 |
 | `#nudge` | `web/src/ui/nudge/` | T13 |
 | `#about` | `web/src/ui/about/` | T16 |
+| `#panel` | `web/src/ui/panel/` | T15 |
 
-Each folder has `index.ts` exporting `mount(el)`, and its own CSS file. T00 wires all of them in
-`main.ts` with placeholders, so no later task needs to touch `main.ts` or `index.html`.
+Each folder has `index.ts` exporting `mount(el)`, and its own CSS file. `main.ts` mounts each
+one. T00 wired the first eight with placeholders; a slot for an "if time" task (`#panel`) is
+added by P1, so a module's own task still never touches `main.ts` or `index.html`.
 
 `#about` is a thin bar across the top: the product name, the Horizons badge and an About button
-that opens the About panel. `#nudge` sits under `#readout`.
+that opens the About panel. `#nudge` sits under `#readout`, and `#panel` under `#nudge`.
 
 ## 6. Look: `web/src/ui/theme.css` (T00 creates, then T19 owns)
 
