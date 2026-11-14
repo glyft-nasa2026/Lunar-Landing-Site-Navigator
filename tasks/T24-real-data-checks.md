@@ -4,7 +4,6 @@ Status: not started
 
 | | |
 |---|---|
-| Owner | P4 |
 | Tier | must |
 | Waits for | T01, T04, T05, T06, T07 |
 | Branch | `t24-real-data-checks` |
@@ -15,7 +14,7 @@ The terrain checks of spec section 7, run on the real table and the real height 
 that keep running on every pull request. These checks used to sit in T05 and T06 as "after T04"
 lines that nobody owned once those tasks had merged.
 
-## Files you own
+## Files in scope
 
 - `web/src/core/realdata.test.ts`
 - `docs/ai-use/T24.md`, `docs/sources/T24.md`, this file's `Status:` line
@@ -29,7 +28,7 @@ lines that nobody owned once those tasks had merged.
    - Floor: never lit in the whole table (`sunFrac` is 0 in every hourly sample, 2026-2035).
    - Rim: lit more than half of the whole table.
    - One real skyline takes under 100 ms (print the timing).
-4. If a check fails, don't loosen it and don't touch the file it tests. Post the numbers in the chat: `horizon.ts` belongs to T05's owner, `windows.ts` to T06's, the rim coordinates to T07's.
+4. If a check fails, keep the check and report the numbers with the affected area: `horizon.ts` (T05), `windows.ts` (T06), or the rim coordinates (T07). Anyone can claim a separate, coordinated fix; keep this test delivery independent of the fix.
 
 ## Done when
 
@@ -40,5 +39,5 @@ lines that nobody owned once those tasks had merged.
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T24-real-data-checks.md. Do only that task, on branch t24-real-data-checks. Edit only the files it lists under "Files you own". If a check fails, show me the numbers and stop; don't change any other file to make it pass. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T24-real-data-checks.md. Do only that task, on branch t24-real-data-checks. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. If a check fails, show me the numbers and stop; don't change any other file to make it pass. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

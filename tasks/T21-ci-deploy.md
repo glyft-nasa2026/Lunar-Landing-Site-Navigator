@@ -4,7 +4,6 @@ Status: done (pull requests #8 and #11)
 
 | | |
 |---|---|
-| Owner | P3 |
 | Tier | must |
 | Waits for | - |
 | Branch | `t21-ci-deploy` |
@@ -14,20 +13,20 @@ Status: done (pull requests #8 and #11)
 Every pull request is tested automatically, `main` is protected, and each merge to `main`
 publishes the site. Runs at the same time as T00.
 
-## Files you own
+## Files in scope
 
 - `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`
 - `docs/ai-use/T21.md`, `docs/sources/T21.md`, this file's `Status:` line
 
 ## Steps
 
-1. **The repo must be public first.** On a free organisation, GitHub refuses branch rules and GitHub Pages for a private repo. P1 makes it public; ask in the chat if it isn't yet.
+1. **The repo must be public first.** On a free organisation, GitHub refuses branch rules and GitHub Pages for a private repo. Coordinate the setting with a teammate who has repository access if it isn't public yet.
 2. `ci.yml`: on every pull request, one job named exactly `test-and-build`. Node from `web/.nvmrc`. In `web/`: `npm ci`, `npm test`, `npm run build`.
 3. `deploy.yml`: on push to `main`, build and publish `web/dist` to GitHub Pages with GitHub's own Pages actions.
 4. In the browser, Settings, Pages: set the source to "GitHub Actions". Do this before this task merges: the merge is the first deploy.
 5. In the browser, Settings, General: allow squash merging only, and switch on "Automatically delete head branches".
 6. In the browser, Settings, Branches, a rule for `main`: require a pull request, require the status check `test-and-build`, and tick "Do not allow bypassing the above settings". All five of us are admins, so without that tick the rule stops nobody. GitHub only lets you pick the check after it has run once. **Do this step after this task has merged, not before.** T00's pull request has no `test-and-build` check, so a rule switched on early would lock out T00, and this task with it.
-7. Post the Pages address in the chat and ask P1 to put it in the README.
+7. Post the deployed address in the chat and arrange the README update (T26); anyone can take that update.
 
 ## Done when
 
@@ -49,8 +48,8 @@ After it merges. Post each result as a comment on the merged pull request:
 Until T00 merges there is no `web/` folder, so the check on your own pull request is red. That
 is expected: merge `origin/main` into your branch once T00 is in, and it turns green.
 
-While this waits for T00, sit with P5 and go through the design for your three modules (T08,
-T09, T10). The order of the first merges is in `docs/team-workflow.md`, "The first three merges".
+While this waits for T00, review the design or help with another available task after checking
+for overlap. The order of the first merges is in `docs/team-workflow.md`, "The first three merges".
 
 ## After the merge
 
@@ -66,5 +65,5 @@ T09, T10). The order of the first merges is in `docs/team-workflow.md`, "The fir
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T21-ci-deploy.md. Do only that task, on branch t21-ci-deploy. Edit only the files it lists under "Files you own". Steps 1 and 4 to 7 are clicks in the browser: tell me exactly what to click, and wait for me. Step 6 and the "After it merges" list come after the merge: write out the exact clicks and commands for them before you finish. When you think you're finished, run every line of "Done when" that can be run from here and tell me which ones I must check myself.
+Read CLAUDE.md, docs/data-contract.md and tasks/T21-ci-deploy.md. Do only that task, on branch t21-ci-deploy. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. Steps 1 and 4 to 7 are clicks in the browser: tell me exactly what to click, and wait for me. Step 6 and the "After it merges" list come after the merge: write out the exact clicks and commands for them before you finish. When you think you're finished, run every line of "Done when" that can be run from here and tell me which ones I must check myself.
 ```

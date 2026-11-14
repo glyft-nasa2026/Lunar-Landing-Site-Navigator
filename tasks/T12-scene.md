@@ -4,7 +4,6 @@ Status: done (pull requests #7 and #18; drag-to-pan and outside-table fixes in #
 
 | | |
 |---|---|
-| Owner | P1 |
 | Tier | must |
 | Waits for | T00 |
 | Branch | `t12-scene` |
@@ -13,7 +12,7 @@ Status: done (pull requests #7 and #18; drag-to-pan and outside-table fixes in #
 
 Spec feature F10, and F1's click-to-pick.
 
-## Files you own
+## Files in scope
 
 - `web/src/scene/`
 - `web/public/textures/` if any
@@ -57,5 +56,5 @@ The folder's CSS file goes to T23 once this merges.
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T12-scene.md. Do only that task, on branch t12-scene. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T12-scene.md. Do only that task, on branch t12-scene. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

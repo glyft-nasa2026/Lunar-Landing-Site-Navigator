@@ -4,7 +4,6 @@ Status: done (pull request #13)
 
 | | |
 |---|---|
-| Owner | P2 |
 | Tier | must |
 | Waits for | T00, T20 |
 | Branch | `t04-dem` |
@@ -13,7 +12,7 @@ Status: done (pull request #13)
 
 The real height grid in our own projection and format (contract section 2).
 
-## Files you own
+## Files in scope
 
 - `data-prep/make_dem.py`
 - `web/public/data/dem.bin`, `dem.json` (taken over from T20's mock)
@@ -45,5 +44,5 @@ The real height grid in our own projection and format (contract section 2).
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T04-dem.md. Do only that task, on branch t04-dem. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T04-dem.md. Do only that task, on branch t04-dem. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

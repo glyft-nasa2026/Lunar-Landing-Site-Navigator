@@ -1,33 +1,31 @@
 # Rules for every Claude session in this repo
 
 This is a 48-hour hackathon project built by five people, each with their own Claude session.
-The rules below exist so five sessions can work at once with no merge conflicts.
+Anyone can take any task. The rules below keep parallel sessions coordinated.
 
 ## Before writing anything
 
 1. Read `docs/data-contract.md`.
-2. Read the one task file you were given (`tasks/Txx-*.md`).
-3. Don't read the rest of the repo unless the task file tells you to. Context is limited.
+2. Read `tasks/README.md` and `docs/team-workflow.md`, then the task file (`tasks/Txx-*.md`).
+3. Read the files needed for that task and its dependencies. Keep context focused.
 
-## File ownership: the rule that prevents merge conflicts
+## Task coordination
 
-- **Edit only the files listed under "Files you own" in your task.** Create new files only inside
-  the folders listed there.
-- **Never edit these, whoever you are, unless your task lists them:** `web/package.json`,
-  `web/package-lock.json`, `web/index.html`, `web/src/main.ts`, `web/src/state.ts`,
-  `web/src/core/types.ts`, `web/src/ui/theme.css`, `web/src/ui/layout.css`,
-  `web/src/ui/plotTheme.ts`, `data-prep/requirements.txt`, `.github/`, `.gitattributes`,
-  `docs/data-contract.md`, `docs/decisions.md`, `docs/mcp-and-skills.md`, `SPEC.md`,
-  `tasks/README.md`, `history.md`, this file.
-- **Some files pass from one task to the next.** Mock data becomes real data, a first-pass
-  `core/` file goes to the task that proves it, a placeholder goes to its module, and that
-  module's CSS then goes on to T23. Your task file says which files you take over and from
-  which task. Make your branch after that task has merged, never before.
-- **Need a change in a file you don't own?** Stop. Tell the human to ask that file's owner (the
-  board in `tasks/README.md` says who). Don't make the change "just this once".
-- **Need a new npm or pip package?** Stop and tell the human to ask P1. Don't install it.
-- No shared log files. AI-use notes go in `docs/ai-use/<task id>.md`, sources in
-  `docs/sources/<task id>.md`. One file per task, so two branches never touch the same file.
+- **Anyone can claim any available task.** Check its `Status:`, open pull requests and the team
+  chat first. Claim it with the task id, branch and planned files; keep the draft pull request
+  and `Status:` current. An active task changes hands through an explicit handoff.
+- **Files in scope are a starting list, not exclusive ownership.** Include other files needed
+  to finish the task, document the expanded scope in the pull request, and check for overlap
+  before editing. Shared files, the contract, theme and dependencies follow the same rule.
+- **Coordinate overlapping edits.** Agree the order with the other contributor before editing
+  the same file; merge the earlier change first or work together on one branch. Use separate
+  worktrees or clones for concurrent sessions. Details are in `docs/team-workflow.md`.
+- Respect task dependencies and milestones. Start from current `main` after prerequisites
+  merge; mock-to-real data, engine tests and CSS polish still follow their task order.
+- Keep manifest and lockfile changes together. Coordinate package changes so two branches
+  don't update the same dependency files at once.
+- AI-use notes go in `docs/ai-use/<task id>.md`, sources in `docs/sources/<task id>.md`.
+  Keep records per task and include the checks performed by each contributor.
 
 ## Git
 
@@ -62,8 +60,8 @@ The rules below exist so five sessions can work at once with no merge conflicts.
 - **No colour codes, fonts or pixel sizes in a module.** Use the variables and classes in
   `web/src/ui/theme.css` (contract section 6), and `plotLayout()` for every Plotly chart. A
   colour needed in JavaScript (Plotly, three.js) comes from `themeColor()`. The one pixel value
-  allowed is the phone breakpoint, `@media (max-width: 800px)`. The theme files belong to T19:
-  don't edit them from another task.
+  allowed is the phone breakpoint, `@media (max-width: 800px)`. T19 establishes the shared theme;
+  coordinate any theme changes with active UI work.
 - **Data may still be loading or still be mock.** A module shows "Loading" while `eph` is null
   and never crashes on it. A test that needs real data skips when the file says
   `"source": "mock"`.

@@ -22,10 +22,10 @@ exists, paste its link here: _(link to come)_.
 | File | What |
 |---|---|
 | `desktop.png` | Whole screen, 1280 wide |
-| `phone.png` | Whole screen, 390 wide, slots stacked in contract order |
-| `about.png` `scene.png` `scenarios.png` `readout.png` `nudge.png` `compare.png` `timeline.png` `sky.png` | One per slot, at its desktop width |
+| `phone.png` | Whole screen, 390 wide, slots stacked in contract order: about, scene, scenarios, readout, nudge, panel, compare, timeline, sky |
+| `about.png` `scene.png` `scenarios.png` `readout.png` `nudge.png` `panel.png` `compare.png` `timeline.png` `sky.png` | One per slot, at its desktop width (nine slots) |
 | `components.png` | Every state: button (secondary, hover, pressed, focus, selected, disabled), primary, tab, toggle, site chip (filled, selected, empty), info pill, field (focus, error), toast, tooltip on disabled Proceed |
-| `loading.png`, `hero.png` | Brief frames 1 and 2. **Proposals only**: they aren't slots (see "Needs P1") |
+| `loading.png`, `hero.png` | Brief frames 1 and 2. **Proposals only**: they aren't slots (see "Needs team decision") |
 | `cvd.png` | Scenario, Sun and Earth colours under protanopia, deuteranopia, tritanopia |
 
 Mock-up numbers are made up. Nobody copies an angle or a time from a picture into code.
@@ -49,14 +49,14 @@ Clear Bamboo, Deep Hanada) are no longer used.
 | `--scn-ghost` | `#8a8f98` |
 | `--sun` `--earth` | `#F0E442` `#56B4E9` (fixed) |
 | `--lit` | `#e6e9ee` |
-| `--dark` | `#262c36` |
+| `--dark` | `#0e1116` (T19's choice, #23) |
 | `--terrain-lo` `--terrain-hi` | `#3a3f47` `#d9dce1` |
 | `--radius` | `6px` |
 | `--space-1` … `--space-5` | 4, 8, 12, 16, 24 px |
 
-**Strips on `--dark`.** Solid scenario strips against `#262c36`: A 6.23, C 4.10, **B 2.71**,
-below the 3 : 1 that WCAG asks of graphics. The letter beside each strip keeps B readable; a
-darker `--dark` (for example `#1B1B1B`, B 3.32) would fix it. That is T19's call.
+**Strips on `--dark`.** T19 set `--dark` to the page colour `#0e1116`: on main's earlier
+`#262c36` scenario B's strip was 2.71 : 1. Now the solid strips are A 8.40, B 3.65, C 5.53, all
+above the 3 : 1 that WCAG asks of graphics.
 
 ## Type
 
@@ -73,7 +73,7 @@ darker `--dark` (for example `#1B1B1B`, B 3.32) would fix it. That is T19's call
 ## Rules the pictures follow
 
 - Pins, chips, table columns and strips use the scenario colour plus the letter (A, B, C), so
-  colour is never the only clue. The live site is the accent green.
+  colour is never the only clue. The live site uses `--accent` (soft blue).
 - Active tab: accent text with a 2 px underline. Inactive: muted. Focus: 2 px accent outline on
   everything you can press.
 - Disabled is 40 % opacity, with a tooltip saying why ("Select at least one site").
@@ -116,7 +116,7 @@ pixel values left are line widths (1 px borders, 2 px focus outline and tab unde
 knob inset), the pill rounding in item 1 below, the canvas sizes (1280, 390, 1440 × 900), and
 positions in the two proposal frames (loading, hero).
 
-## Needs P1 (asked once, all together)
+## Needs team decision
 
 Values the design needs that the contract doesn't name. Nothing below was given a name.
 
@@ -148,3 +148,21 @@ Values the design needs that the contract doesn't name. Nothing below was given 
      over the spec's terrain.
    - Brief toggles "Day / Night Curve" and "Depth Field Map" map to F14 layers (if time).
    - Brief: Inter or Space Grotesk. Task rule: system fonts only. System fonts are used.
+7. **Solar panel and battery (`panel`, T15 and a proposal).**
+   - **Arrangement differs from the T19 ticket.** The ticket puts `#panel` under `#nudge`, beside
+     `#scenarios` (`'scenarios panel'`). With the battery added the card needs the width for its
+     chart, so the picture gives it its own full-width row under Scenarios
+     (`'scenarios scenarios' 'panel panel'`), and after Nudge on the phone as before. Not beside
+     the scene, so the map card isn't stretched. P1 and T19 to agree; without the battery the
+     ticket's place still works.
+   - **The battery is not in the spec** (F15 has the two panel percentages only). The picture
+     shows three inputs (battery capacity in kWh, power use in W, panel size in kW), three results
+     (how long it lasts in the dark, how often and how long it runs flat, how long to fill again
+     after sunrise) and a 30-day charge chart with the dark stretches shaded and empty spells in
+     `--bad`. Model in the picture: upright Sun-facing panel, starts full, charge += (panel power
+     when the Sun is up − use) × time, kept between empty and full. A real version needs a spec
+     line, a `core/` function with tests (every number from `core/`), and the inputs in
+     `state.ts`; it would use the same Sun samples as the strips. The mock curve is simulated on
+     scenario A's made-up Sun strip, so its numbers agree with its chart, not with real data.
+   - New pieces with no shared class: the result box (`.stat`, on `--panel-2`; `--bad` border when
+     the battery runs flat) and the thin meter bar under each percentage (`--sun` on `--dark`).
