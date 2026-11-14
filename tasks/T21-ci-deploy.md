@@ -1,6 +1,6 @@
 # T21: CI, deploy and repo settings
 
-Status: done
+Status: done (pull requests #8 and #11)
 
 | | |
 |---|---|
@@ -51,6 +51,17 @@ is expected: merge `origin/main` into your branch once T00 is in, and it turns g
 
 While this waits for T00, sit with P5 and go through the design for your three modules (T08,
 T09, T10). The order of the first merges is in `docs/team-workflow.md`, "The first three merges".
+
+## After the merge
+
+- 14 Nov 2026: hosting is not GitHub Pages, as the steps above say. `main` is published at darksight.space by Cloudflare Pages (`preview.yml`, added by P1 in #9 and #24), each pull request gets its own preview address, and `deploy.yml` commits each build of `main` to the `deploy` branch for the homelab. The reasons are in `docs/decisions.md`.
+- 14 Nov 2026, audit of the merged tickets: `ci.yml` has no defect. The live site, `darksight.pages.dev` and the `deploy` branch all served `main`'s latest build. Open, for P3 and P1 (nothing was changed: these files publish the live site and can't be tried out without doing so):
+  - *costs time*: pressing "Re-run" on an older `main` run publishes that older commit, in both workflows. Neither checks that its commit is still the tip of `main`.
+  - *costs time*: `deploy.yml` can be started by hand from any branch (`workflow_dispatch` with no check), which would put that branch's build on the `deploy` branch. `preview.yml` has the check.
+  - *costs time*: the Cloudflare token is a repo-level secret, so a same-repo branch that edits `preview.yml` can publish to the live site. The `wrangler-action` is on a moving tag (`@v3`).
+  - *cosmetic*: a manual run of `preview.yml` from another branch joins the `main` queue and cancels a `main` deploy in progress.
+  - *cosmetic*: previews of closed pull requests are never removed.
+  - *cosmetic*: the branch rule doesn't ask for branches to be up to date, so two green pull requests can break `main` together. Both deploy workflows run the tests again first, so a broken `main` is not published.
 
 ## Prompt to paste into Claude Code
 

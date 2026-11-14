@@ -1,6 +1,6 @@
 # T11: Sky panorama
 
-Status: done, pull request open (chart to be looked at in the browser)
+Status: done (pull request #17)
 
 | | |
 |---|---|
@@ -32,6 +32,13 @@ Spec feature F9.
 - [ ] The Sun marker is below the skyline exactly when the readout says the Sun is hidden. Check 5 times by scrubbing.
 - [ ] At an Apollo site the chart still shows Earth, high in the sky.
 - [ ] `npm test` and `npm run build` pass.
+
+## After the merge
+
+- 14 Nov 2026, audit of the merged tickets: the chart was looked at in headless Chromium on the real table and height map. The three browser lines of "Done when" hold (crater floor, marker state against the readout at 10 times, Apollo 11 with Earth high in the sky), and nine more sites drew correctly, both poles and longitude 180 among them.
+- Open, for P2:
+  - *cosmetic*: a sliver of Sun reads "0 % of the disc" in the hover while the readout says 1 % (`index.ts`, plain `Math.round`). Seen at -89.5, 0 on 2026-11-22 15:13.
+  - *cosmetic*: line widths (1 and 2) are written as numbers in `index.ts`. The rule is no pixel sizes in a module.
 
 ## Prompt to paste into Claude Code
 

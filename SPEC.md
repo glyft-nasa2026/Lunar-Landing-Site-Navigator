@@ -88,7 +88,7 @@ No server. Python prepares data once; the browser does the rest.
 | Countdowns, percentages | TypeScript, `core/windows.ts` | In memory |
 | 3D view | three.js | |
 | Charts | Plotly.js | |
-| Hosting | GitHub Pages at darksight.space; mirror on rickphobia.com | |
+| Hosting | Cloudflare Pages serves `main` at darksight.space; each pull request gets a preview at its own address. Each build of `main` also goes to the `deploy` branch for the homelab (`docs/decisions.md`). Mirror on rickphobia.com: T28, if time | |
 
 **Why this works:** at one moment, the Sun's and Earth's directions measured from the Moon are
 the same for every site. Only the site's own "up" differs. So one table serves every site.
