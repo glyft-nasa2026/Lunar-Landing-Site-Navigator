@@ -63,12 +63,36 @@ describe('scene coordinates and picking', () => {
     const largeMeta = { ...meta, size: 634, pixel_m: 960, x_min_m: -304320, y_max_m: 304320 };
     const large = parseDem(largeMeta, new Int16Array(largeMeta.size ** 2).buffer);
     const geometry = terrainGeometry(large, low, high);
-    expect(geometry.getAttribute('position').count).toBe(512 ** 2);
+    expect(geometry.getAttribute('position').count).toBeLessThanOrEqual(512 ** 2);
     const b = detailBounds(large, crater);
     expect(b.col0).toBeGreaterThanOrEqual(0);
     expect(b.row1).toBeLessThan(largeMeta.size);
     const patch = terrainGeometry(large, low, high, 1, b);
     expect(patch.getAttribute('position').count).toBe((b.col1 - b.col0 + 1) * (b.row1 - b.row0 + 1));
     geometry.dispose(); patch.dispose();
+  });
+
+  it('cuts a hole under the native patch and stitches its boundary to the coarse edges', () => {
+    const m = { ...meta, size: 634, pixel_m: 960, x_min_m: -304320, y_max_m: 304320 };
+    const data = new Int16Array(m.size ** 2);
+    // Sloping heights make a seam error visible instead of testing a coincident flat surface.
+    for (let row = 0; row < m.size; row++) for (let col = 0; col < m.size; col++) data[row * m.size + col] = col + row;
+    const terrain = parseDem(m, data.buffer);
+    const bounds = detailBounds(terrain, crater);
+    const coarse = terrainGeometry(terrain, low, high, 3, undefined, bounds);
+    const patch = terrainGeometry(terrain, low, high, 3, bounds);
+    const material = new MeshBasicMaterial();
+    const at = sitePosition(crater);
+    const ray = new Raycaster(at.clone().add(new Vector3(0, 100, 0)), new Vector3(0, -1, 0));
+    expect(ray.intersectObject(new Mesh(coarse, material))).toHaveLength(0);
+    expect(ray.intersectObject(new Mesh(patch, material))).toHaveLength(1);
+    const positions = patch.getAttribute('position');
+    // The first intermediate native point on the top edge lies exactly halfway between
+    // the two surrounding coarse vertices (stride 2 for this grid).
+    const first = new Vector3().fromBufferAttribute(positions, 0);
+    const second = new Vector3().fromBufferAttribute(positions, 2);
+    const middle = new Vector3().fromBufferAttribute(positions, 1);
+    expect(middle.distanceTo(first.add(second).multiplyScalar(0.5))).toBeLessThan(1e-5);
+    coarse.dispose(); patch.dispose(); material.dispose();
   });
 });

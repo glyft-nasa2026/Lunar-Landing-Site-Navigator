@@ -1,6 +1,6 @@
 # T12: 3D scene and map
 
-Status: in progress (branch t12-scene)
+Status: implemented, in review (pull request #7); laptop FPS verification pending
 
 | | |
 |---|---|
