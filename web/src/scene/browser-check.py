@@ -61,7 +61,9 @@ with sync_playwright() as p:
     browser = p.chromium.launch(headless=True, args=['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
     page = browser.new_page(viewport={'width': 1280, 'height': 900}, device_scale_factor=1)
     errors = []
+    graphics_warnings = []
     page.on('pageerror', lambda e: errors.append(str(e)))
+    page.on('console', lambda m: graphics_warnings.append(m.text) if m.type in ('error', 'warning') and m.text.startswith('THREE.') else None)
 
     def route_data(route):
         name = route.request.url.rsplit('/', 1)[-1]
@@ -171,6 +173,7 @@ with sync_playwright() as p:
     assert page.locator('.scene-canvas').count() == 1
     assert page.locator('.scene-message').inner_text().startswith('Loading')
     assert not errors, errors
+    assert not graphics_warnings, graphics_warnings
     passed('loading and lifecycle', 'null data and repeated mount work; one canvas; no uncaught browser errors')
     fallback = browser.new_page()
     fallback.add_init_script("""const original=HTMLCanvasElement.prototype.getContext;

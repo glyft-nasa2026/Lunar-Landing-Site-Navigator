@@ -1,6 +1,6 @@
 import {
   AmbientLight, CanvasTexture, Color, DirectionalLight, Group, Mesh, MeshBasicMaterial,
-  MeshLambertMaterial, OrthographicCamera, PCFSoftShadowMap, PerspectiveCamera, Raycaster,
+  MeshLambertMaterial, OrthographicCamera, PCFShadowMap, PerspectiveCamera, Raycaster,
   Scene, SphereGeometry, Sprite, SpriteMaterial, SRGBColorSpace, Vector2, Vector3, WebGLRenderer,
   type Camera, type Material,
 } from 'three';
@@ -72,7 +72,7 @@ export function mount(el: HTMLElement): void {
     return;
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.shadowMap.enabled = true; renderer.shadowMap.type = PCFSoftShadowMap;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = PCFShadowMap;
   const canvas = renderer.domElement;
   canvas.className = 'scene-canvas'; canvas.tabIndex = 0;
   canvas.setAttribute('aria-label', 'Interactive Moon terrain. Click to select a site; use the site list for keyboard selection.');
