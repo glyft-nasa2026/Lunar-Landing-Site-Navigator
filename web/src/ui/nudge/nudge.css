@@ -1,1 +1,70 @@
-/* Styles for #nudge. Written by T13; use only the variables and classes of ui/theme.css. */
+/* Styles for #nudge. Written by T13; use only the variables and classes of ui/theme.css.
+   After T13 merges, this file belongs to T23. */
+
+#nudge h2 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-lg);
+}
+
+#nudge .nudge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+#nudge .nudge-days {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+#nudge .btn[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+#nudge .nudge-out {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+#nudge .nudge-out p {
+  margin: 0;
+}
+
+#nudge .nudge-ok {
+  color: var(--ok);
+}
+
+#nudge .nudge-bad {
+  color: var(--bad);
+}
+
+#nudge .nudge-hint,
+#nudge .nudge-muted {
+  font-size: var(--fs-sm);
+}
+
+#nudge .nudge-table {
+  margin-top: var(--space-2);
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+}
+
+#nudge .nudge-table th,
+#nudge .nudge-table td:first-child {
+  color: var(--muted);
+  font-weight: normal;
+  text-align: left;
+}
+
+#nudge .nudge-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}

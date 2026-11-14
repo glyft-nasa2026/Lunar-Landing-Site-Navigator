@@ -3,6 +3,203 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: audit of the merged tickets
+
+P1 asked for every merged ticket to be checked: is the work correct, and does the paperwork
+match. This entry covers the files changed for the tickets that needed no code fix. The tickets
+that did (T00, T02, T03, T05, T08, T10, T12, T20) carry their own "After the merge" notes, in
+their own pull requests.
+
+### SPEC.md, section 5 (Where each number comes from)
+
+- The Hosting row said "GitHub Pages at darksight.space; mirror on rickphobia.com". GitHub
+  Pages was never used: `docs/decisions.md` records Cloudflare Pages for `main` and for pull
+  request previews, and the `deploy` branch for the homelab. The mirror is T28 and has not
+  started. Now: the row says what serves the site today.
+
+### tasks/: `Status:` lines
+
+Six merged tickets still read as unfinished, because the line was written before the merge and
+never updated. Each now says done with its pull request numbers, and each file has an "After the
+merge" section with what changed since and what the audit found. The old lines:
+
+| Task | The line said |
+|---|---|
+| T01 | done (npm test and npm run build left to CI: Node not installed locally) |
+| T04 | done, pull request open (grey image to attach; Quickmap comparison by eye) |
+| T06 | done, in review (pull request #5) |
+| T11 | done, pull request open (chart to be looked at in the browser) |
+| T21 | done |
+| T22 | in review. docs/design.md and pictures done from the brief, PDF and SVG (no Figma link yet); waiting for the team's yes in the chat |
+
+- T22's "waiting for the team's yes" is closed on P1's word (14 Nov 2026) that everyone said
+  yes. There is still no Figma link.
+- The steps and "Done when" lists in those files are left as written: they are the plan as it
+  was. What differs today is in each "After the merge" section.
+
+## 14 Nov 2026: `#panel` beside Scenarios in T19's layout step
+
+### tasks/T19-ui-design.md
+
+- Step 3 said `#panel` goes "in the column beside the scene, under `#nudge`", as "a `panel` area
+  under `nudge` on desktop (one more row in `grid-template-rows`)", and that without an area the
+  card lands "in a stray cell at the bottom". Checked in headless Chrome on T19's branch merged
+  with `main`: without an area the card lands at the top of the page, above the map. A row
+  beside the scene stretches the map card, whose viewport has a fixed height, and leaves an empty
+  band under the map. Now: the Scenarios row becomes `'scenarios panel'`, so the card sits under
+  `#nudge` beside `#scenarios` and the map keeps its size. The Done-when line says the same.
+
+## 14 Nov 2026: T25 to T30 reach `main`
+
+Pull request #4 added six tasks on 13 Nov. It was stacked on #3 (`workflow-fixes`) and was
+merged 8 seconds after #3, before GitHub had moved its base to `main`. So it merged into the
+`workflow-fixes` branch, GitHub showed it as merged, and the six tasks never reached `main`. An
+audit of the merged tickets on 14 Nov found them missing. This entry adds them, with the facts
+that changed in between brought up to date. The reasons for the six tasks are the ones written
+on 13 Nov, kept below.
+
+### tasks/README.md and the task files
+
+- **The board** had 25 tasks, T00 to T24. Now 31: T25 to T30 are new. P1's row gains T25 and
+  T26, P2's gains T27.
+- **The mirror** on rickphobia.com was in spec section 5 and in `docs/decisions.md`, with no
+  task. Now T28, if time.
+- **F16**, the camera glide, was an "if time" feature in the spec with no task file, unlike F14
+  and F15. Now T29.
+- **The freeze.** T16 and T17 collect the sources and AI-use notes, but no task checked that
+  every file was filled in, put the live address in the README, closed spec section 10, or
+  marked the submitted commit. T21 step 7 asks P1 for the README line with no task to do it in.
+  Now T26.
+- **Load time.** T05 and T24 time one skyline. Nothing measured the page loading a 12.8 MB
+  height map on a slow connection. Now T27, which measures and hands each fix to its owner.
+- **CI** runs the unit tests and the build and never opens the page. Now T30, if time, kept
+  apart from the "not before M2" rule because it is not a feature.
+
+What the 13 Nov task files said that is no longer true, and what they say now:
+
+- **T25** had no Notes. Added: until T07 merges the site list is mock, and on the real height
+  map `mock-rim` and `mock-floor` are two ordinary points.
+- **T26** step 1 took the live address from "P3 posts it in T21"; it is `https://darksight.space`.
+  Step 2 said the title stays "Lunar Landing Site Navigator" unless P5 picks a name; the product
+  was named Darksight on 14 Nov. Step 3 was "real names against P2 to P5", which the board
+  already has; it now checks the board against the task files. Step 7 said "the deploy run";
+  two workflows publish now, so it names both.
+- **T27** said the height map "may be 15 MB" and listed `ephemeris.bin`. The map is 12.8 MB and
+  the table is one file per decade (pull request #31). It gains the two checks issue #32 asks
+  for on the final version: the pause on a crater floor, and "Loading" between decades.
+- **T28** called the mirror a backup for GitHub Pages, "the submitted link". The submitted link
+  is `https://darksight.space`, published through Cloudflare Pages. Step 1 now also points at
+  the `deploy` branch, which already holds each build.
+- **T30** said "one of the eight slots". The page has nine since T15 added `#panel`; it now says
+  "the slots in contract section 5".
+- **`tickets-summary.md`**, every task in one line, was in the same pull request. It is not
+  brought over: it repeated the board and would go stale with it.
+
+### SPEC.md
+
+- **Section 2 and section 4.** There was no F19. The page opened on whatever `state.ts` chose as
+  a default (latitude -89.5, longitude 0, nothing pinned). Now F19: the plain link opens on the
+  rim-against-floor example.
+- **Section 10.** Added the load-time budgets as an open decision: T27's numbers were proposed
+  by the session that wrote the task, not agreed by the team.
+
+### docs/data-contract.md
+
+- **Section 4.** Was silent on what state holds when the address is empty. Added "First open".
+  Modules can no longer assume nothing is pinned at the start.
+
+## 14 Nov 2026: T13's first "Done when" line is checked on real terrain
+
+### tasks/T13-nudge.md
+
+- **Done when, line 1** was "On the mock grid, starting at the crater rim (-87.67, 45.0) and
+  nudging 1 km south, down the inside wall, reports a large loss of sunlight." It could not
+  pass. `make_mock.py` keeps the mock rim crest flat for 1.5 km either side of the rim
+  (`FLAT_M`, there so a read between cells sees the exact height), so 1 km south is still on
+  the crest and the nudge rightly says "No meaningful change"; the loss starts 2 km in (pull
+  request #35). Now the line starts at -89.45, -137.3 on the real height map, which `main` has
+  served since T04 merged, so T13 can check it before it merges. P1 saw "−14 days of sunlight
+  in 30 days" and "sunset 17 days earlier" there on pull request #35's preview. Not chosen:
+  two nudges on the mock (the site no longer serves the mock crater), or a narrower `FLAT_M`
+  (P2's file, and the mock files and their tests would have to be made again).
+
+## 14 Nov 2026: T15 taken by P1, `#panel` slot
+
+### docs/data-contract.md
+
+- **5. Page slots:** said "T00 wires all of them in `main.ts` with placeholders, so no later
+  task needs to touch `main.ts` or `index.html`." T15 needs a slot T00 didn't make. Now P1 adds
+  the slot for an "if time" task, and the module's own task still never touches those files.
+  The `#panel` row and the `panel.ts` row of section 3 are new.
+
+### tasks/README.md and tasks/T15-panel.md
+
+- T15's owner was "unassigned". Now P1 (Yi Hung), whose other tasks are merged.
+- T15's files were only `web/src/ui/panel/`, but its percentages are numbers the user sees,
+  which must come from `core/`. Now `core/panel.ts` and its test are T15's too.
+- Step 3 was "Needs a slot in `index.html`: agree with P1." P1 owns the task, so it now says
+  where the slot is. Step 2 adds the 30-day average, which shows the difference between the
+  panels even at an hour when the Sun is down.
+
+## 14 Nov 2026: `#panel` slot in T19's layout step
+
+### tasks/T19-ui-design.md
+
+- Step 3's phone order was "about, scene, scenarios, readout, nudge, compare, timeline, sky".
+  Now `panel` comes after `nudge`, and the step says where `#panel` (T15's Solar panel card,
+  pull request #36) goes on desktop. A new Done-when line checks it. T19's grid (pull request
+  #23) places every slot by name, so a slot it doesn't name would land in a stray cell.
+
+## 14 Nov 2026: dates 1900-2100, one file per decade, DE440
+
+From pull request #31 (MarsRon). The team asked to pick any date over a much wider span. One
+hourly file for 1900-2100 would be over 40 MB to download up front, so the table is split by
+decade (the page loads the 2020s, 0.7 MB, and other decades when a scenario needs them) and
+thinned to one row every 3 hours, which still agrees with Skyfield's surface alt/az to 0.001
+degrees (T02 allows 0.02). DE421's Moon orientation file stops in 2050; DE440's covers
+1550-2650. "Permanently shadowed" now covers the future from the chosen time instead of one
+fixed decade. The risks accepted at merge are tracked in issue #32.
+
+### SPEC.md
+
+- **4. Features, F2:** the range was "2026 to 2035". Now 1900 to 2100.
+- **4. Features, F4:** the special wording was "Permanently shadowed (2026-2035)". Now
+  "(until 2100)".
+- **5. How it works:** the Sun and Earth row was "hourly, 2026-2035", from "NASA JPL DE421
+  files", output "`ephemeris.bin` (about 2 MB)". Now every 3 hours, 1900-2100, DE440, one file
+  per decade.
+- **7. Accuracy:** the Shackleton floor row was "Never lit, 2026-2035". Now "Never lit, to 2100".
+- **8. Known limits:** was "Table covers 2026-2035, hourly, with straight-line steps between
+  hours." Now 1900-2100 every 3 hours, plus what "Permanently shadowed" means.
+
+### docs/data-contract.md
+
+- **1. Moon-fixed frame:** the frame was `MOON_ME_DE421`. Now `MOON_ME_DE440_ME421`.
+- **2. Files, `ephemeris.json` + `ephemeris/<decade>.bin`:** the heading was "`ephemeris.bin` +
+  `ephemeris.json`": one file, `start` 2026-01-01T00:00:00Z, `step_s` 3600, `rows` 87649,
+  `source` "JPL DE421 via Skyfield". Now `ephemeris.json` is an index with `home` and `chunks`
+  (file, start, rows, hash), `step_s` is 10800, and the browser keeps decade files in Cache
+  Storage. A table without `chunks` (T20's mock) is still one `ephemeris.bin`.
+- **3. TypeScript, the `ephemeris.ts` row:** listed only `loadEphemeris`, `parseEphemeris`,
+  `startMs`, `endMs`, `meta` and `vectorsAt`. Added `loadEphemerisChunk`, `indexEphemeris`,
+  `homeStartMs`, `homeEndMs`, `missing` and `withChunk`.
+- **3. TypeScript, Visibility (T06), wording table:** was `Permanently shadowed (2026-2035)`.
+- **4. State:** `neverLitFor` was "no sunlight there in the whole table". The "Decades" and
+  "Never lit" notes are new.
+
+### docs/decisions.md
+
+- Pull request #31 added two rows: one from its first version and one from its final version,
+  which said it "replaces the 1950-2050 hourly line below". They are now one row. The removed
+  row said: "Time range widened from 2026-2035 to 1950-2050. The table is split into one file
+  per decade; the page loads the 2020s first and other decades the first time a scenario needs
+  them. Kernels move from DE421 to DE440 (frame `MOON_ME_DE440_ME421`). 'Permanently shadowed'
+  is judged on 2020-2029." Why: "Users asked to pick any date 1950-2050. One hourly file would
+  be about 21 MB to download up front; per decade it stays at about 2 MB. DE421's Moon
+  orientation file stops in 2050. A shadow verdict over 'whatever has loaded' would change as
+  decades arrive." The range then grew to 1900-2100 at 3-hour rows, and the shadow verdict
+  moved from 2020-2029 to the chosen time through 2100.
+
 ## 14 Nov 2026: pull request previews get their own address
 
 ### docs/decisions.md

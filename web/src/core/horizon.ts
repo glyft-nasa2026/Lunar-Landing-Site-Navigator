@@ -25,8 +25,9 @@ export const SKYLINE_MAX_DIST_M = 150_000;
 export const SKYLINE_MIN_LAT = -85;
 /**
  * Within this many degrees of the south pole (about 3 m), the walk starts from the pole itself.
- * There, every direction is north and bearing b runs down longitude (site lon + b), which is
- * what destination() means but can't compute: its formula cancels to 0/0 at the exact pole.
+ * There, every direction is north and bearing b runs down longitude (site lon + b).
+ * destination() follows the same rule from exactly -90. This shortcut was written when it
+ * could not (its first formula cancelled to 0/0 there) and is kept as it is.
  */
 const POLE_EPS_DEG = 1e-4;
 
