@@ -1,0 +1,15 @@
+{
+  "start": "2026-01-01T00:00:00Z",
+  "step_s": 3600,
+  "rows": 87649,
+  "frame": "MOON_ME_DE421",
+  "columns": [
+    "sun_x",
+    "sun_y",
+    "sun_z",
+    "earth_x_km",
+    "earth_y_km",
+    "earth_z_km"
+  ],
+  "source": "mock"
+}
