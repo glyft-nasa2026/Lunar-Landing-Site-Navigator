@@ -63,13 +63,13 @@ can be pinned.
 | F7 | Strips | Two bars per scenario (Sun, Earth) on one shared axis: days since each scenario's own time, 0 to 30. Filled where up, empty where hidden | Strips agree with the countdowns |
 | F8 | Timeline | For the selected scenario: degrees above the skyline against time, one line for Sun, one for Earth, shaded below zero. Range buttons: 30 days, 90 days, 1 year; earlier and later buttons. Dragging sets the live time, and the chart stays still while the marker moves | Dragging updates readout and 3D view |
 | F9 | Sky panorama | Azimuth 0-360 across, elevation up. The terrain skyline as a filled shape, the Sun's and Earth's paths over the next 30 days, and their positions now | The Sun marker sits below the skyline exactly when the readout says "hidden" |
-| F10 | 3D scene | South-pole terrain from LOLA. The Sun is the light, placed from the computed direction. Earth is drawn in the sky. Pins for scenarios and curated sites. Two cameras: top-down (the "2D map") and orbit ("3D"). Clicking the terrain sets the live site | Click returns latitude and longitude within one grid cell of the true point |
+| F10 | 3D scene | South-pole terrain from LOLA. The Sun is the light, placed from the computed direction. Earth is drawn in the sky. Pins for scenarios and curated sites. Two views: a flat "2D map" (polar stereographic on the height map, equidistant cylindrical elsewhere, with a latitude-longitude grid) and an orbit "3D" scene. Clicking the terrain sets the live site | Click returns latitude and longitude within one grid cell of the true point |
 | F11 | Nudge | Buttons: 1 km north, south, east, west; +1 day, -1 day. Makes a ghost scenario and states the difference in words: "+31 h of sunlight", "loses Earth 2 days earlier" | A nudge off a crater rim onto its floor shows a large loss of sunlight |
 | F12 | Curated sites | 15-20 sites: Apollo, recent landers, south-pole candidates. Each has a source link | Every pin checked on Quickmap |
 | F13 | About and checks | "Checked against JPL Horizons, largest difference X degrees", known limits, data sources, how AI was used | Page shows the number from `validation.json` |
 | F14 | Layers (if time) | Coloured map overlays with on/off and transparency: lit %, Earth-visible %, never lit, height | |
 | F15 | Panel choice (if time) | Flat panel or upright panel that turns to face the Sun; shows relative power | |
-| F16 | Transition (if time) | The camera glides between top-down and orbit | |
+| F16 | Transition (if time) | The flat map and the 3D scene cross-fade, the 3D camera easing onto the site | |
 | F17 | Share link | Scenarios are stored in the page address, so a link reopens the same comparison | Reloading the page keeps the pinned scenarios |
 | F18 | Look and feel | One dark theme, one layout and one chart style across every module, from shared variables. Works from 1280 px desktop down to a phone | Text contrast 4.5 to 1; no colour code outside the theme files; nothing overlaps at 1280 px or 390 px |
 | F19 | Example on first open | A link with no scenarios in it opens on a ready comparison: the crater rim (live, and pinned as A) against the crater floor (pinned as B), at the current hour. A link with scenarios in it opens exactly those | The plain link shows two columns in the compare table; unpinning both and reloading leaves nothing pinned |
@@ -88,7 +88,7 @@ No server. Python prepares data once; the browser does the rest.
 | Countdowns, percentages | TypeScript, `core/windows.ts` | In memory |
 | 3D view | three.js | |
 | Charts | Plotly.js | |
-| Hosting | GitHub Pages at darksight.space; mirror on rickphobia.com | |
+| Hosting | Cloudflare Pages serves `main` at darksight.space; each pull request gets a preview at its own address. Each build of `main` also goes to the `deploy` branch for the homelab (`docs/decisions.md`). Mirror on rickphobia.com: T28, if time | |
 
 **Why this works:** at one moment, the Sun's and Earth's directions measured from the Moon are
 the same for every site. Only the site's own "up" differs. So one table serves every site.
@@ -138,11 +138,10 @@ Fill in the clock times once the submission deadline is known.
 
 | Decision | Who | Importance |
 |---|---|---|
-| Submission deadline and Saturday start time, Malaysia time | P1 | blocks the schedule |
+| Submission deadline and Saturday start time, Malaysia time | Team | blocks the schedule |
 | Team agrees the cut line (refraction and GPS removed) | All | blocks T08 onward |
-| Project name | P5 | cosmetic |
-| Names against P2-P5 on the board | P1 | blocks delegation |
-| Repo made public (GitHub refuses the branch rule and Pages on a private repo in a free organisation) | P1 | blocks T21 |
-| Figma seat for the designer: Full or Dev on Professional or Education | P5 | costs time (a fallback is in `docs/mcp-and-skills.md`) |
-| Demo format and length, read from the submission form | P4 | blocks T17 |
-| Load-time budgets in T27 (numbers in 3 s, height map in 20 s, no freeze over 0.5 s, on "Fast 4G"): proposed, not yet agreed | P1 | costs time |
+| Project name | Team | cosmetic |
+| Repo made public (GitHub refuses the branch rule and Pages on a private repo in a free organisation) | Whoever takes T21, with repository settings access | blocks T21 |
+| Figma seat when using Figma: Full or Dev on Professional or Education | Whoever takes the design task | costs time (a fallback is in `docs/mcp-and-skills.md`) |
+| Demo format and length, read from the submission form | Whoever takes T17 | blocks T17 |
+| Load-time budgets in T27 (numbers in 3 s, height map in 20 s, no freeze over 0.5 s, on "Fast 4G"): proposed, not yet agreed | Team, informed by T27's measurements | costs time |

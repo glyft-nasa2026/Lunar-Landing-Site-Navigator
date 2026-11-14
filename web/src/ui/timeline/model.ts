@@ -76,6 +76,32 @@ export function timelineModel(
 }
 
 /**
+ * A time the way Plotly needs it on a date axis: "YYYY-MM-DD HH:MM:SS.sss" in UTC, with no zone
+ * written. Plotly shows such a string as it stands. Given a number of milliseconds it shows the
+ * browser's local time instead, so a laptop in Malaysia read 8 hours ahead of the "UTC" label.
+ * An empty string (Plotly: no value) for a time that isn't a date.
+ */
+export function plotTime(tMs: number): string {
+  const d = new Date(tMs);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 23).replace('T', ' ');
+}
+
+/**
+ * What to say in place of the chart when the table is loaded but the window holds fewer than the
+ * two samples a chart needs. `count` is how many it holds, `fromMs` where the window starts.
+ * None of these is a wait: state.ts hands over the table only once every decade the scenarios
+ * need has arrived or failed, so "Loading" here would never end.
+ */
+export function emptyNote(count: number, fromMs: number, tableStartMs: number, tableEndMs: number): string {
+  if (!(fromMs >= tableStartMs && fromMs < tableEndMs)) {
+    return 'This window is outside the Sun and Earth table (1900 to 2100).';
+  }
+  // Inside 1900 to 2100 with nothing to show: the decade's file did not download.
+  if (count === 0) return 'This window is outside the Sun and Earth table.';
+  return 'The Sun and Earth table ends less than two hours from here: nothing to chart.';
+}
+
+/**
  * The time under a pointer: `px` from the left of the plot area, `lengthPx` its width, the axis
  * from startMs to endMs. Clamped to the window, so a drag never moves the window itself.
  */

@@ -4,7 +4,6 @@ Status: not started
 
 | | |
 |---|---|
-| Owner | P3 |
 | Tier | if time |
 | Waits for | T00, T20, T21 |
 | Branch | `t30-smoke-test` |
@@ -19,11 +18,11 @@ This is not a feature, so the "not before M2" rule for "if time" features doesn'
 it whenever you are waiting on another task. It is "if time" because T18's walkthroughs at M1
 and M2 already cover the same ground by hand. Drop it if it isn't working within an hour.
 
-## Files you own
+## Files in scope
 
 - `web/e2e/` (new)
 - `.github/workflows/ci.yml` (taken over from T21)
-- `web/package.json` and `web/package-lock.json`: one new dev package, `@playwright/test`, and one new script, `test:page`. P1 has agreed to this one change by listing it here; tell P1 in the chat when your branch is open, so no other package change is made at the same time
+- `web/package.json` and `web/package-lock.json`: one new dev package, `@playwright/test`, and one new script, `test:page`. Announce the dependency change when claiming this task and coordinate with other branches editing these files
 - `docs/ai-use/T30.md`, `docs/sources/T30.md`, this file's `Status:` line
 
 ## Steps
@@ -49,5 +48,5 @@ and M2 already cover the same ground by hand. Drop it if it isn't working within
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md section 5 and tasks/T30-smoke-test.md. Do only that task, on branch t30-smoke-test. Edit only the files it lists under "Files you own"; in web/package.json add only the one package and the one script the task names. If the task needs a change anywhere else, or another package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md section 5 and tasks/T30-smoke-test.md. Do only that task, on branch t30-smoke-test. Use "Files in scope" as the starting scope; in web/package.json add the package and script the task names. Follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

@@ -1,9 +1,94 @@
 /* Styles for #nudge. Written by T13; use only the variables and classes of ui/theme.css.
-   After T13 merges, this file belongs to T23. */
+   After T13 merges, this file belongs to T23.
+   Issue #58: #nudge floats over the map, in the corner named by its data-corner attribute.
+   It moves by jumping, with no animation, so there is nothing to turn off for reduced motion. */
+
+#nudge {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(calc(var(--space-5) * 12), calc(100% - var(--space-2) * 2));
+  max-height: calc(100% - var(--space-2) * 2);
+  padding: var(--space-3);
+  overflow: hidden;
+}
+
+#nudge[data-corner='tl'] { top: var(--space-2); left: var(--space-2); }
+#nudge[data-corner='tr'] { top: var(--space-2); right: var(--space-2); }
+#nudge[data-corner='bl'] { bottom: var(--space-2); left: var(--space-2); }
+#nudge[data-corner='br'] { bottom: var(--space-2); right: var(--space-2); }
+
+#nudge .nudge-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
 
 #nudge h2 {
-  margin: 0 0 var(--space-3);
-  font-size: var(--fs-lg);
+  margin: 0 auto 0 0;
+  font-size: var(--fs-md);
+}
+
+#nudge .nudge-corners {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: var(--space-1);
+}
+
+#nudge .nudge-corner,
+#nudge .nudge-fold {
+  padding: 0 var(--space-2);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+
+#nudge .nudge-body {
+  min-height: 0;
+  margin-top: var(--space-3);
+  padding-right: var(--space-1);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+#nudge .nudge-body[hidden] {
+  display: none;
+}
+
+#nudge .nudge-dist {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+#nudge .nudge-dist input {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--accent);
+}
+
+#nudge .nudge-dist-value {
+  min-width: calc(var(--space-5) * 3);
+  text-align: right;
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+#nudge .nudge-grid .btn,
+#nudge .nudge-days .btn {
+  padding: var(--space-1);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#nudge .nudge-step {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
 }
 
 #nudge .nudge-grid {

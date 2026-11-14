@@ -228,6 +228,26 @@ function covered(fromMs: number, toMs: number, settled = false): boolean {
   return settled ? need.every((i) => failed.has(i)) : need.length === 0;
 }
 
+/**
+ * How far the table can be read from fromMs towards toMs. toMs when every decade on the way is
+ * in memory. The start of the first decade that failed to download when one is in the way: its
+ * times read as outside the table, so the days before it are still good. Null while a decade
+ * on the way is downloading, or when fromMs itself is in a failed one. Asks for the decades
+ * not asked for yet.
+ */
+function readableTo(fromMs: number, toMs: number): number | null {
+  if (!table) return null;
+  const need = table.missing(fromMs, toMs);
+  let end = toMs;
+  for (const i of need) {
+    if (failed.has(i)) end = Math.min(end, Date.parse(table.meta.chunks?.[i]?.start ?? table.meta.start));
+    else fetchChunk(i);
+  }
+  if (!(end > fromMs)) return null;
+  // Anything still missing before `end` is on its way; a decade past it no longer matters.
+  return table.missing(fromMs, end).some((i) => !failed.has(i)) ? null : end;
+}
+
 function fetchChunk(i: number): void {
   if (!table || pending.has(i)) return;
   pending.add(i);
@@ -235,7 +255,7 @@ function fetchChunk(i: number): void {
   loadEphemerisChunk(asked, i).then(
     (buffer) => {
       if (table?.meta !== asked.meta || !pending.delete(i)) return; // a new table came meanwhile
-      table = table.withChunk(i, buffer);
+      table = table.withChunk(i, buffer);   // the loader has checked the length: this can't throw
       notify(false);
     },
     (err: unknown) => {
@@ -383,9 +403,10 @@ function groundFor(site: Site): number {
 
 function hourly(sc: Scenario, startMs: number, range: Range): Sample[] {
   const eph = state.eph;
-  if (!eph || !covered(startMs, startMs + rangeMs(range))) return [];
+  const endMs = eph ? readableTo(startMs, startMs + rangeMs(range)) : null;
+  if (!eph || endMs === null) return [];
   return cached(seriesCache, `${siteKey(sc.site)}|${startMs}|${range}`, () =>
-    series(eph, sc.site, groundFor(sc.site), skylineFor(sc), startMs, startMs + rangeMs(range), HOUR_MS));
+    series(eph, sc.site, groundFor(sc.site), skylineFor(sc), startMs, endMs, HOUR_MS));
 }
 
 export function skylineFor(sc: Scenario): Skyline {
@@ -404,16 +425,19 @@ export function timelineFor(sc: Scenario, range: Range): Sample[] {
 
 /** Over 30 days from sc.tMs. */
 export function summaryFor(sc: Scenario): Summary {
-  if (!state.eph) return summary([]);
-  return cached(summaryCache, `${siteKey(sc.site)}|${sc.tMs}`, () => summary(samplesFor(sc, '30d')));
+  const samples = samplesFor(sc, '30d');
+  // No hours yet may only mean the decade is still downloading: don't remember zeros for it.
+  if (samples.length === 0) return summary([]);
+  return cached(summaryCache, `${siteKey(sc.site)}|${sc.tMs}`, () => summary(samples));
 }
 
 /** Next rise or set after sc.tMs. */
 export function flipFor(sc: Scenario, body: Body): Flip {
   const eph = state.eph;
-  if (!eph || !covered(sc.tMs, sc.tMs + FLIP_DAYS * DAY_MS)) return null;
+  const endMs = eph ? readableTo(sc.tMs, sc.tMs + FLIP_DAYS * DAY_MS) : null;
+  if (!eph || endMs === null) return null;
   return cached(flipCache, `${siteKey(sc.site)}|${sc.tMs}|${body}`, () =>
-    nextFlip(eph, sc.site, groundFor(sc.site), skylineFor(sc), sc.tMs, body));
+    nextFlip(eph, sc.site, groundFor(sc.site), skylineFor(sc), sc.tMs, body, (endMs - sc.tMs) / DAY_MS));
 }
 
 /**
@@ -427,14 +451,22 @@ export function neverLitFor(sc: Scenario): boolean {
   const eph = state.eph;
   // Near the end of the table a few dark hours would prove nothing: ask for 60 days at least.
   if (!eph || sc.tMs < eph.startMs || eph.endMs - sc.tMs < FLIP_DAYS * DAY_MS) return false;
-  if (sunlit(eph, sc, sc.tMs) || flipFor(sc, 'sun') !== null) return false;
+  if (sunlitTest(eph, sc)(sc.tMs) || flipFor(sc, 'sun') !== null) return false;
   if (!covered(sc.tMs, eph.endMs)) return false;
   return lastLitMs(eph, sc, sc.tMs) < sc.tMs;
 }
 
-function sunlit(eph: Ephemeris, sc: Scenario, tMs: number): boolean {
-  const sun = sunAltAz(eph, sc.site, groundFor(sc.site), tMs);
-  return sun.alt - skylineElev(skylineFor(sc), sun.az) + SUN_RADIUS > 0;
+/**
+ * The test "is any of the Sun's disc above the skyline there at tMs". The site's ground height
+ * and skyline are looked up once here, not once per hour: the scan below asks 650,000 times.
+ */
+function sunlitTest(eph: Ephemeris, sc: Scenario): (tMs: number) => boolean {
+  const ground = groundFor(sc.site);
+  const skyline = skylineFor(sc);
+  return (tMs) => {
+    const sun = sunAltAz(eph, sc.site, ground, tMs);
+    return sun.alt - skylineElev(skyline, sun.az) + SUN_RADIUS > 0;
+  };
 }
 
 /**
@@ -450,10 +482,13 @@ function lastLitMs(eph: Ephemeris, sc: Scenario, downToMs: number): number {
     scan = { litMs: -Infinity, fromMs: eph.endMs + HOUR_MS };
     litScans.set(key, scan);
   }
-  while (scan.litMs === -Infinity && scan.fromMs > downToMs) {
-    const t = scan.fromMs - HOUR_MS;
-    scan.fromMs = t;
-    if (sunlit(eph, sc, t)) scan.litMs = t;
+  if (scan.litMs === -Infinity && scan.fromMs > downToMs) {
+    const sunlit = sunlitTest(eph, sc);
+    while (scan.litMs === -Infinity && scan.fromMs > downToMs) {
+      const t = scan.fromMs - HOUR_MS;
+      scan.fromMs = t;
+      if (sunlit(t)) scan.litMs = t;
+    }
   }
   return scan.litMs;
 }

@@ -1,10 +1,9 @@
 # T04: South-pole height map from LOLA
 
-Status: done, pull request open (grey image to attach; Quickmap comparison by eye)
+Status: done (pull request #13)
 
 | | |
 |---|---|
-| Owner | P2 |
 | Tier | must |
 | Waits for | T00, T20 |
 | Branch | `t04-dem` |
@@ -13,7 +12,7 @@ Status: done, pull request open (grey image to attach; Quickmap comparison by ey
 
 The real height grid in our own projection and format (contract section 2).
 
-## Files you own
+## Files in scope
 
 - `data-prep/make_dem.py`
 - `web/public/data/dem.bin`, `dem.json` (taken over from T20's mock)
@@ -37,8 +36,13 @@ The real height grid in our own projection and format (contract section 2).
 - [ ] The image is the right way round: compare crater positions with Quickmap's south-pole view.
 - [ ] `npm test` and `npm run build` pass.
 
+## After the merge
+
+- 14 Nov 2026, audit of the merged tickets, on the shipped `dem.bin`: the size, the height range, the south pole and the four points at 85 S, and Shackleton's floor against its rim (more than 2,500 m) all pass. Part of the grid was worked out again from the LOLA source file and matched exactly. No defect found.
+- The Quickmap comparison by eye is not recorded as done. *cosmetic*: the Shackleton line above already shows the grid is the right way round, since a mirrored grid would have no crater at those coordinates.
+
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T04-dem.md. Do only that task, on branch t04-dem. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T04-dem.md. Do only that task, on branch t04-dem. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

@@ -1,8 +1,8 @@
 import {
   AmbientLight, Box3, CanvasTexture, Color, DirectionalLight, Group, Mesh, MeshBasicMaterial,
-  MeshLambertMaterial, OrthographicCamera, PCFShadowMap, PerspectiveCamera, Raycaster,
+  MeshLambertMaterial, PCFShadowMap, PerspectiveCamera, Raycaster,
   Scene, SphereGeometry, Sprite, SpriteMaterial, SRGBColorSpace, Vector2, Vector3, WebGLRenderer,
-  type Camera, type Material,
+  type Material,
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { Dem } from '../core/dem';
@@ -11,7 +11,8 @@ import {
   getState, samplesFor, select, selected, setLiveSite, setMode, subscribe, type AppState,
 } from '../state';
 import { themeColor } from '../ui/plotTheme';
-import { gridSite, moonCentre, moonDirection, siteNorth, sitePosition, siteUp, sphereSite } from './coordinates';
+import { mount as mountMap, unmount as unmountMap } from '../map';
+import { gridSite, moonCentre, moonDirection, sitePosition, siteUp, sphereSite } from './coordinates';
 import {
   detailBounds, edgeHeight, globeGeometry, recolorTerrain, setTerrainHole, terrainGeometry, type GridBounds,
 } from './terrain';
@@ -72,7 +73,7 @@ export function mount(el: HTMLElement): void {
         <output>1×</output>
       </label>
     </div>
-    <div class="scene-viewport"><p class="scene-message muted" role="status">Loading Sun and Earth table…</p></div>
+    <div class="scene-viewport"><p class="scene-message muted" role="status">Loading Sun and Earth table…</p><section id="nudge" aria-label="Nudge"></section></div>
     <p class="scene-help muted">Click to pick a site · drag to pan · scroll to zoom</p>
     <p class="scene-caption muted">Lighting illustrates the terrain; use the readout for visibility.</p>`;
   const viewport = el.querySelector<HTMLDivElement>('.scene-viewport')!;
@@ -83,12 +84,27 @@ export function mount(el: HTMLElement): void {
   const output = el.querySelector<HTMLOutputElement>('output')!;
   const reset = el.querySelector<HTMLButtonElement>('.scene-reset')!;
   const buttons = [...el.querySelectorAll<HTMLButtonElement>('[data-mode]')];
+  // The 2D map is a flat canvas of its own (web/src/map/, T31), shown in place of the 3D canvas in
+  // 2D mode. It needs no WebGL, so it works even where the 3D scene can't.
+  const mapHost = document.createElement('div');
+  viewport.prepend(mapHost); mountMap(mapHost);
+  const centreMap = (): void => { mapHost.dispatchEvent(new Event('map:centre')); };
   let renderer: WebGLRenderer;
   try { renderer = new WebGLRenderer({ antialias: true }); }
   catch {
-    message.textContent = 'The Moon explorer needs WebGL. Try a browser with hardware acceleration enabled.';
-    slider.disabled = reset.disabled = true;
-    buttons.forEach((b) => { b.disabled = true; });
+    // No 3D: keep the flat map, switch to it, and say why the 3D button is off.
+    const only2d = buttons.find((b) => b.dataset.mode === '2d')!;
+    for (const b of buttons) {
+      const is2d = b === only2d;
+      b.disabled = !is2d; b.classList.toggle('btn-primary', is2d); b.setAttribute('aria-pressed', String(is2d));
+    }
+    slider.disabled = true;
+    help.textContent = 'The 3D view needs WebGL, which this browser has switched off · Click to pick a site · drag to pan · scroll to zoom';
+    caption.textContent = 'Lighting is illustrative; use the readout for visibility';
+    message.hidden = true;
+    reset.addEventListener('click', centreMap);
+    if (getState().mode !== '2d') setMode('2d');
+    mounts.set(el, () => { reset.removeEventListener('click', centreMap); unmountMap(mapHost); mounts.delete(el); });
     return;
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -100,7 +116,7 @@ export function mount(el: HTMLElement): void {
 
   let frame = 0, disposed = false, lost = false, framed = false;
   let mode: AppState['mode'] = getState().mode;
-  let polar = false, stretch = 1, drawnStretch = 1, span = 150, pinPx = 1, orbitGlobe = false;
+  let polar = false, stretch = 1, drawnStretch = 1, pinPx = 1, orbitGlobe = false;
   let dem: Dem | null = null, coarse: Mesh | null = null, detail: Mesh | null = null;
   let bounds: GridBounds | undefined;
   let siteKey = '', coarseKey = '', detailKey = '', pinKey = '', themeKey = '';
@@ -110,16 +126,11 @@ export function mount(el: HTMLElement): void {
   /** The selected site on the drawn surface. */
   const target = new Vector3();
   /** Everything the terrain meshes draw, so the Sun's shadow box can be fitted to it. */
-  const terrainBox = new Box3(), shadowBox = new Box3(), seenBox = new Box3();
+  const terrainBox = new Box3(), shadowBox = new Box3();
 
   const world = new Scene();
-  const mapCamera = new OrthographicCamera(-1, 1, 1, -1, 0.01, 20_000);
+  // Only the orbit view is 3D. The 2D map is web/src/map/ (T31): the 3D scene draws nothing in 2D mode.
   const orbitCamera = new PerspectiveCamera(45, 1, 0.02, 60_000);
-  mapCamera.up.set(0, 0, -1);
-  const mapControls = new OrbitControls(mapCamera, canvas);
-  mapControls.enableRotate = false; mapControls.screenSpacePanning = true;
-  mapControls.minZoom = 0.1; mapControls.maxZoom = 200;
-  mapControls.addEventListener('change', invalidate);
   let orbitControls = makeOrbitControls(false, new Vector3(0, 1, 0));
   const sun = new DirectionalLight(); sun.intensity = 3; sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.00001; sun.shadow.normalBias = 0.002;
@@ -141,7 +152,6 @@ export function mount(el: HTMLElement): void {
   const pinGeometry = new SphereGeometry(1, 12, 8);
   const raycaster = new Raycaster(), pointer = new Vector2();
   let pointerDown: { x: number; y: number; id: number } | null = null, maxDrag = 0;
-  const activeCamera = (): Camera => mode === '2d' ? mapCamera : orbitCamera;
 
   /**
    * OrbitControls takes its orbit axis from camera.up once, when it is created, so each view
@@ -172,36 +182,32 @@ export function mount(el: HTMLElement): void {
   }
 
   /** Pins keep the same size on screen at every zoom, sitting on the surface. */
-  function sizePins(camera: Camera): void {
+  function sizePins(): void {
     const height = viewport.clientHeight || 1;
     for (const pin of pins.children) {
       const { base, up, scale } = pin.userData as PinData;
-      const perPx = camera === mapCamera
-        ? (mapCamera.top - mapCamera.bottom) / mapCamera.zoom / height
-        : 2 * Math.tan(orbitCamera.fov * RAD / 2) * orbitCamera.position.distanceTo(base) / height;
+      const perPx = 2 * Math.tan(orbitCamera.fov * RAD / 2) * orbitCamera.position.distanceTo(base) / height;
       const r = pinPx * scale * perPx;
       pin.scale.setScalar(r);
       pin.position.copy(base).addScaledVector(up, r);
     }
   }
   function render(): void {
-    const camera = activeCamera();
-    if (camera === orbitCamera) {
-      // The camera moves from metres above a crater to beyond the whole Moon: keep the depth
-      // range tight around what can be seen, or near surfaces fight and far ones vanish.
-      const fromCentre = orbitCamera.position.distanceTo(globe.position);
-      orbitCamera.near = Math.min(1000, Math.max(0.005, (fromCentre - MOON_RADIUS_KM - relief) / 2));
-      orbitCamera.far = fromCentre + MOON_RADIUS_KM + EARTH_DRAWN_KM * 1.1;
-      orbitCamera.updateProjectionMatrix();
-    }
-    sizePins(camera);
+    // In 2D the flat map shows instead: nothing is drawn here, so no shadow map is rendered.
+    if (mode === '2d') return;
+    // The camera moves from metres above a crater to beyond the whole Moon: keep the depth
+    // range tight around what can be seen, or near surfaces fight and far ones vanish.
+    const fromCentre = orbitCamera.position.distanceTo(globe.position);
+    orbitCamera.near = Math.min(1000, Math.max(0.005, (fromCentre - MOON_RADIUS_KM - relief) / 2));
+    orbitCamera.far = fromCentre + MOON_RADIUS_KM + EARTH_DRAWN_KM * 1.1;
+    orbitCamera.updateProjectionMatrix();
+    sizePins();
     fitShadow();
-    renderer.render(world, camera);
+    renderer.render(world, orbitCamera);
   }
   /**
    * three.js leaves everything outside the Sun's shadow box unshadowed, which drew straight-edged
-   * lit bands across dark ground. Across the Sun's rays the box covers what is on screen in 2D, or
-   * the whole terrain in 3D; along them it spans the whole terrain, because a peak far off screen
+   * lit bands across dark ground. The box covers the whole terrain, because a peak far off screen
    * can still cast a shadow into view.
    */
   function fitShadow(): void {
@@ -209,25 +215,6 @@ export function mount(el: HTMLElement): void {
     const light = sun.shadow.camera;
     light.position.copy(sun.position); light.lookAt(sun.target.position); light.updateMatrixWorld();
     const box = shadowBox.copy(terrainBox).applyMatrix4(light.matrixWorldInverse);
-    if (mode === '2d') {
-      // The map looks straight down the Y axis: screen right is +X and screen up is -Z.
-      const hx = (mapCamera.right - mapCamera.left) / 2 / mapCamera.zoom;
-      const hz = (mapCamera.top - mapCamera.bottom) / 2 / mapCamera.zoom;
-      const x0 = mapCamera.position.x - hx, x1 = mapCamera.position.x + hx;
-      const z0 = mapCamera.position.z - hz, z1 = mapCamera.position.z + hz;
-      // The ground drops away from the pole, as y = sqrt(R^2 - d^2) - R at a distance d from its axis.
-      const ground = (d: number): number => Math.sqrt(Math.max(0, MOON_RADIUS_KM ** 2 - d * d)) - MOON_RADIUS_KM;
-      const nearest = Math.hypot(Math.max(0, x0, -x1), Math.max(0, z0, -z1));
-      const farthest = Math.hypot(Math.max(-x0, x1), Math.max(-z0, z1));
-      const [min, max] = coarse.geometry.userData.heightRange as number[];
-      // A kilometre spare: the native patch can reach a little past the coarse grid's heights.
-      seenBox.min.set(x0, ground(farthest) + min * stretch / 1000 - 1, z0);
-      seenBox.max.set(x1, ground(nearest) + max * stretch / 1000 + 1, z1);
-      seenBox.applyMatrix4(light.matrixWorldInverse);
-      box.min.x = Math.max(box.min.x, seenBox.min.x); box.max.x = Math.min(box.max.x, seenBox.max.x);
-      box.min.y = Math.max(box.min.y, seenBox.min.y); box.max.y = Math.min(box.max.y, seenBox.max.y);
-      if (box.min.x >= box.max.x || box.min.y >= box.max.y) return;
-    }
     light.left = box.min.x; light.right = box.max.x; light.bottom = box.min.y; light.top = box.max.y;
     // The light looks down its -Z axis.
     light.near = Math.max(0.01, -box.max.z - 1); light.far = -box.min.z + 1;
@@ -249,42 +236,27 @@ export function mount(el: HTMLElement): void {
     if (!width || !height) return;
     renderer.setSize(width, height, false);
     const aspect = width / height;
-    mapCamera.left = -span * aspect; mapCamera.right = span * aspect;
-    mapCamera.top = span; mapCamera.bottom = -span; mapCamera.updateProjectionMatrix();
     orbitCamera.aspect = aspect; orbitCamera.updateProjectionMatrix(); invalidate();
   }
-  /** Points the map straight down at the selected site, keeping its zoom. */
-  function aimMap(): void {
-    if (polar) {
-      // Longitude 0 up and 90 E right, like the height grid.
-      mapCamera.up.set(0, 0, -1); mapCamera.position.copy(target).add(new Vector3(0, 2000, 0));
-    } else {
-      const up = siteUp(selected().site);
-      mapCamera.up.copy(siteNorth(up)); mapCamera.position.copy(target).addScaledVector(up, MOON_RADIUS_KM * 3);
-    }
-    mapControls.target.copy(target); mapCamera.lookAt(target); mapControls.update();
-  }
-  /** Resets both cameras to their starting view of the selected site. */
+  /** Resets the orbit camera, and the flat map, to their starting view of the selected site. */
   function centre(): void {
     const up = siteUp(selected().site);
     orbitControls.dispose();
     if (polar && dem) {
-      span = Math.max(8, Math.min(80, dem.meta.size * dem.meta.pixel_m / 8000));
+      const span = Math.max(8, Math.min(80, dem.meta.size * dem.meta.pixel_m / 8000));
       orbitControls = makeOrbitControls(false, up);
       orbitControls.target.copy(target);
       orbitCamera.position.copy(target).add(new Vector3(span * 0.6, span * 0.9, span * 1.1));
     } else {
-      span = MOON_RADIUS_KM * 1.15;
       orbitControls = makeOrbitControls(true, new Vector3(0, -1, 0));
       orbitControls.target.copy(globe.position);
       orbitCamera.position.copy(globe.position).addScaledVector(up, MOON_RADIUS_KM * 3.5);
     }
     orbitCamera.lookAt(orbitControls.target); orbitControls.update(); onOrbitChange();
-    mapCamera.zoom = 1; aimMap(); resize();
+    centreMap(); resize();
   }
-  /** Brings the selected site back to the middle of both views, keeping zoom and viewing angle. */
+  /** Brings the selected site back to the middle of the orbit view, keeping zoom and viewing angle. The map follows by itself. */
   function follow(): void {
-    aimMap();
     if (orbitGlobe) {
       const distance = orbitCamera.position.distanceTo(globe.position);
       orbitCamera.position.copy(globe.position).addScaledVector(siteUp(selected().site), distance);
@@ -368,17 +340,25 @@ export function mount(el: HTMLElement): void {
     dem = s.dem; polar = nextPolar; mode = s.mode; siteKey = key; drawnStretch = stretch;
     target.copy(sitePosition(sc.site, polar && dem ? dem.heightAt(sc.site.lat, sc.site.lon) : 0, stretch));
     updateTerrain(changedDem);
-    slider.disabled = !polar;
+    // Stretch is drawn only in 3D; the flat map shows heights as colours.
+    slider.disabled = !polar || mode === '2d';
+    // scene.css gives the canvas display: block, which the hidden attribute would not override.
+    canvas.style.display = mode === '2d' ? 'none' : '';
     for (const button of buttons) {
       const active = button.dataset.mode === mode;
       button.classList.toggle('btn-primary', active); button.setAttribute('aria-pressed', String(active));
     }
-    mapControls.enabled = mode === '2d'; orbitControls.enabled = mode === '3d';
+    orbitControls.enabled = mode === '3d';
     if (!framed || changedDem || changedView) { framed = true; centre(); }
     else if (changedSite || changedMode || changedStretch) follow();
     updatePins(s);
     sun.target.position.copy(target);
-    if (s.eph) {
+    // vectorsAt answers a time it has no row for (outside 1900-2100, or in a decade that failed
+    // to download) with the nearest row it does have. Lighting the scene from that would show a
+    // picture of some other date while the readout says the time is outside the table.
+    const tabled = !!s.eph && sc.tMs >= s.eph.startMs && sc.tMs <= s.eph.endMs
+      && s.eph.missing(sc.tMs, sc.tMs).length === 0;
+    if (s.eph && tabled) {
       const vectors = s.eph.vectorsAt(sc.tMs);
       sun.position.copy(target).addScaledVector(moonDirection(vectors.sun), 2000); sun.intensity = 3;
       sun.castShadow = polar;
@@ -388,12 +368,17 @@ export function mount(el: HTMLElement): void {
       earth.position.copy(target).addScaledVector(toEarth.normalize(), EARTH_DRAWN_KM);
       earth.scale.setScalar(2 * EARTH_RADIUS_KM * EARTH_DRAWN_KM / distance); earth.visible = true;
     } else { sun.intensity = 0; earth.visible = false; }
-    if (!lost) { message.hidden = !!s.eph; message.textContent = 'Loading Sun and Earth table…'; }
+    if (!lost) {
+      message.hidden = tabled;
+      message.textContent = s.eph ? 'This time is outside the Sun and Earth table' : 'Loading Sun and Earth table…';
+    }
     // The same cached sample the readout shows, so the two never disagree.
     const now: Sample | undefined = samplesFor(sc, '30d')[0];
     const mock = dem?.meta.source === 'mock' || s.eph?.meta.source === 'mock';
+    const whole = mode === '2d' ? 'Whole-Moon map' : 'Moon globe';
     caption.textContent = [mock ? 'Mock data' : '',
-      polar ? 'South-pole terrain' : (dem ? 'Moon globe · outside terrain coverage' : 'Moon globe · Loading height map'),
+      polar ? (mode === '2d' ? 'South-pole terrain · polar stereographic' : 'South-pole terrain')
+        : `${whole}${mode === '2d' ? ' · equidistant cylindrical' : ''} · ${dem ? 'outside terrain coverage' : 'Loading height map'}`,
       now ? (now.sunFrac > 0 ? 'Sun visible' : 'Sun hidden') : '',
       stretch > 1 && dem ? 'Heights exaggerated; shadows are illustrative' : 'Lighting is illustrative; use the readout for visibility',
     ].filter(Boolean).join(' · ');
@@ -419,9 +404,8 @@ export function mount(el: HTMLElement): void {
     if (!start || start.id !== event.pointerId || maxDrag > 5 || event.button !== 0 || lost) return;
     const rect = canvas.getBoundingClientRect(); if (!rect.width || !rect.height) return;
     pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
-    const camera = activeCamera();
-    sizePins(camera); world.updateMatrixWorld(true); camera.updateMatrixWorld(true);
-    raycaster.setFromCamera(pointer, camera);
+    sizePins(); world.updateMatrixWorld(true); orbitCamera.updateMatrixWorld(true);
+    raycaster.setFromCamera(pointer, orbitCamera);
     const surface = raycaster.intersectObjects([detail, coarse, globe].filter((m): m is Mesh => !!m), false)[0];
     const pin = raycaster.intersectObjects(pins.children, false).find((hit) => !surface || hit.distance <= surface.distance + 0.01);
     if (pin) {
@@ -464,7 +448,7 @@ export function mount(el: HTMLElement): void {
     canvas.removeEventListener('webglcontextlost', onLost); canvas.removeEventListener('webglcontextrestored', onRestored);
     slider.removeEventListener('input', onStretch); reset.removeEventListener('click', centre);
     buttons.forEach((b) => b.removeEventListener('click', changeMode)); window.removeEventListener('pagehide', onPageHide);
-    mapControls.dispose(); orbitControls.dispose(); clearTerrain(); clearPins();
+    orbitControls.dispose(); clearTerrain(); clearPins(); unmountMap(mapHost);
     pinGeometry.dispose(); globe.geometry.dispose(); globeMaterial.dispose(); terrainMaterial.dispose(); detailMaterial.dispose();
     earthMaterial.map?.dispose(); earthMaterial.dispose(); sun.dispose();
     // Free the WebGL context now: browsers allow only a few, and a remount would leak one.

@@ -1,10 +1,9 @@
 # T01: Sun and Earth table from Skyfield
 
-Status: done (npm test and npm run build left to CI: Node not installed locally)
+Status: done (pull request #16; the table was replaced by the 1900-2100 one in #31)
 
 | | |
 |---|---|
-| Owner | P4 |
 | Tier | must |
 | Waits for | T20 |
 | Branch | `t01-ephemeris` |
@@ -13,7 +12,7 @@ Status: done (npm test and npm run build left to CI: Node not installed locally)
 
 The real table (contract section 2) and the fixtures that prove the browser maths.
 
-## Files you own
+## Files in scope
 
 - `data-prep/make_ephemeris.py`
 - `web/public/data/ephemeris.bin`, `ephemeris.json` (taken over from T20's mock)
@@ -44,10 +43,15 @@ Skyfield downloads its own data files (about 20 MB) on first run. Keep them in `
 
 The packages are already in `data-prep/requirements.txt` (T20). While T20 is still open, set up Python, read the Skyfield page and start that download; make the branch once T20 has merged.
 
-P1's T02 waits for the fixtures. Merge this as soon as its checks pass.
+T02 waits for the fixtures. Merge this as soon as its checks pass.
+
+## After the merge
+
+- 14 Nov 2026, pull request #31: the table became 1900-2100 on DE440 (frame `MOON_ME_DE440_ME421`), one row every 3 hours, in 20 decade files with an index (`ephemeris.json` plus `ephemeris/<decade>.bin`). `make_ephemeris.py` was rewritten there, and `altaz.json` grew to 30 cases. The steps above describe the first table (2026-2035, hourly, DE421, one file).
+- 14 Nov 2026, audit of the merged tickets: `make_ephemeris.py` was run again from the cached kernels. All 20 decade files, the index and `altaz.json` came out byte for byte the same as the shipped ones. No defect found.
 
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T01-ephemeris.md. Do only that task, on branch t01-ephemeris. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T01-ephemeris.md. Do only that task, on branch t01-ephemeris. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

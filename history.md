@@ -1,7 +1,126 @@
 # History
 
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
-files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
+files say what is true now; decisions are in `docs/decisions.md`. Anyone can record a change;
+coordinate overlapping edits.
+
+## 14 Nov 2026: anyone can take any task
+
+Yi Hung asked: "change the ownership thing, no need to arrange tasks to specific person anymore,
+anyone can take any tasks, we just have to arrange better".
+
+### CLAUDE.md: File ownership; docs/team-workflow.md
+
+- Was "Edit only the files listed under 'Files you own' in your task", with a protected-file
+  list, "Need a change in a file you don't own? Stop", and "ask P1" for packages. File lists
+  now describe starting scope; necessary extra files can be declared in the pull request.
+  Anyone can change shared files after coordinating overlaps. Dependency files still change
+  together, and task dependencies and milestones still apply.
+- The workflow said "Take the next task in your row", assigned reviewers in a P1-to-P5 ring,
+  and made P1 the fallback for handoffs and large tasks. Now anyone can claim available work,
+  review it or accept a handoff. Claims name the task, branch and planned files; active work
+  changes hands explicitly. Concurrent sessions use separate worktrees or clones, and
+  contributors agree an order before editing the same file.
+
+### tasks/README.md; tasks/T00-T30: metadata, scope and prompts
+
+- During integration with current `main`, T31 arrived with an Owner row naming P3 and a
+  "Files you own" list requiring P1 approval. Yi Hung authorised resolving the conflicts and
+  finishing the merge. T31 now follows the same open-task policy, making 32 tasks. Both the
+  coordination decision and the flat-map decision are retained; T29 keeps the new map scope,
+  cross-fade behaviour and T31 dependency. Incoming task statuses and prerequisites stay.
+
+- Removed the fixed person-to-task sequences, the board's Owner column, and each task's
+  Owner row (P1-P5 or "unassigned"). The People table keeps names and tool plans, without
+  reserved roles. The replacement queue prioritises ready must work, dependencies, milestone
+  checks and then optional work. Existing statuses, branch names and prerequisites stay.
+- "Files you own" is now "Files in scope". Prompts point to the common coordination rules;
+  shared-file fixes no longer have to wait for a named person. T14 includes its slot and scene
+  integration; T23 can include necessary coordinated markup. Tests, measurement-only T27 and
+  freeze follow-ups retain focused deliveries. Failed checks remain evidence, not a reason to
+  weaken a test. Anyone can prepare T28; server steps still require access arranged with
+  Yi Hung, whose server hosts the mirror.
+- Historic "After the merge" notes and confirmations remain records. Person names there do
+  not restrict who can claim follow-up work; the board makes this explicit.
+
+### docs/data-contract.md; docs/mcp-and-skills.md; docs/design.md
+
+- The contract and tool guide said "Only P1 edits". State, page slots, package changes and new
+  theme variables were routed to P1; Figma and UI tasks to P5. These now use the common
+  coordination process. The data formats, geometry formulas and theme conventions are unchanged.
+- Design's unresolved section "Needs P1 (asked once, all together)" is "Needs team decision";
+  its six open items are retained. Figma access and exported pictures are selected by task,
+  without a person assignment.
+
+### docs/decisions.md; SPEC.md: Open decisions; README.md
+
+- Retired decisions "T01 goes to P4, T13 to P3, T17 to P4", "The UI designer (P5) ... does UI
+  only", and "every file has one owner task". Their current replacements record open task
+  claims, shared design conventions and coordination of overlaps. T27's "every fix goes to
+  the owner" now means anyone can claim a separate fix.
+- SPEC's decision contacts were P1, P4 or P5; they are now the team or whoever takes the
+  relevant task. Removed "Names against P2-P5 on the board ... blocks delegation" because
+  numbered person assignments are no longer used; team names remain on the board.
+- README pointers describe the shared queue and contributors. Decisions and history no longer
+  reserve editing for P1. Reason for these changes: Yi Hung's instruction above.
+
+## 14 Nov 2026: the 2D map becomes a flat map (issue #39, T31)
+
+P1 approved issue #39. The "2D map" was the 3D scene through a second, orthographic camera.
+
+### SPEC.md, F10 and F16
+
+- F10 said "Two cameras: top-down (the "2D map") and orbit ("3D")". An orthographic camera over a
+  sphere is an orthographic azimuthal view: distorted toward the edge, no grid to read a
+  coordinate from, and it carried the shadow map and raycasting into the "flat" view. Now: two
+  views, a flat map (polar stereographic on the height map, equidistant cylindrical elsewhere,
+  with a latitude-longitude grid) and the orbit scene.
+- F16 said "The camera glides between top-down and orbit". With no 2D camera there is nothing to
+  glide. Now: the flat map and the 3D scene cross-fade, the 3D camera easing onto the site.
+
+### tasks/T29-transition.md
+
+- Was "Camera glide", moving one camera between the two views. Now a cross-fade, waiting for T31
+  as well, and sharing `web/src/map/index.ts`.
+
+### tasks/T12-scene.md
+
+- Step 2 ("One scene, two cameras") and step 6 (picking by raycast in both views) describe the
+  scene as T12 built it. Since T31 they hold for the 3D view only; the file is left as written.
+
+## 14 Nov 2026: audit of the merged tickets
+
+P1 asked for every merged ticket to be checked: is the work correct, and does the paperwork
+match. This entry covers the files changed for the tickets that needed no code fix. The tickets
+that did (T00, T02, T03, T05, T08, T10, T12, T20) carry their own "After the merge" notes, in
+their own pull requests.
+
+### SPEC.md, section 5 (Where each number comes from)
+
+- The Hosting row said "GitHub Pages at darksight.space; mirror on rickphobia.com". GitHub
+  Pages was never used: `docs/decisions.md` records Cloudflare Pages for `main` and for pull
+  request previews, and the `deploy` branch for the homelab. The mirror is T28 and has not
+  started. Now: the row says what serves the site today.
+
+### tasks/: `Status:` lines
+
+Six merged tickets still read as unfinished, because the line was written before the merge and
+never updated. Each now says done with its pull request numbers, and each file has an "After the
+merge" section with what changed since and what the audit found. The old lines:
+
+| Task | The line said |
+|---|---|
+| T01 | done (npm test and npm run build left to CI: Node not installed locally) |
+| T04 | done, pull request open (grey image to attach; Quickmap comparison by eye) |
+| T06 | done, in review (pull request #5) |
+| T11 | done, pull request open (chart to be looked at in the browser) |
+| T21 | done |
+| T22 | in review. docs/design.md and pictures done from the brief, PDF and SVG (no Figma link yet); waiting for the team's yes in the chat |
+
+- T22's "waiting for the team's yes" is closed on P1's word (14 Nov 2026) that everyone said
+  yes. There is still no Figma link.
+- The steps and "Done when" lists in those files are left as written: they are the plan as it
+  was. What differs today is in each "After the merge" section.
 
 ## 14 Nov 2026: `#panel` beside Scenarios in T19's layout step
 

@@ -1,10 +1,9 @@
 # T19: Theme, layout, chart style
 
-Status: not started
+Status: in review (#23). Palette from docs/design.md, --dark #0e1116, #panel placed beside scenarios, chart animation opt-in; deployed-site screenshots after merge
 
 | | |
 |---|---|
-| Owner | P5 (UI designer) |
 | Tier | must |
 | Waits for | T00, T22 |
 | Branch | `t19-ui-design` |
@@ -15,14 +14,14 @@ The design from T22, built into the three shared files, so five people's modules
 product. This task sets the values; every other UI task only uses the names (contract
 section 6). **Before starting, read `docs/mcp-and-skills.md` section 3.**
 
-## Files you own
+## Files in scope
 
 - `web/src/ui/theme.css`, `web/src/ui/layout.css`, `web/src/ui/plotTheme.ts` (taken over from T00, which made them with placeholder values)
 - `docs/ai-use/T19.md`, `docs/sources/T19.md`, this file's `Status:` line
 
 ## Steps
 
-1. `theme.css`: set every variable named in contract section 6 to the value in `docs/design.md` (or pull them from Figma with `get_variable_defs`). **Don't rename or remove a variable; other modules depend on the names.** A new variable needs P1 to add it to the contract first.
+1. `theme.css`: set every variable named in contract section 6 to the value in `docs/design.md` (or pull them from Figma with `get_variable_defs`). **Don't rename or remove a variable; other modules depend on the names.** If a new variable is needed, agree its name with the team and include the contract update in this task's scope.
 2. Colours that are fixed and must not change: scenario A `#E69F00`, B `#0072B2`, C `#009E73` (chosen to stay distinct for colour-blind users). The Sun is yellow `#F0E442` and Earth is light blue `#56B4E9` in the charts.
 3. `layout.css`: the page grid from spec section 3 for the slots in `index.html`. Desktop from 1280 px wide. Below 800 px, the slots stack in this order: about, scene, scenarios, readout, nudge, panel, compare, timeline, sky.
    - `#panel` is T15's Solar panel card (pull request #36), inside `#side` right after `#nudge` in `index.html`. Give it its own place in the grid like the other slots: on desktop in the right-hand column under `#nudge`, beside `#scenarios`; on phone after `#nudge`. If the grid places slots by name (`grid-template-areas`, with `#side` as `display: contents`), that means the Scenarios row becomes `'scenarios panel'`, `panel` comes after `nudge` on phone, and `#panel { grid-area: panel; }`. Not a row of its own beside the scene: that stretches the map card, whose viewport has a fixed height, and leaves an empty band under the map. Without an area of its own the card is auto-placed at the top of the page, above the map.
@@ -58,21 +57,21 @@ section 6). **Before starting, read `docs/mcp-and-skills.md` section 3.**
 
 - [ ] Every variable in contract section 6 is set; none renamed or removed.
 - [ ] On the built site, text against its background passes a contrast check of 4.5 to 1 or better (name the checker used in the pull request).
-- [ ] Searching `web/src/ui/` and `web/src/scene/` for `#` colour codes finds them only in `theme.css`. List any others in the pull request for their owners to fix.
+- [ ] Searching `web/src/ui/` and `web/src/scene/` for `#` colour codes finds them only in `theme.css`. List any others in the pull request so someone can claim the module fix.
 - [ ] At 1280 px wide nothing overlaps or scrolls sideways; at 390 px wide every slot is reachable by scrolling down.
 - [ ] `#panel` sits under `#nudge` in the right-hand column, beside `#scenarios`, at 1280 px, and after `#nudge` at 390 px.
 - [ ] `npm test` and `npm run build` pass.
 
 ## Notes
 
-This task changes values in three files and nothing else. If a module looks wrong because it
-hard-coded a colour or a size, that's a fix in the module: by its owner in `index.ts`, by you in
-its CSS file once T23 has taken it over.
+This task focuses on the three shared theme files. If a module hard-codes a colour or size,
+record a focused module fix or include it in a declared scope expansion after checking for
+overlap. T23 covers the CSS polish after each module merges; anyone can take that work.
 
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md, docs/design.md, docs/mcp-and-skills.md section 3 and tasks/T19-ui-design.md. Do only that task, on branch t19-ui-design. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md, docs/design.md, docs/mcp-and-skills.md section 3 and tasks/T19-ui-design.md. Do only that task, on branch t19-ui-design. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 
 Figma rules for this repo:
 - Fetch one frame per call, from the link I give you. Don't walk the whole file: read calls are limited to 200 a day.

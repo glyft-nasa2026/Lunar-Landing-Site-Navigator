@@ -1,10 +1,9 @@
 # T11: Sky panorama
 
-Status: done, pull request open (chart to be looked at in the browser)
+Status: done (pull request #17)
 
 | | |
 |---|---|
-| Owner | P2 |
 | Tier | must |
 | Waits for | T05 |
 | Branch | `t11-ui-sky` |
@@ -13,7 +12,7 @@ Status: done, pull request open (chart to be looked at in the browser)
 
 Spec feature F9.
 
-## Files you own
+## Files in scope
 
 - `web/src/ui/sky/`
 - `docs/ai-use/T11.md`, `docs/sources/T11.md`, this file's `Status:` line
@@ -33,8 +32,15 @@ Spec feature F9.
 - [ ] At an Apollo site the chart still shows Earth, high in the sky.
 - [ ] `npm test` and `npm run build` pass.
 
+## After the merge
+
+- 14 Nov 2026, audit of the merged tickets: the chart was looked at in headless Chromium on the real table and height map. The three browser lines of "Done when" hold (crater floor, marker state against the readout at 10 times, Apollo 11 with Earth high in the sky), and nine more sites drew correctly, both poles and longitude 180 among them.
+- Open, for P2:
+  - *cosmetic*: a sliver of Sun reads "0 % of the disc" in the hover while the readout says 1 % (`index.ts`, plain `Math.round`). Seen at -89.5, 0 on 2026-11-22 15:13.
+  - *cosmetic*: line widths (1 and 2) are written as numbers in `index.ts`. The rule is no pixel sizes in a module.
+
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T11-ui-sky.md. Do only that task, on branch t11-ui-sky. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T11-ui-sky.md. Do only that task, on branch t11-ui-sky. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

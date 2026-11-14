@@ -1,7 +1,8 @@
 # Data contract
 
-The one file both halves follow. **Only P1 edits it.** If it's wrong or missing something, tell
-P1; don't work around it.
+The one file both halves follow. Anyone can propose a contract change as part of a task.
+Coordinate overlapping edits and tell contributors using the interface before changing it;
+update the contract and affected code together.
 
 Conventions (also in `CLAUDE.md`): degrees; latitude north-positive; longitude east-positive,
 -180 to 180; azimuth clockwise from north; UTC; Moon radius `R = 1737.4 km`; heights in metres
@@ -223,12 +224,15 @@ export type CuratedSite = { id: string; name: string; lat: number; lon: number; 
 | `dem.ts` | T00 | `loadDem(onProgress?): Promise<Dem>` · `parseDem(meta, buffer: ArrayBuffer): Dem` (no network; tests use it) · `dem.covers(lat, lon): boolean` · `dem.heightAt(lat, lon): number` (bilinear, metres; 0 outside) · `dem.meta` |
 | `geometry.ts` | T00 first pass, then T02 | `sunAltAz(eph, site, groundM, tMs): AltAz` · `earthAltAz(eph, site, groundM, tMs): AltAz` · `destination(lat, lon, bearingDeg, distM): { lat, lon }` |
 | `horizon.ts` | T00 flat skyline, then T05 | `skylineAt(dem: Dem | null, site: Site): Skyline` · `skylineElev(s: Skyline, az: number): number` (interpolated) |
+| `projection.ts` | T31 | `polarForward(lat, lon): { x, y }` and `polarInverse(x, y): { lat, lon }` (section 2's formulas, metres) · `cylForward(lat, lon, lon0 = 0): { x, y }` and `cylInverse(x, y, lon0 = 0): { lat, lon } \| null` (equidistant cylindrical, km, `x = R (lon - lon0) rad`, `y = R lat rad`; longitude wrapped to -180..180; null beyond a pole) · `MapView = { cx, cy, scale, width, height }` (map units at the centre, screen pixels per unit, canvas size in pixels; screen y grows down, map y grows up) · `viewToScreen(view, x, y)` and `screenToView(view, px, py)` |
+| `shade.ts` | T31 | `shadePolar(dem, sun: Vec3, maxCells = 1300): PolarShade` (`{ size, stride, frac, cosI, height, heightRange }`: on every `stride`th cell of the height map, the fraction of the Sun's disc above the terrain, 0, 0.5 or 1, the cosine of the Sun's incidence on the ground, and the cell's height; NaN outside coverage) · `shadeGlobal(sun: Vec3, width, height): Float32Array` (cosine of the Sun's zenith angle at each cell centre of a latitude-longitude grid, row 0 at 90 N) · `subPoint(v: Vec3): { lat, lon }` (where a direction from the Moon's centre meets the surface). Illustration for the map only: lit and dark answers come from `windows.ts` |
 | `panel.ts` | T15 | `panelPower(sample): { flat, upright }` (each 0..1 of full power: flat = `sunFrac * sin(alt)`, none below 0 degrees; upright and turned to the Sun = `sunFrac * cos(alt)`) · `panelAverage(samples): { flat, upright }` (mean, dark hours count as 0) |
 | `windows.ts` | T00 first pass, then T06 | `series(eph, site, groundM, skyline, startMs, endMs, stepMs): Sample[]` · `nextFlip(eph, site, groundM, skyline, tMs, body: Body, maxDays = 60): Flip` · `summary(samples: Sample[]): Summary` · `countdownText(body: Body, upNow: boolean, flip: Flip, tMs: number, neverLit = false): string` |
 
 **First pass** means T00 writes the function straight from the formulas below, with a few sanity
-tests, so the site shows live numbers from the first hour. The task named after it then owns the
-file: it adds the real tests and fixes what they find. Names and signatures never change.
+tests, so the site shows live numbers from the first hour. The follow-up task adds the real
+tests and fixes what they find. These are task dependencies, not person assignments. Keep the
+documented names and signatures unless a coordinated contract change updates their callers.
 
 `countdownText` wording (F4). Durations read `3 d 4 h`, or `5 h 20 min` under one day.
 
@@ -286,7 +290,7 @@ earthUp    = earthAbove > 0
 
 `nextFlip` walks forward hourly, then halves the last interval until it is under one minute.
 
-## 4. State: `web/src/state.ts` (T00, P1 only)
+## 4. State: `web/src/state.ts` (created by T00)
 
 UI modules read state and call actions. They never call each other.
 
@@ -352,7 +356,7 @@ is what lets a drag move the marker without the chart sliding under the cursor.
 **While data is loading** (`eph` is null), the accessors return empty arrays, `null` flips, a
 flat skyline and zeros. Modules show "Loading" and must not crash.
 
-## 5. Page slots: `web/index.html` (T00, P1 only)
+## 5. Page slots: `web/index.html` (created by T00)
 
 | Element id | Module folder | Task |
 |---|---|---|
@@ -362,18 +366,27 @@ flat skyline and zeros. Modules show "Loading" and must not crash.
 | `#compare` | `web/src/ui/compare/` | T09 |
 | `#timeline` | `web/src/ui/timeline/` | T10 |
 | `#sky` | `web/src/ui/sky/` | T11 |
-| `#nudge` | `web/src/ui/nudge/` | T13 |
+| `#nudge` | `web/src/ui/nudge/` | T13 (made by `#scene`, see below) |
 | `#about` | `web/src/ui/about/` | T16 |
 | `#panel` | `web/src/ui/panel/` | T15 |
 
 Each folder has `index.ts` exporting `mount(el)`, and its own CSS file. `main.ts` mounts each
-one. T00 wired the first eight with placeholders; a slot for an "if time" task (`#panel`) is
-added by P1, so a module's own task still never touches `main.ts` or `index.html`.
+one. T00 wired the first eight with placeholders; T15 added `#panel`. A task that adds a slot
+includes `main.ts`, `index.html` and this contract in its scope, and coordinates with active
+layout work.
 
 `#about` is a thin bar across the top: the product name, the Horizons badge and an About button
-that opens the About panel. `#nudge` sits under `#readout`, and `#panel` under `#nudge`.
+that opens the About panel. `#panel` sits under `#readout`.
 
-## 6. Look: `web/src/ui/theme.css` (T00 creates, then T19 owns)
+`#nudge` (issue #58) is not in `index.html`. The scene creates it inside its map viewport (the
+`position: relative` box that holds the map canvas), before `main.ts` reaches it, so the nudge
+panel is ordinary HTML floating over the map, never drawn in the canvas. The nudge places itself
+in one of the viewport's four corners (`data-corner="tl" | "tr" | "bl" | "br"`, bottom left to
+start). Any map control the scene puts inside the viewport marks its corner with
+`data-map-corner="tl"` (and so on); the nudge then skips that corner for the next free one,
+clockwise. The scene's toolbar sits above the viewport and claims no corner.
+
+## 6. Look: `web/src/ui/theme.css` (T00 creates, T19 designs)
 
 Modules use these names and never write a colour code, font or pixel size of their own. T19
 changes the values; the names stay.
@@ -410,6 +423,6 @@ styles, write `var(--sun)` or `var(${sc.color})`.
 **The one pixel value a module may write** is the phone breakpoint:
 `@media (max-width: 800px)`. Everything else comes from the variables.
 
-**Who styles what.** A module's own task writes its first CSS using the shared classes. Once that
-task has merged, the module's CSS file belongs to T23 (the UI designer); its `index.ts` stays
-with the module's owner.
+**CSS order.** A module's task writes its first CSS using the shared classes. T23 polishes it
+after that task merges. Anyone can take either task; coordinate further code and CSS changes
+with active work on the same files.

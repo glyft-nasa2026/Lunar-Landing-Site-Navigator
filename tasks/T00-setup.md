@@ -1,10 +1,9 @@
 # T00: Site skeleton
 
-Status: done, in review (pull request #2)
+Status: done (pull request #2; decade-download fixes in #50)
 
 | | |
 |---|---|
-| Owner | P1 |
 | Tier | must |
 | Waits for | - |
 | Branch | `t00-setup` |
@@ -18,7 +17,7 @@ T20 (mock data), T21 (CI and deploy) and T22 (design) run at the same time on th
 branches. Don't do their work here. Merge this as early as it is usable: four people's code
 tasks start from it.
 
-## Files you own
+## Files in scope
 
 - At the repo root: `.gitignore`, `.gitattributes`, `README.md`, `CLAUDE.md`, `history.md`
 - `web/package.json`, `web/package-lock.json`, `web/tsconfig.json`, `web/vite.config.ts`,
@@ -27,9 +26,9 @@ tasks start from it.
 - `web/src/core/types.ts`, `ephemeris.ts`, `dem.ts`, their tests, and `sites.test.ts`
 - `docs/ai-use/T00.md`, `docs/sources/T00.md`, this file's `Status:` line
 
-You also create these, and they change owner when this task merges:
+You also create these; follow-up tasks build on them after this task merges:
 
-| You create | With | Then owned by |
+| You create | With | Follow-up task |
 |---|---|---|
 | `web/src/core/geometry.ts` | first pass (contract section 3) | T02 |
 | `web/src/core/horizon.ts` | the flat skyline only | T05 |
@@ -37,17 +36,18 @@ You also create these, and they change owner when this task merges:
 | `web/src/ui/theme.css`, `layout.css`, `plotTheme.ts` | every name, placeholder values | T19 |
 | `index.ts` and an empty CSS file in `web/src/ui/scenarios/`, `readout/`, `compare/`, `timeline/`, `sky/`, `nudge/`, `about/` and in `web/src/scene/` | a placeholder | T08, T08, T09, T10, T11, T13, T16, T12 |
 
-Not yours: `web/public/data/` and `data-prep/` (T20), `.github/` (T21), `docs/design*` (T22).
+Separate tasks cover `web/public/data/` and `data-prep/` (T20), `.github/` (T21) and
+`docs/design*` (T22). Coordinate any overlap with those tasks.
 
 ## Steps
 
-1. Vite + TypeScript (strict) + vitest in `web/`. Install `three`, `plotly.js-dist-min` and their type packages now, so nobody else touches `package.json`. Scripts are named exactly `dev`, `test` (runs once, no watch mode) and `build`: T21's CI calls them.
+1. Vite + TypeScript (strict) + vitest in `web/`. Install `three`, `plotly.js-dist-min` and their type packages now, so module tasks have their dependencies. Coordinate later package changes. Scripts are named exactly `dev`, `test` (runs once, no watch mode) and `build`: T21's CI calls them.
 2. `base: './'` in `vite.config.ts`, and load data with `import.meta.env.BASE_URL + 'data/...'`. The same build then works on GitHub Pages under any repo name and on the mirror.
 3. `.gitattributes`: `* text=auto eol=lf`, and `*.bin` and `*.png` marked `binary`. `web/.nvmrc` with `22`, and `"engines": { "node": ">=22" }`. Most of the team is on Windows.
 4. `index.html` with the eight slots from contract section 5. `main.ts` mounts every module folder. Each placeholder shows its slot name and one live value from state (the readout placeholder shows the Sun's altitude), which proves the wiring.
 5. `types.ts` and `state.ts` exactly as contract sections 3 and 4: the selected-and-live rule, the timeline window, every cached accessor, and the pinned scenarios kept in the page address and restored on load (F17).
 6. `ephemeris.ts` and `dem.ts`: `parseEphemeris` and `parseDem` (no network) and the two loaders, with a progress callback for the height map. If a data file is missing, state stays `null` and the page says "Data not loaded". It must not crash: T20 may merge after this.
-7. First pass of `geometry.ts` (all three functions) and `windows.ts` (all four), straight from the contract's formulas and wording table, with a few sanity tests. `horizon.ts` returns the flat skyline. Don't polish them: T02, T05 and T06 own them next.
+7. First pass of `geometry.ts` (all three functions) and `windows.ts` (all four), straight from the contract's formulas and wording table, with a few sanity tests. `horizon.ts` returns the flat skyline. T02, T05 and T06 add the full implementations and tests next.
 8. `sites.test.ts`: every entry of `web/public/data/sites.json` has the contract's fields and a longitude between -180 and 180. It skips when the file isn't there yet.
 9. `theme.css` with every variable and class name from contract section 6 set to plain placeholder values, `layout.css` with a basic grid, and `plotTheme.ts` exporting `plotLayout()` and `themeColor()`. Names must be complete here so no module waits for T19.
 
@@ -55,7 +55,7 @@ Not yours: `web/public/data/` and `data-prep/` (T20), `.github/` (T21), `docs/de
 
 - [ ] `npm test` passes with `web/public/data/` empty. Tests build their tables and grids in memory with `parseEphemeris` and `parseDem`.
 - [ ] With `web/public/data/` empty, `npm run dev` shows the eight labelled placeholders and "Data not loaded", with no console errors.
-- [ ] If T20 has merged (merge `origin/main` first): the readout placeholder shows a Sun altitude that changes when the time changes. If it hasn't, P1 checks this line on `main` as soon as T20 merges and posts the result in the chat.
+- [ ] If T20 has merged (merge `origin/main` first): the readout placeholder shows a Sun altitude that changes when the time changes. If it hasn't, whoever completes T00 checks this line on `main` as soon as T20 merges and posts the result in the chat.
 - [ ] A state test: pin two scenarios, rebuild state from the page address, both are back.
 - [ ] A state test: `setLiveTime` inside the window keeps `windowStartMs`; outside it, the window restarts.
 - [ ] `npm test` and `npm run build` pass.
@@ -66,8 +66,21 @@ This pull request has no `test-and-build` check: CI is T21's, and T21 merges aft
 reviewer runs `npm ci`, `npm test` and `npm run build` on the branch instead
 (`docs/team-workflow.md`, "The first three merges").
 
+## After the merge
+
+- 14 Nov 2026, pull request #6: the product was renamed Darksight.
+- 14 Nov 2026, pull request #31: the Sun and Earth table became 1900-2100 on DE440, one row every 3 hours, split by decade (`ephemeris.json` plus `ephemeris/<decade>.bin`). `ephemeris.ts` gained `indexEphemeris`, `withChunk`, `missing` and `loadEphemerisChunk`; `state.ts` fetches a decade the first time a scenario needs it and keeps it on the device. Step 6's "the two loaders" and the "Done when" lines still hold; the one-file form is still read, for T20's mock and the tests.
+- 14 Nov 2026, pull request #36 (T15): the `#panel` slot was added to `index.html` and `main.ts`, so there are nine slots, not eight.
+- 14 Nov 2026, pull request #50 (`t00-setup-b`), from the audit of merged tickets:
+  - A decade file that arrives too short (a host's web page sent with "200 OK") is refused and never kept on the device. Before, it was kept and read again on every visit.
+  - That file now counts as a failed download. Before, the page sat on "Loading" for good.
+  - With a failed decade, countdowns and the hourly series read up to where that decade starts, as they do at the end of the table. Before, a scenario in the 60 days before it lost both.
+  - A summary worked out while its decade was downloading is not remembered as zeros.
+  - The never-lit scan looks up the site once, not once per hour.
+  - `realTable.testutil.ts` throws when the index lists a decade file that is not there. Before, the Skyfield and Horizons tests skipped.
+
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T00-setup.md. Do only that task, on branch t00-setup. Edit only the files it lists under "Files you own" and the files it says you create. If the task needs a change anywhere else, or a new package beyond the ones it names, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T00-setup.md. Do only that task, on branch t00-setup. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

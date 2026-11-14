@@ -4,7 +4,6 @@ Status: done (pull requests #14, #20, #25, #29; lost clicks and input checks fix
 
 | | |
 |---|---|
-| Owner | P3 |
 | Tier | must |
 | Waits for | T00 |
 | Branch | `t08-ui-scenarios` |
@@ -13,7 +12,7 @@ Status: done (pull requests #14, #20, #25, #29; lost clicks and input checks fix
 
 Spec features F1 (list and typed coordinates), F2 (time box), F3, F4 and F5.
 
-## Files you own
+## Files in scope
 
 - `web/src/ui/scenarios/`, `web/src/ui/readout/`
 - `docs/ai-use/T08.md`, `docs/sources/T08.md`, this file's `Status:` line
@@ -47,5 +46,5 @@ Spec features F1 (list and typed coordinates), F2 (time box), F3, F4 and F5.
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T08-ui-scenarios.md. Do only that task, on branch t08-ui-scenarios. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T08-ui-scenarios.md. Do only that task, on branch t08-ui-scenarios. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```
