@@ -1,4 +1,7 @@
-name: Latest ticket preview
+name: Site and pull request previews
+# main deploys to https://darksight.space. Each same-repository pull request deploys to its own
+# address, https://pr-<number>.darksight.pages.dev, so a branch built on an older main never
+# replaces the live site.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -8,15 +11,22 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: darksight-latest-preview
+  # One queue per pull request and one for main: a pull request never cancels the main deploy.
+  group: darksight-preview-${{ github.event.pull_request.number || 'main' }}
   cancel-in-progress: true
 jobs:
   preview:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Fork pull requests can't use the deployment token. A manual run deploys main only.
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+      (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     environment:
-      name: latest-preview
-      url: https://darksight.space
+      name: ${{ github.event_name == 'pull_request' && 'pr-preview' || 'latest-preview' }}
+      url: ${{ github.event_name == 'pull_request' && (steps.deploy.outputs.pages-deployment-alias-url || steps.deploy.outputs.deployment-url) || 'https://darksight.space' }}
+    env:
+      # The Pages project's production branch is named "preview"; it is what darksight.space serves.
+      PAGES_BRANCH: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'preview' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,10 +42,18 @@ jobs:
           npm ci
           npm test
           npm run build
-      - name: Publish latest successful ticket
+      - name: Publish
+        id: deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: web
-          command: pages deploy dist --project-name=darksight --branch=preview --commit-hash=${{ github.event.pull_request.head.sha || github.sha }}
+          command: pages deploy dist --project-name=darksight --branch=${{ env.PAGES_BRANCH }} --commit-hash=${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Show where it went
+        env:
+          ALIAS_URL: ${{ steps.deploy.outputs.pages-deployment-alias-url }}
+          DEPLOY_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          if [ "$PAGES_BRANCH" = preview ]; then where=https://darksight.space; else where="${ALIAS_URL:-$DEPLOY_URL}"; fi
+          echo "Deployed to $where (this build: $DEPLOY_URL)" >> "$GITHUB_STEP_SUMMARY"
