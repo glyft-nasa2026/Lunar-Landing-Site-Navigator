@@ -1,6 +1,6 @@
 # T09: Compare table and strips
 
-Status: in progress
+Status: in progress, draft pull request #21
 
 | | |
 |---|---|
