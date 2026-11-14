@@ -52,6 +52,7 @@ The folder's CSS file goes to T23 once this merges.
   - A plain left-drag or one-finger drag pans the 2D map. Before, it did nothing.
   - With no table row for the selected time, the scene goes dark and says "This time is outside the Sun and Earth table". Before, it was lit from the nearest row.
   - `browser-check.py` has 15 checks, not 13, and its drag check starts away from the selected pin.
+- 14 Nov 2026, issue #66 (`issue-66-moon-model`): the globe north of 80 S is no longer a plain sphere (step 7). It is coloured by height and lit through surface normals from a whole-Moon LOLA grid, `globe.bin` (contract section 2), with slopes drawn 6 times steeper. North of 80 N it is a mesh on a square polar grid, `north.bin`, like the south-pole terrain, so nothing pinches together at the pole. Round the selected site the globe is drawn from 950 m heights fetched as tiles (level of detail, `tiles/`); that patch lies on the sphere, its ground is not raised. The whole-Moon 2D map (T31) is drawn from the same `globe.bin`: height colours, with slopes facing the Sun brighter and slopes facing away darker; the polar 2D map is unchanged. Without the files the globe is the plain sphere as before.
 
 ## Prompt to paste into Claude Code
 
