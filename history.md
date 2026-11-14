@@ -21,12 +21,14 @@ files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits 
   where the slot is. Step 2 adds the 30-day average, which shows the difference between the
   panels even at an hour when the Sun is down.
 
+## 14 Nov 2026: `#panel` slot in T19's layout step
+
 ### tasks/T19-ui-design.md
 
 - Step 3's phone order was "about, scene, scenarios, readout, nudge, compare, timeline, sky".
-  Now `panel` comes after `nudge`, and the step says where `#panel` goes on desktop. A new
-  Done-when line checks it. T19's grid (pull request #23) places every slot by name, so a slot
-  it doesn't name would land in a stray cell.
+  Now `panel` comes after `nudge`, and the step says where `#panel` (T15's Solar panel card,
+  pull request #36) goes on desktop. A new Done-when line checks it. T19's grid (pull request
+  #23) places every slot by name, so a slot it doesn't name would land in a stray cell.
 
 ## 14 Nov 2026: dates 1900-2100, one file per decade, DE440
 
