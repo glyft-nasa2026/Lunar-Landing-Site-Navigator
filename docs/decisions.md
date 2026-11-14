@@ -4,6 +4,7 @@ One dated line each, newest first. Only P1 edits this file.
 
 | Date | Decision | Why |
 |---|---|---|
+| 14 Nov 2026 | The 2D map is a real flat map on a 2D canvas: the height map in its own polar stereographic grid near the pole, equidistant cylindrical elsewhere, as LROC QuickMap does. Clicks go through the inverse projection in `core/`. New task T31; F16 becomes a cross-fade | The old map was the 3D scene through an orthographic camera: distorted toward the edge, no grid to read, and it carried the shadow map and raycasting into a "flat" view (issue #39). A flat map loses the free camera glide; P1 judged a readable map worth more |
 | 14 Nov 2026 | Six more tasks: T25 example on first open (F19, must), T26 freeze checklist (must), T27 load time measured (must), T28 mirror, T29 camera glide and T30 page smoke test in CI (all three if time) | A check of the plan found work that the spec or the decisions named but no task owned, and three gaps a judge would meet first: an empty first screen, a long wait for the height map, and a repo nobody had swept at the freeze |
 | 14 Nov 2026 | The plain link opens on an example comparison, crater rim against crater floor; a link with scenarios in it is never changed | The first screen was one arbitrary point with nothing pinned. The comparison is the product, so it should be what a judge sees first |
 | 14 Nov 2026 | T27 measures and reports; every fix goes to the owner of the file it is in | A measuring task that also edited `main.ts`, `horizon.ts` or the height map would cross three owners |

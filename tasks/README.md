@@ -61,9 +61,10 @@ order given in `docs/team-workflow.md`, "The first three merges".
 | [T26](T26-freeze.md) | Freeze checklist: README, notes, open decisions, tag | P1 | must | M3 |
 | [T14](T14-layers.md) | Map layers | unassigned | if time | M2 |
 | [T15](T15-panel.md) | Solar panel choice | P1 | if time | M2 |
-| [T29](T29-transition.md) | Camera glide between 2D and 3D | unassigned | if time | T12, M2 |
+| [T29](T29-transition.md) | Cross-fade between 2D map and 3D | unassigned | if time | T12, T31, M2 |
 | [T28](T28-mirror.md) | Mirror on rickphobia.com | P1 | if time | T21, M1 |
 | [T30](T30-smoke-test.md) | Page smoke test in CI | P3 | if time | T00, T20, T21 |
+| [T31](T31-flat-map.md) | A true flat 2D map (issue #39) | P3 | must | T12 |
 
 ## Order
 

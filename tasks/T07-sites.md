@@ -1,6 +1,6 @@
 # T07: Curated site list
 
-Status: not started
+Status: in review (draft PR open; Quickmap tick list still to do by a person)
 
 | | |
 |---|---|
