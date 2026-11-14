@@ -195,6 +195,26 @@ with sync_playwright() as p:
     page.get_by_role('button', name='2D map', exact=True).click()
     assert page.evaluate("async () => (await import('/src/state.ts')).getState().live.site") == old_site
     passed('camera switch and drag', '2D → 3D → 2D preserves site; return-to-origin drag does not select')
+    # Zoomed right out, 3D shows the whole Moon with the terrain set into it, not a lone terrain disc.
+    def drawn_fraction(path):
+        shot = Image.open(path).convert('RGB')
+        bg = shot.getpixel((1, 1))
+        pixels = list(shot.getdata())
+        return sum(max(abs(a - b) for a, b in zip(px, bg)) > 6 for px in pixels) / len(pixels), shot
+    page.get_by_role('button', name='3D orbit', exact=True).click()
+    page.wait_for_timeout(250)
+    box = canvas.bounding_box()
+    page.mouse.move(box['x']+box['width']/2, box['y']+box['height']/2)
+    for _ in range(40):
+        page.mouse.wheel(0, 400)
+        page.wait_for_timeout(20)
+    page.wait_for_timeout(400)
+    canvas.screenshot(path='/tmp/t12-globe-zoomed-out.png')
+    globe_fraction, _ = drawn_fraction('/tmp/t12-globe-zoomed-out.png')
+    assert globe_fraction > 0.03, globe_fraction
+    page.get_by_role('button', name='2D map', exact=True).click()
+    assert page.evaluate("async () => (await import('/src/state.ts')).getState().live.site") == old_site
+    passed('3D globe', {'drawn_fraction_zoomed_out': round(globe_fraction, 3)})
     page.get_by_label('Vertical stretch', exact=True).fill('5')
     assert page.locator('.scene-stretch output').inner_text() == '5×'
     passed('vertical stretch', '5× works, selected site unchanged')
@@ -204,6 +224,23 @@ with sync_playwright() as p:
     assert page.get_by_label('Vertical stretch', exact=True).is_disabled()
     canvas.screenshot(path='/tmp/t12-globe.png')
     passed('outside DEM', 'Apollo latitude uses the Moon globe in both views')
+    # In the globe view a drag turns the Moon about its centre, so it stays in the middle of the view.
+    page.get_by_role('button', name='3D orbit', exact=True).click()
+    page.wait_for_timeout(250)
+    box = canvas.bounding_box()
+    page.mouse.move(box['x']+box['width']/2, box['y']+box['height']/2+60)
+    page.mouse.down(); page.mouse.move(box['x']+box['width']/2+150, box['y']+box['height']/2+60, steps=10); page.mouse.up()
+    page.wait_for_timeout(300)
+    canvas.screenshot(path='/tmp/t12-globe-turned.png')
+    turned_fraction, turned = drawn_fraction('/tmp/t12-globe-turned.png')
+    w2, h2 = turned.size
+    bg2 = turned.getpixel((1, 1))
+    centre_drawn = all(max(abs(a - b) for a, b in zip(turned.getpixel((w2//2+dx, h2//2+dy)), bg2)) > 6 for dx in (-20, 0, 20) for dy in (-20, 0, 20))
+    # The whole globe fills about a fifth of the canvas; swung off-centre it would fill far less.
+    assert centre_drawn and turned_fraction > 0.15, turned_fraction
+    assert 'turn the Moon' in page.locator('.scene-help').inner_text()
+    passed('globe drag', {'drawn_fraction_after_drag': round(turned_fraction, 3)})
+    page.get_by_role('button', name='2D map', exact=True).click()
     page.get_by_role('button', name='3D orbit', exact=True).click()
     page.get_by_role('button', name='2D map', exact=True).click()
     # Same code, different metadata and grid resolution; no source-file changes.

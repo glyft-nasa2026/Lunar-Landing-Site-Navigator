@@ -13,6 +13,22 @@ export function moonDirection(v: Vec3): Vector3 {
   return new Vector3(v[1], -v[2], -v[0]);
 }
 
+/** The centre of the Moon in the render frame. */
+export function moonCentre(): Vector3 {
+  return new Vector3(0, -MOON_RADIUS_KM, 0);
+}
+
+/** Unit vector pointing straight up (away from the Moon's centre) at a site. */
+export function siteUp(site: Site): Vector3 {
+  return sitePosition(site).sub(moonCentre()).normalize();
+}
+
+/** Unit vector pointing north along the ground, for a site's `siteUp`. At a pole, toward longitude 0. */
+export function siteNorth(up: Vector3): Vector3 {
+  const north = new Vector3(0, -1, 0).addScaledVector(up, up.y);
+  return north.lengthSq() < 1e-12 ? new Vector3(0, 0, -1) : north.normalize();
+}
+
 export function sitePosition(site: Site, heightM = 0, stretch = 1): Vector3 {
   const lat = site.lat * RAD, lon = site.lon * RAD;
   const r = MOON_RADIUS_KM + heightM * stretch / 1000;

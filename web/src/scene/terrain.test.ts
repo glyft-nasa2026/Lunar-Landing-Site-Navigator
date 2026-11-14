@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Color, Mesh, MeshBasicMaterial, Raycaster, Vector3 } from 'three';
 import { parseDem, projectToGrid, type DemMeta } from '../core/dem';
 import { MOON_RADIUS_KM } from '../core/types';
-import { gridSite, moonDirection, sitePosition, sphereSite } from './coordinates';
-import { detailBounds, terrainGeometry } from './terrain';
+import { gridSite, moonCentre, moonDirection, siteNorth, sitePosition, siteUp, sphereSite } from './coordinates';
+import { detailBounds, globeGeometry, setTerrainHole, terrainGeometry } from './terrain';
 
 const meta: DemMeta = {
   size: 65, pixel_m: 2000, x_min_m: -64_000, y_max_m: 64_000,
@@ -94,5 +94,67 @@ describe('scene coordinates and picking', () => {
     const middle = new Vector3().fromBufferAttribute(positions, 1);
     expect(middle.distanceTo(first.add(second).multiplyScalar(0.5))).toBeLessThan(1e-5);
     coarse.dispose(); patch.dispose(); material.dispose();
+  });
+
+  it('gives each site an outward up and a ground-level north', () => {
+    expect(siteUp({ lat: -90, lon: 0 }).distanceTo(new Vector3(0, 1, 0))).toBeLessThan(1e-12);
+    const up = siteUp({ lat: 0, lon: 0 });
+    expect(up.distanceTo(new Vector3(0, 0, -1))).toBeLessThan(1e-12);
+    expect(siteNorth(up).distanceTo(new Vector3(0, -1, 0))).toBeLessThan(1e-12);
+    // At the south pole north is longitude 0, the map's up direction.
+    expect(siteNorth(siteUp({ lat: -90, lon: 0 })).distanceTo(new Vector3(0, 0, -1))).toBeLessThan(1e-12);
+    const site = { lat: -45, lon: 120 }, n = siteUp(site), north = siteNorth(n);
+    expect(Math.abs(n.dot(north))).toBeLessThan(1e-12);
+    // Walking north raises the latitude.
+    const ahead = sphereSite(sitePosition(site).addScaledVector(north, 10));
+    expect(ahead.lat).toBeGreaterThan(site.lat);
+  });
+
+  it('leaves the globe open over the terrain cap with no gap at its edge', () => {
+    // A coarse grid that still reaches past 80 S, so the test stays quick.
+    const m = { ...meta, size: 160, pixel_m: 3840, x_min_m: -305_280, y_max_m: 305_280 };
+    const flat = parseDem(m, new Int16Array(m.size ** 2).buffer);
+    const material = new MeshBasicMaterial();
+    const globe = new Mesh(globeGeometry(m), material);
+    globe.position.copy(moonCentre()); globe.updateMatrixWorld();
+    const coarse = new Mesh(terrainGeometry(flat, low, high), material);
+    // A ray falling straight down onto a site, from 50 km up.
+    const down = (site: { lat: number; lon: number }): Raycaster => {
+      const from = sitePosition(site, 50_000);
+      return new Raycaster(from, moonCentre().sub(from).normalize());
+    };
+    expect(down(crater).intersectObject(globe)).toHaveLength(0);
+    expect(down({ lat: -79, lon: 10 }).intersectObject(globe)).toHaveLength(1);
+    // Every point around the cap's edge hits the globe or the terrain. The longitudes avoid
+    // -90 exactly, where a ray runs along the sphere mesh's own seam.
+    for (let lon = -179.7; lon < 180; lon += 3) {
+      for (const lat of [-80.3, -80.2, -80.1, -80.02, -79.98, -79.9]) {
+        const ray = down({ lat, lon });
+        const hit = ray.intersectObject(globe).length > 0 || ray.intersectObject(coarse).length > 0;
+        expect(hit, `${lat}, ${lon}`).toBe(true);
+      }
+    }
+    expect(globeGeometry(null).parameters.thetaStart).toBe(0);
+    globe.geometry.dispose(); coarse.geometry.dispose(); material.dispose();
+  }, 20_000);
+
+  it('moves the hole without rebuilding the vertices', () => {
+    const m = { ...meta, size: 634, pixel_m: 960, x_min_m: -304320, y_max_m: 304320 };
+    const flat = parseDem(m, new Int16Array(m.size ** 2).buffer);
+    const geometry = terrainGeometry(flat, low, high);
+    const material = new MeshBasicMaterial();
+    const mesh = new Mesh(geometry, material);
+    const at = sitePosition(crater);
+    const ray = new Raycaster(at.clone().add(new Vector3(0, 100, 0)), new Vector3(0, -1, 0));
+    const positions = geometry.getAttribute('position');
+    expect(ray.intersectObject(mesh)).toHaveLength(1);
+    setTerrainHole(geometry, detailBounds(flat, crater));
+    expect(ray.intersectObject(mesh)).toHaveLength(0);
+    setTerrainHole(geometry, detailBounds(flat, { lat: -87, lon: -120 }));
+    expect(ray.intersectObject(mesh)).toHaveLength(1);
+    setTerrainHole(geometry);
+    expect(ray.intersectObject(mesh)).toHaveLength(1);
+    expect(geometry.getAttribute('position')).toBe(positions);
+    geometry.dispose(); material.dispose();
   });
 });

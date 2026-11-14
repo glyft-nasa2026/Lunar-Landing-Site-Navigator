@@ -6,15 +6,25 @@ import {
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { Dem } from '../core/dem';
-import { MOON_RADIUS_KM, type Site } from '../core/types';
-import { series } from '../core/windows';
-import { getState, selected, select, setLiveSite, setMode, skylineFor, subscribe, type AppState } from '../state';
+import { MOON_RADIUS_KM, type Sample, type Site } from '../core/types';
+import {
+  getState, samplesFor, select, selected, setLiveSite, setMode, subscribe, type AppState,
+} from '../state';
 import { themeColor } from '../ui/plotTheme';
-import { gridSite, moonDirection, sitePosition, sphereSite } from './coordinates';
-import { detailBounds, recolorTerrain, terrainGeometry, type GridBounds } from './terrain';
+import { gridSite, moonCentre, moonDirection, siteNorth, sitePosition, siteUp, sphereSite } from './coordinates';
+import {
+  detailBounds, globeGeometry, recolorTerrain, setTerrainHole, terrainGeometry, type GridBounds,
+} from './terrain';
 import './scene.css';
 
 const mounts = new WeakMap<HTMLElement, () => void>();
+const RAD = Math.PI / 180;
+/** Sets only the drawn size of the Earth sprite. No number shown to the user depends on it. */
+const EARTH_RADIUS_KM = 6371;
+/** The Earth sprite is drawn this far from the site, scaled to its true apparent size. */
+const EARTH_DRAWN_KM = 20_000;
+
+type PinData = { site: Site; scenarioId?: string; label: string; base: Vector3; up: Vector3; scale: number };
 
 /** Stylised illustration; no geographic dataset or numerical result is generated here. */
 function earthTexture(): CanvasTexture {
@@ -35,6 +45,16 @@ function earthTexture(): CanvasTexture {
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
   return texture;
+}
+
+/** A theme length in CSS pixels, so the pin size comes from theme.css rather than from here. */
+function themeLength(host: HTMLElement, name: string): number {
+  const probe = document.createElement('div');
+  probe.style.position = 'absolute'; probe.style.visibility = 'hidden'; probe.style.width = `var(${name})`;
+  host.append(probe);
+  const px = probe.getBoundingClientRect().width;
+  probe.remove();
+  return px;
 }
 
 export function mount(el: HTMLElement): void {
@@ -77,21 +97,28 @@ export function mount(el: HTMLElement): void {
   canvas.className = 'scene-canvas'; canvas.tabIndex = 0;
   canvas.setAttribute('aria-label', 'Interactive Moon terrain. Click to select a site; use the site list for keyboard selection.');
   viewport.prepend(canvas);
+
+  let frame = 0, disposed = false, lost = false, framed = false;
+  let mode: AppState['mode'] = getState().mode;
+  let polar = false, stretch = 1, drawnStretch = 1, span = 150, pinPx = 1, orbitGlobe = false;
+  let dem: Dem | null = null, coarse: Mesh | null = null, detail: Mesh | null = null;
+  let bounds: GridBounds | undefined;
+  let siteKey = '', coarseKey = '', detailKey = '', pinKey = '', themeKey = '';
+  let pinSites: AppState['sites'] | null = null, pinDem: Dem | null = null;
+  /** Highest drawn terrain above the sphere, in km, so the near plane never cuts a peak. */
+  let relief = 0;
+  /** The selected site on the drawn surface. */
+  const target = new Vector3();
+
   const world = new Scene();
   const mapCamera = new OrthographicCamera(-1, 1, 1, -1, 0.01, 20_000);
-  const orbitCamera = new PerspectiveCamera(45, 1, 0.02, 30_000);
+  const orbitCamera = new PerspectiveCamera(45, 1, 0.02, 60_000);
   mapCamera.up.set(0, 0, -1);
   const mapControls = new OrbitControls(mapCamera, canvas);
-  const orbitControls = new OrbitControls(orbitCamera, canvas);
   mapControls.enableRotate = false; mapControls.screenSpacePanning = true;
   mapControls.minZoom = 0.1; mapControls.maxZoom = 200;
-  orbitControls.minDistance = 0.2; orbitControls.maxDistance = 12_000;
-  let frame = 0, disposed = false, lost = false;
-  let mode: AppState['mode'] = getState().mode;
-  let polar = false, stretch = 1, span = 150;
-  let dem: Dem | null = null, coarse: Mesh | null = null, detail: Mesh | null = null;
-  let bounds: GridBounds | undefined, siteKey = '', terrainKey = '', themeKey = '';
-  const target = new Vector3();
+  mapControls.addEventListener('change', invalidate);
+  let orbitControls = makeOrbitControls(false, new Vector3(0, 1, 0));
   const sun = new DirectionalLight(); sun.intensity = 3; sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.00001; sun.shadow.normalBias = 0.002;
   sun.shadow.camera.near = 1; sun.shadow.camera.far = 4000;
@@ -99,9 +126,11 @@ export function mount(el: HTMLElement): void {
   const ambient = new AmbientLight(); ambient.intensity = 0.07; world.add(ambient);
   const terrainMaterial = new MeshLambertMaterial({ vertexColors: true });
   const detailMaterial = terrainMaterial.clone();
-  const globeMaterial = new MeshLambertMaterial();
-  const globe = new Mesh(new SphereGeometry(MOON_RADIUS_KM, 96, 64), globeMaterial);
-  globe.position.y = -MOON_RADIUS_KM; world.add(globe);
+  // The globe is always drawn, with the terrain set into its south cap. Pushed back in depth so
+  // the terrain wins where the two overlap at the cap's edge.
+  const globeMaterial = new MeshLambertMaterial({ polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
+  const globe = new Mesh(globeGeometry(null), globeMaterial);
+  globe.position.copy(moonCentre()); world.add(globe);
   const earthMaterial = new SpriteMaterial({ map: earthTexture(), depthTest: true });
   const earth = new Sprite(earthMaterial); earth.name = 'Earth'; world.add(earth);
   const pins = new Group(); world.add(pins);
@@ -109,17 +138,69 @@ export function mount(el: HTMLElement): void {
   const raycaster = new Raycaster(), pointer = new Vector2();
   let pointerDown: { x: number; y: number; id: number } | null = null, maxDrag = 0;
   const activeCamera = (): Camera => mode === '2d' ? mapCamera : orbitCamera;
-  const activeControls = (): OrbitControls => mode === '2d' ? mapControls : orbitControls;
 
+  /**
+   * OrbitControls takes its orbit axis from camera.up once, when it is created, so each view
+   * gets new controls. Terrain view: orbit around the site, never below its horizon. Globe view:
+   * turn the whole Moon around its centre, with north up.
+   */
+  function makeOrbitControls(globeView: boolean, up: Vector3): OrbitControls {
+    orbitCamera.up.copy(up);
+    const controls = new OrbitControls(orbitCamera, canvas);
+    controls.addEventListener('change', onOrbitChange);
+    controls.enablePan = !globeView;
+    controls.minDistance = globeView ? MOON_RADIUS_KM * 1.02 : 0.2;
+    controls.maxDistance = MOON_RADIUS_KM * (globeView ? 8 : 6);
+    controls.maxPolarAngle = globeView ? Math.PI : Math.PI * 0.49;
+    controls.enabled = mode === '3d';
+    orbitGlobe = globeView;
+    return controls;
+  }
+  function onOrbitChange(): void {
+    if (orbitGlobe) {
+      // Turn the Moon about as fast as the ground under the cursor moves, at any height. The
+      // controls turn 2π per canvas height; the ground moves 2 h tan(fov/2) / R per canvas height.
+      const height = orbitCamera.position.distanceTo(globe.position) - MOON_RADIUS_KM;
+      const speed = height * Math.tan(orbitCamera.fov * RAD / 2) / (Math.PI * MOON_RADIUS_KM);
+      orbitControls.rotateSpeed = Math.min(1, Math.max(0.002, speed));
+    }
+    invalidate();
+  }
+
+  /** Pins keep the same size on screen at every zoom, sitting on the surface. */
+  function sizePins(camera: Camera): void {
+    const height = viewport.clientHeight || 1;
+    for (const pin of pins.children) {
+      const { base, up, scale } = pin.userData as PinData;
+      const perPx = camera === mapCamera
+        ? (mapCamera.top - mapCamera.bottom) / mapCamera.zoom / height
+        : 2 * Math.tan(orbitCamera.fov * RAD / 2) * orbitCamera.position.distanceTo(base) / height;
+      const r = pinPx * scale * perPx;
+      pin.scale.setScalar(r);
+      pin.position.copy(base).addScaledVector(up, r);
+    }
+  }
+  function render(): void {
+    const camera = activeCamera();
+    if (camera === orbitCamera) {
+      // The camera moves from metres above a crater to beyond the whole Moon: keep the depth
+      // range tight around what can be seen, or near surfaces fight and far ones vanish.
+      const fromCentre = orbitCamera.position.distanceTo(globe.position);
+      orbitCamera.near = Math.min(1000, Math.max(0.005, (fromCentre - MOON_RADIUS_KM - relief) / 2));
+      orbitCamera.far = fromCentre + MOON_RADIUS_KM + EARTH_DRAWN_KM * 1.1;
+      orbitCamera.updateProjectionMatrix();
+    }
+    sizePins(camera);
+    renderer.render(world, camera);
+  }
   // No continuous animation while idle. Controls, state changes and resize schedule a frame.
   function invalidate(): void {
     if (frame || disposed || lost) return;
     frame = requestAnimationFrame(() => {
       frame = 0;
-      if (!disposed && !lost) renderer.render(world, activeCamera());
+      if (!disposed && !lost) render();
     });
   }
-  mapControls.addEventListener('change', invalidate); orbitControls.addEventListener('change', invalidate);
   function resize(): void {
     const width = viewport.clientWidth, height = viewport.clientHeight;
     if (!width || !height) return;
@@ -129,132 +210,190 @@ export function mount(el: HTMLElement): void {
     mapCamera.top = span; mapCamera.bottom = -span; mapCamera.updateProjectionMatrix();
     orbitCamera.aspect = aspect; orbitCamera.updateProjectionMatrix(); invalidate();
   }
-  function centre(): void {
-    mapCamera.zoom = 1; mapControls.target.copy(target); orbitControls.target.copy(target);
+  /** Points the map straight down at the selected site, keeping its zoom. */
+  function aimMap(): void {
     if (polar) {
-      span = Math.max(8, Math.min(80, (dem?.meta.size ?? 634) * (dem?.meta.pixel_m ?? 960) / 8000));
+      // Longitude 0 up and 90 E right, like the height grid.
       mapCamera.up.set(0, 0, -1); mapCamera.position.copy(target).add(new Vector3(0, 2000, 0));
-      orbitCamera.up.set(0, 1, 0);
+    } else {
+      const up = siteUp(selected().site);
+      mapCamera.up.copy(siteNorth(up)); mapCamera.position.copy(target).addScaledVector(up, MOON_RADIUS_KM * 3);
+    }
+    mapControls.target.copy(target); mapCamera.lookAt(target); mapControls.update();
+  }
+  /** Resets both cameras to their starting view of the selected site. */
+  function centre(): void {
+    const up = siteUp(selected().site);
+    orbitControls.dispose();
+    if (polar && dem) {
+      span = Math.max(8, Math.min(80, dem.meta.size * dem.meta.pixel_m / 8000));
+      orbitControls = makeOrbitControls(false, up);
+      orbitControls.target.copy(target);
       orbitCamera.position.copy(target).add(new Vector3(span * 0.6, span * 0.9, span * 1.1));
-      orbitControls.maxPolarAngle = Math.PI * 0.49;
     } else {
       span = MOON_RADIUS_KM * 1.15;
-      const normal = target.clone().sub(globe.position).normalize();
-      const north = new Vector3(0, -1, 0).addScaledVector(normal, normal.y).normalize();
-      if (north.lengthSq() < 0.5) north.set(0, 0, -1);
-      mapCamera.up.copy(north); orbitCamera.up.copy(north);
-      mapCamera.position.copy(target).addScaledVector(normal, MOON_RADIUS_KM * 3);
-      orbitCamera.position.copy(target).addScaledVector(normal, MOON_RADIUS_KM * 2.5);
-      orbitControls.maxPolarAngle = Math.PI;
+      orbitControls = makeOrbitControls(true, new Vector3(0, -1, 0));
+      orbitControls.target.copy(globe.position);
+      orbitCamera.position.copy(globe.position).addScaledVector(up, MOON_RADIUS_KM * 3.5);
     }
-    mapCamera.lookAt(target); orbitCamera.lookAt(target);
-    mapControls.update(); orbitControls.update(); resize();
+    orbitCamera.lookAt(orbitControls.target); orbitControls.update(); onOrbitChange();
+    mapCamera.zoom = 1; aimMap(); resize();
+  }
+  /** Brings the selected site back to the middle of both views, keeping zoom and viewing angle. */
+  function follow(): void {
+    aimMap();
+    if (orbitGlobe) {
+      const distance = orbitCamera.position.distanceTo(globe.position);
+      orbitCamera.position.copy(globe.position).addScaledVector(siteUp(selected().site), distance);
+    } else {
+      orbitCamera.position.add(target.clone().sub(orbitControls.target));
+      orbitControls.target.copy(target);
+    }
+    orbitControls.update(); invalidate();
   }
   function clearTerrain(): void {
     for (const mesh of [coarse, detail]) if (mesh) { world.remove(mesh); mesh.geometry.dispose(); }
-    coarse = detail = null;
+    coarse = detail = null; coarseKey = detailKey = ''; relief = 0; bounds = undefined;
   }
-  function updateTerrain(): void {
-    clearTerrain();
-    if (!dem || !polar) return;
+  /**
+   * The whole region is built once per height map, stretch and theme, and shown in every view.
+   * A new site only rebuilds the small native patch and moves the hole under it.
+   */
+  function updateTerrain(changedDem: boolean): void {
+    if (changedDem) {
+      clearTerrain();
+      const old = globe.geometry; globe.geometry = globeGeometry(dem?.meta); old.dispose();
+    }
+    if (!dem) return;
     const low = new Color(themeColor('--terrain-lo')), high = new Color(themeColor('--terrain-hi'));
-    bounds = detailBounds(dem, selected().site);
-    const geometry = terrainGeometry(dem, low, high, stretch, undefined, bounds);
-    coarse = new Mesh(geometry, terrainMaterial);
+    const nextCoarse = `${stretch}|${themeKey}`;
+    if (!coarse || coarseKey !== nextCoarse) {
+      if (coarse) { world.remove(coarse); coarse.geometry.dispose(); }
+      coarse = new Mesh(terrainGeometry(dem, low, high, stretch), terrainMaterial);
+      coarse.castShadow = coarse.receiveShadow = true; world.add(coarse);
+      coarseKey = nextCoarse; detailKey = '';
+      const [min, max] = coarse.geometry.userData.heightRange as number[];
+      relief = Math.max(0, max) * stretch / 1000;
+      // The sphere outside the height map takes the ramp's colour for 0 m, so the seam doesn't show.
+      globeMaterial.color.copy(low).lerp(high, Math.max(0, Math.min(1, -min / Math.max(1, max - min))));
+    }
+    const nextDetail = polar ? `${siteKey}|${coarseKey}` : 'none';
+    if (detailKey === nextDetail) return;
+    detailKey = nextDetail;
+    if (detail) { world.remove(detail); detail.geometry.dispose(); detail = null; }
+    bounds = polar ? detailBounds(dem, selected().site) : undefined;
+    setTerrainHole(coarse.geometry, bounds);
+    if (!bounds) return;
     detail = new Mesh(terrainGeometry(dem, low, high, stretch, bounds), detailMaterial);
-    recolorTerrain(detail.geometry, low, high, geometry.userData.heightRange as number[]);
-    for (const mesh of [coarse, detail]) { mesh.castShadow = mesh.receiveShadow = true; world.add(mesh); }
+    recolorTerrain(detail.geometry, low, high, coarse.geometry.userData.heightRange as number[]);
+    detail.castShadow = detail.receiveShadow = true; world.add(detail);
   }
   function clearPins(): void {
     for (const obj of [...pins.children]) { ((obj as Mesh).material as Material).dispose(); pins.remove(obj); }
   }
   function updatePins(s: AppState): void {
+    const scenarios = [s.live, ...s.pinned, ...(s.ghost ? [s.ghost] : [])];
+    const key = [themeKey, stretch, s.selectedId,
+      ...scenarios.map((sc) => `${sc.id} ${sc.color} ${sc.label} ${sc.site.lat} ${sc.site.lon}`)].join('|');
+    // Scrubbing time changes none of this, so the pins aren't rebuilt at every step of a drag.
+    if (key === pinKey && pinSites === s.sites && pinDem === dem) return;
+    pinKey = key; pinSites = s.sites; pinDem = dem;
     clearPins();
     const addPin = (site: Site, color: string, label: string, id?: string): void => {
-      if (polar && (!dem?.covers(site.lat, site.lon) || site.lat > -80)) return;
-      const chosen = id === s.selectedId;
-      const radius = polar ? Math.max(0.12, span * 0.012) : MOON_RADIUS_KM * 0.015;
+      const height = dem?.covers(site.lat, site.lon) ? dem.heightAt(site.lat, site.lon) : 0;
       const pin = new Mesh(pinGeometry, new MeshBasicMaterial({ color: themeColor(color) }));
-      pin.position.copy(sitePosition(site, polar ? dem!.heightAt(site.lat, site.lon) : 0, stretch));
-      const up = pin.position.clone().sub(globe.position).normalize();
-      pin.position.addScaledVector(up, radius * (chosen ? 1.6 : 1));
-      pin.scale.setScalar(radius * (chosen ? 1.6 : 1));
-      pin.userData = { site, scenarioId: id, label }; pins.add(pin);
+      const data: PinData = {
+        site, scenarioId: id, label, base: sitePosition(site, height, stretch), up: siteUp(site),
+        scale: id !== undefined && id === s.selectedId ? 1.6 : 1,
+      };
+      pin.userData = data; pins.add(pin);
     };
     s.sites.forEach((site) => addPin(site, '--muted', site.name));
-    [s.live, ...s.pinned, ...(s.ghost ? [s.ghost] : [])].forEach((sc) => addPin(sc.site, sc.color, sc.label, sc.id));
+    scenarios.forEach((sc) => addPin(sc.site, sc.color, sc.label, sc.id));
   }
   function update(s: AppState): void {
     const sc = selected();
-    const nextPolar = !!s.dem && sc.site.lat <= -80 && s.dem.covers(sc.site.lat, sc.site.lon);
-    const changedDem = dem !== s.dem, changedSite = siteKey !== `${sc.site.lat},${sc.site.lon}`;
-    const changedView = polar !== nextPolar, changedMode = mode !== s.mode;
-    dem = s.dem; polar = nextPolar; mode = s.mode; siteKey = `${sc.site.lat},${sc.site.lon}`;
-    target.copy(sitePosition(sc.site, polar ? dem!.heightAt(sc.site.lat, sc.site.lon) : 0, stretch));
-    globe.visible = !polar; slider.disabled = !polar;
+    const nextPolar = !!s.dem && s.dem.covers(sc.site.lat, sc.site.lon);
+    const key = `${sc.site.lat},${sc.site.lon}`;
+    const changedDem = dem !== s.dem, changedView = polar !== nextPolar, changedSite = siteKey !== key;
+    const changedMode = mode !== s.mode, changedStretch = drawnStretch !== stretch;
+    dem = s.dem; polar = nextPolar; mode = s.mode; siteKey = key; drawnStretch = stretch;
+    target.copy(sitePosition(sc.site, polar && dem ? dem.heightAt(sc.site.lat, sc.site.lon) : 0, stretch));
+    updateTerrain(changedDem);
+    slider.disabled = !polar;
     for (const button of buttons) {
       const active = button.dataset.mode === mode;
       button.classList.toggle('btn-primary', active); button.setAttribute('aria-pressed', String(active));
     }
     mapControls.enabled = mode === '2d'; orbitControls.enabled = mode === '3d';
-    if (changedSite || changedView || changedDem) centre();
-    else if (changedMode) {
-      const controls = activeControls(), delta = target.clone().sub(controls.target);
-      controls.object.position.add(delta); controls.target.copy(target); controls.update();
-    }
-    const nextTerrainKey = `${siteKey}|${stretch}|${polar}`;
-    if (changedDem || nextTerrainKey !== terrainKey) { terrainKey = nextTerrainKey; updateTerrain(); }
+    if (!framed || changedDem || changedView) { framed = true; centre(); }
+    else if (changedSite || changedMode || changedStretch) follow();
     updatePins(s);
     sun.target.position.copy(target);
     if (s.eph) {
       const vectors = s.eph.vectorsAt(sc.tMs);
       sun.position.copy(target).addScaledVector(moonDirection(vectors.sun), 2000); sun.intensity = 3;
-      const half = polar ? Math.max(25, ((bounds?.col1 ?? 0) - (bounds?.col0 ?? 0)) * (dem?.meta.pixel_m ?? 0) / 1500) : MOON_RADIUS_KM * 1.2;
-      const camera = sun.shadow.camera;
-      camera.left = camera.bottom = -half; camera.right = camera.top = half; camera.updateProjectionMatrix();
+      if (polar && bounds && dem) {
+        const half = Math.max(25, (bounds.col1 - bounds.col0) * dem.meta.pixel_m / 1500);
+        const camera = sun.shadow.camera;
+        camera.left = camera.bottom = -half; camera.right = camera.top = half; camera.updateProjectionMatrix();
+      }
       sun.castShadow = polar;
-      // Topocentric Earth direction: translate the geocentric vector before normalising it.
-      const earthAt = moonDirection(vectors.earthKm); earthAt.y -= MOON_RADIUS_KM;
-      earth.position.copy(target).addScaledVector(earthAt.sub(target).normalize(), polar ? 350 : 6500);
-      earth.scale.setScalar(polar ? 5 : 120); earth.visible = true;
+      // Seen from the site, not the Moon's centre: Earth is close enough for that to matter.
+      const toEarth = moonDirection(vectors.earthKm).add(globe.position).sub(target);
+      const distance = toEarth.length();
+      earth.position.copy(target).addScaledVector(toEarth.normalize(), EARTH_DRAWN_KM);
+      earth.scale.setScalar(2 * EARTH_RADIUS_KM * EARTH_DRAWN_KM / distance); earth.visible = true;
     } else { sun.intensity = 0; earth.visible = false; }
-    message.hidden = !!s.eph; message.textContent = 'Loading Sun and Earth table…';
-    const ground = dem?.heightAt(sc.site.lat, sc.site.lon) ?? 0;
-    const sample = s.eph ? series(s.eph, sc.site, ground, skylineFor(sc), sc.tMs, sc.tMs + 1, 1)[0] : undefined;
+    if (!lost) { message.hidden = !!s.eph; message.textContent = 'Loading Sun and Earth table…'; }
+    // The same cached sample the readout shows, so the two never disagree.
+    const now: Sample | undefined = samplesFor(sc, '30d')[0];
     const mock = dem?.meta.source === 'mock' || s.eph?.meta.source === 'mock';
-    caption.textContent = [mock ? 'Mock data' : '', polar ? 'South-pole terrain' : (dem ? 'Moon globe · outside terrain coverage' : 'Moon globe · Loading height map'),
-      sample ? (sample.sunFrac > 0 ? 'Sun visible' : 'Sun hidden') : '',
-      stretch > 1 && polar ? 'Heights exaggerated; shadows are illustrative' : 'Lighting is illustrative; use the readout for visibility'].filter(Boolean).join(' · ');
-    help.textContent = mode === '2d' ? 'Click to pick a site · drag to pan · scroll to zoom' : 'Click to pick a site · drag to orbit · right-drag to pan · scroll to zoom';
+    caption.textContent = [mock ? 'Mock data' : '',
+      polar ? 'South-pole terrain' : (dem ? 'Moon globe · outside terrain coverage' : 'Moon globe · Loading height map'),
+      now ? (now.sunFrac > 0 ? 'Sun visible' : 'Sun hidden') : '',
+      stretch > 1 && dem ? 'Heights exaggerated; shadows are illustrative' : 'Lighting is illustrative; use the readout for visibility',
+    ].filter(Boolean).join(' · ');
+    help.textContent = mode === '2d' ? 'Click to pick a site · drag to pan · scroll to zoom'
+      : orbitGlobe ? 'Click to pick a site · drag to turn the Moon · scroll to zoom'
+        : 'Click to pick a site · drag to orbit · right-drag to pan · scroll to zoom';
     invalidate();
   }
   function updateTheme(): void {
-    const key = ['--bg', '--text', '--terrain-lo', '--terrain-hi', '--earth', '--muted', '--accent', '--scn-a', '--scn-b', '--scn-c', '--scn-ghost'].map(themeColor).join('|');
+    const key = ['--bg', '--text', '--terrain-lo', '--terrain-hi', '--earth', '--muted', '--accent', '--scn-a', '--scn-b', '--scn-c', '--scn-ghost', '--space-1'].map(themeColor).join('|');
     if (key === themeKey) return;
     themeKey = key; world.background = new Color(themeColor('--bg'));
-    sun.color.set(themeColor('--text')); ambient.color.set(themeColor('--text')); globeMaterial.color.set(themeColor('--terrain-hi'));
+    // Three quarters of the smallest gap: about the size the pins had at the starting zoom.
+    pinPx = Math.max(1, themeLength(viewport, '--space-1') * 0.75);
+    sun.color.set(themeColor('--text')); ambient.color.set(themeColor('--text'));
+    // Until the height map arrives there is no 0 m colour; the middle of the ramp stands in.
+    globeMaterial.color.set(themeColor('--terrain-lo')).lerp(new Color(themeColor('--terrain-hi')), 0.5);
     const old = earthMaterial.map; earthMaterial.map = earthTexture(); old?.dispose();
-    terrainKey = ''; update(getState());
+    update(getState());
   }
   function pick(event: PointerEvent): void {
     const start = pointerDown; pointerDown = null;
     if (!start || start.id !== event.pointerId || maxDrag > 5 || event.button !== 0 || lost) return;
     const rect = canvas.getBoundingClientRect(); if (!rect.width || !rect.height) return;
     pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
-    world.updateMatrixWorld(true); activeCamera().updateMatrixWorld(true); raycaster.setFromCamera(pointer, activeCamera());
-    const surface = raycaster.intersectObjects(polar ? [detail!, coarse!].filter(Boolean) : [globe])[0];
-    const pin = raycaster.intersectObjects(pins.children).find((hit) => !surface || hit.distance <= surface.distance + 0.01);
+    const camera = activeCamera();
+    sizePins(camera); world.updateMatrixWorld(true); camera.updateMatrixWorld(true);
+    raycaster.setFromCamera(pointer, camera);
+    const surface = raycaster.intersectObjects([detail, coarse, globe].filter((m): m is Mesh => !!m), false)[0];
+    const pin = raycaster.intersectObjects(pins.children, false).find((hit) => !surface || hit.distance <= surface.distance + 0.01);
     if (pin) {
-      const data = pin.object.userData;
-      if (data.scenarioId && getState().pinned.some((p) => p.id === data.scenarioId)) select(data.scenarioId as string);
-      else setLiveSite(data.site as Site);
+      const data = pin.object.userData as PinData;
+      if (data.scenarioId && getState().pinned.some((p) => p.id === data.scenarioId)) select(data.scenarioId);
+      else setLiveSite(data.site);
     } else if (surface) {
-      const site = polar && surface.uv && dem ? gridSite(dem.meta, surface.uv.x * (dem.meta.size - 1), surface.uv.y * (dem.meta.size - 1)) : sphereSite(surface.point);
-      if (!polar || dem?.covers(site.lat, site.lon)) setLiveSite(site);
+      const uv = surface.object === globe ? undefined : surface.uv;
+      const site = uv && dem ? gridSite(dem.meta, uv.x * (dem.meta.size - 1), uv.y * (dem.meta.size - 1)) : sphereSite(surface.point);
+      if (!uv || dem?.covers(site.lat, site.lon)) setLiveSite(site);
     }
   }
   const down = (event: PointerEvent): void => {
-    if (pointerDown || !event.isPrimary || event.button !== 0) { pointerDown = null; return; }
+    // A second finger cancels the click; a new primary press always starts a fresh one.
+    if (!event.isPrimary || event.button !== 0) { pointerDown = null; return; }
     pointerDown = { x: event.clientX, y: event.clientY, id: event.pointerId }; maxDrag = 0;
   };
   const move = (event: PointerEvent): void => { if (pointerDown) maxDrag = Math.max(maxDrag, Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y)); };
@@ -266,7 +405,8 @@ export function mount(el: HTMLElement): void {
   canvas.addEventListener('webglcontextlost', onLost); canvas.addEventListener('webglcontextrestored', onRestored);
   const changeMode = (event: Event): void => setMode((event.currentTarget as HTMLButtonElement).dataset.mode as AppState['mode']);
   buttons.forEach((b) => b.addEventListener('click', changeMode));
-  const onStretch = (): void => { stretch = Number(slider.value); output.value = `${stretch}×`; update(getState()); centre(); };
+  // The camera follows the site up or down with the stretch; it isn't reset.
+  const onStretch = (): void => { stretch = Number(slider.value); output.value = `${stretch}×`; update(getState()); };
   slider.addEventListener('input', onStretch); reset.addEventListener('click', centre);
   const observer = new ResizeObserver(resize); observer.observe(viewport);
   const themeObserver = new MutationObserver(updateTheme);
@@ -276,14 +416,16 @@ export function mount(el: HTMLElement): void {
   function dispose(): void {
     if (disposed) return;
     disposed = true; cancelAnimationFrame(frame); unsubscribe(); observer.disconnect(); themeObserver.disconnect();
-    mapControls.dispose(); orbitControls.dispose(); clearTerrain(); clearPins();
-    pinGeometry.dispose(); globe.geometry.dispose(); globeMaterial.dispose(); terrainMaterial.dispose(); detailMaterial.dispose();
-    earthMaterial.map?.dispose(); earthMaterial.dispose(); sun.dispose(); renderer.dispose(); canvas.remove();
     canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointermove', move);
     canvas.removeEventListener('pointerup', pick); canvas.removeEventListener('pointercancel', cancel);
     canvas.removeEventListener('webglcontextlost', onLost); canvas.removeEventListener('webglcontextrestored', onRestored);
     slider.removeEventListener('input', onStretch); reset.removeEventListener('click', centre);
-    buttons.forEach((b) => b.removeEventListener('click', changeMode)); window.removeEventListener('pagehide', onPageHide); mounts.delete(el);
+    buttons.forEach((b) => b.removeEventListener('click', changeMode)); window.removeEventListener('pagehide', onPageHide);
+    mapControls.dispose(); orbitControls.dispose(); clearTerrain(); clearPins();
+    pinGeometry.dispose(); globe.geometry.dispose(); globeMaterial.dispose(); terrainMaterial.dispose(); detailMaterial.dispose();
+    earthMaterial.map?.dispose(); earthMaterial.dispose(); sun.dispose();
+    // Free the WebGL context now: browsers allow only a few, and a remount would leak one.
+    renderer.dispose(); renderer.forceContextLoss(); canvas.remove(); mounts.delete(el);
   }
   function onPageHide(event: PageTransitionEvent): void { if (!event.persisted) dispose(); }
   window.addEventListener('pagehide', onPageHide); mounts.set(el, dispose);

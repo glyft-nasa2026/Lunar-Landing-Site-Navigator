@@ -1,16 +1,25 @@
-import { BufferGeometry, Color, Float32BufferAttribute } from 'three';
-import { projectToGrid, type Dem } from '../core/dem';
-import type { Site } from '../core/types';
+import { BufferAttribute, BufferGeometry, Color, Float32BufferAttribute, SphereGeometry } from 'three';
+import { projectToGrid, type Dem, type DemMeta } from '../core/dem';
+import { MOON_RADIUS_KM, type Site } from '../core/types';
 import { gridSite, sitePosition } from './coordinates';
 
 export type GridBounds = { col0: number; col1: number; row0: number; row1: number };
+/** Which grid points a mesh's vertices sit on, kept so its triangles can be rebuilt. */
+type Layout = { b: GridBounds; stride: number; cols: number; rows: number; valid: Uint8Array };
+
+const RAD = Math.PI / 180;
+
+/** Grid step of the whole-region mesh: at most 512 points a side, whatever the DEM's size. */
+export function coarseStride(meta: DemMeta): number {
+  return Math.ceil((meta.size - 1) / 511);
+}
 
 /** Native cells near the selected site, capped to keep edits and scrubbing responsive. */
 export function detailBounds(dem: Dem, site: Site): GridBounds {
   const { col, row } = projectToGrid(dem.meta, site.lat, site.lon);
   const half = Math.min(64, Math.max(2, Math.ceil(20_000 / dem.meta.pixel_m)));
   const last = dem.meta.size - 1;
-  const stride = Math.ceil(last / 511);
+  const stride = coarseStride(dem.meta);
   const c = Math.max(0, Math.min(last, Math.round(col)));
   const r = Math.max(0, Math.min(last, Math.round(row)));
   return {
@@ -21,6 +30,59 @@ export function detailBounds(dem: Dem, site: Site): GridBounds {
   };
 }
 
+/**
+ * The Moon as a sphere centred on the origin (the caller moves it to the Moon's centre).
+ * With a height map, the cap the terrain covers (south of `min_lat`, inside the grid) is left
+ * open so the terrain isn't buried under the sphere. The opening is two coarse cells smaller
+ * than the terrain, so the terrain's stepped edge never leaves a gap; where the two overlap the
+ * globe's material is pushed back in depth so the terrain wins.
+ */
+export function globeGeometry(meta?: DemMeta | null): SphereGeometry {
+  if (!meta) return new SphereGeometry(MOON_RADIUS_KM, 128, 96);
+  const rM = MOON_RADIUS_KM * 1000;
+  const last = meta.size - 1;
+  // Distance from the pole to the nearest grid edge, so a grid smaller than min_lat still has no gap.
+  const half = Math.min(-meta.x_min_m, meta.x_min_m + last * meta.pixel_m,
+    meta.y_max_m, last * meta.pixel_m - meta.y_max_m);
+  const gridColat = 2 * Math.atan(Math.max(0, half) / (2 * rM));
+  const overlap = 2 * coarseStride(meta) * meta.pixel_m / rM;
+  const cap = Math.max(0, Math.min((90 + meta.min_lat) * RAD, gridColat) - overlap);
+  // Render frame +Y is south, and SphereGeometry measures theta from +Y.
+  return new SphereGeometry(MOON_RADIUS_KM, 128, 96, 0, Math.PI * 2, cap, Math.PI - cap);
+}
+
+/** Writes the triangles whose three corners have data, leaving out the quads inside `hole`. */
+function fillIndex(geometry: BufferGeometry, hole?: GridBounds): void {
+  const { b, stride, cols, rows, valid } = geometry.userData.layout as Layout;
+  const index = geometry.getIndex()!;
+  const out = index.array as Uint32Array;
+  let n = 0;
+  for (let row = 0; row < rows - 1; row++) {
+    const r0 = b.row0 + row * stride;
+    const rowInHole = !!hole && r0 >= hole.row0 && Math.min(b.row1, r0 + stride) <= hole.row1;
+    for (let col = 0; col < cols - 1; col++) {
+      if (rowInHole && hole) {
+        const c0 = b.col0 + col * stride;
+        if (c0 >= hole.col0 && Math.min(b.col1, c0 + stride) <= hole.col1) continue;
+      }
+      const a = row * cols + col, next = a + 1, c = a + cols, d = c + 1;
+      if (valid[a] && valid[next] && valid[c]) { out[n++] = a; out[n++] = c; out[n++] = next; }
+      if (valid[next] && valid[c] && valid[d]) { out[n++] = next; out[n++] = c; out[n++] = d; }
+    }
+  }
+  out.fill(0, n);
+  geometry.setDrawRange(0, n);
+  index.needsUpdate = true;
+}
+
+/**
+ * Moves the coarse mesh's hole to sit under a new detail patch, or closes it (no `hole`).
+ * Only the triangle list changes; the vertices stay, so a new site doesn't rebuild the region.
+ */
+export function setTerrainHole(geometry: BufferGeometry, hole?: GridBounds): void {
+  fillIndex(geometry, hole);
+}
+
 /** A curved, indexed mesh. UVs map back to the full DEM, including for the detail patch.
  * Height, size, spacing and coverage all come from the loader, never a dataset-specific constant.
  */
@@ -29,8 +91,8 @@ export function terrainGeometry(
 ): BufferGeometry {
   const last = dem.meta.size - 1;
   const b = bounds ?? { col0: 0, col1: last, row0: 0, row1: last };
-  const coarseStride = Math.ceil(last / 511);
-  const stride = bounds ? 1 : coarseStride;
+  const coarse = coarseStride(dem.meta);
+  const stride = bounds ? 1 : coarse;
   const cols = Math.ceil((b.col1 - b.col0) / stride) + 1;
   const rows = Math.ceil((b.row1 - b.row0) / stride) + 1;
   const count = cols * rows;
@@ -55,8 +117,8 @@ export function terrainGeometry(
       if (bounds && (col === 0 || col === cols - 1 || row === 0 || row === rows - 1)) {
         const alongRow = row === 0 || row === rows - 1;
         const v = alongRow ? c : r;
-        const lo = Math.floor(v / coarseStride) * coarseStride;
-        const hi = Math.min(last, lo + coarseStride);
+        const lo = Math.floor(v / coarse) * coarse;
+        const hi = Math.min(last, lo + coarse);
         if (hi > lo) {
           const a = gridSite(dem.meta, alongRow ? lo : c, alongRow ? r : lo);
           const z = gridSite(dem.meta, alongRow ? hi : c, alongRow ? r : hi);
@@ -77,25 +139,17 @@ export function terrainGeometry(
     color.copy(low).lerp(high, Math.max(0, Math.min(1, (heights[i] - min) / range)));
     color.toArray(colors, i * 3);
   }
-  const indices: number[] = [];
-  for (let row = 0; row < rows - 1; row++) {
-    for (let col = 0; col < cols - 1; col++) {
-      if (hole && b.col0 + col * stride >= hole.col0 &&
-        Math.min(b.col1, b.col0 + (col + 1) * stride) <= hole.col1 &&
-        b.row0 + row * stride >= hole.row0 &&
-        Math.min(b.row1, b.row0 + (row + 1) * stride) <= hole.row1) continue;
-      const a = row * cols + col, next = a + 1, c = a + cols, d = c + 1;
-      if (valid[a] && valid[next] && valid[c]) indices.push(a, c, next);
-      if (valid[next] && valid[c] && valid[d]) indices.push(next, c, d);
-    }
-  }
   const geometry = new BufferGeometry();
   geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
   geometry.setAttribute('uv', new Float32BufferAttribute(uvs, 2));
   geometry.setAttribute('color', new Float32BufferAttribute(colors, 3));
   geometry.setAttribute('height', new Float32BufferAttribute(heights, 1));
-  geometry.setIndex(indices);
+  geometry.userData.layout = { b, stride, cols, rows, valid } satisfies Layout;
+  geometry.setIndex(new BufferAttribute(new Uint32Array(Math.max(0, (cols - 1) * (rows - 1) * 6)), 1));
+  // Normals come from the whole mesh, so they stay smooth along the edge of a hole.
+  fillIndex(geometry);
   geometry.computeVertexNormals();
+  if (hole) fillIndex(geometry, hole);
   geometry.computeBoundingSphere();
   geometry.userData.heightRange = Number.isFinite(min) ? [min, max] : [0, 1];
   return geometry;
