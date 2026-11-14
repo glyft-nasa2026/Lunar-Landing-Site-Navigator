@@ -1,6 +1,6 @@
 # T27: Load time on the real data
 
-Status: not started
+Status: in progress (Leon, branch t27-load-time). Report skeleton in docs/load-time.md; waiting for the browser measurements
 
 | | |
 |---|---|
