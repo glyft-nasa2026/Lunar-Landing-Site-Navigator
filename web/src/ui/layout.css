@@ -74,8 +74,8 @@
   min-width: 0;
 }
 
-/* Phone: one column, in page order: about, scene, scenarios, readout, nudge, compare,
-   timeline, sky. */
+/* Phone: one column, in page order: about, scene (with the nudge panel floating over its map),
+   scenarios, readout, panel, compare, timeline, sky. */
 @media (max-width: 800px) {
   #app {
     grid-template-columns: minmax(0, 1fr);

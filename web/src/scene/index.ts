@@ -73,7 +73,7 @@ export function mount(el: HTMLElement): void {
         <output>1×</output>
       </label>
     </div>
-    <div class="scene-viewport"><p class="scene-message muted" role="status">Loading Sun and Earth table…</p></div>
+    <div class="scene-viewport"><p class="scene-message muted" role="status">Loading Sun and Earth table…</p><section id="nudge" aria-label="Nudge"></section></div>
     <p class="scene-help muted">Click to pick a site · drag to pan · scroll to zoom</p>
     <p class="scene-caption muted">Lighting illustrates the terrain; use the readout for visibility.</p>`;
   const viewport = el.querySelector<HTMLDivElement>('.scene-viewport')!;
