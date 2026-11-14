@@ -4,6 +4,48 @@ What a rule or fact in this repo's notes used to say, and why it changed. Newest
 files say what is true now; decisions are in `docs/decisions.md`. Anyone can record a change;
 coordinate overlapping edits.
 
+## 14 Nov 2026: four south-pole sites moved onto the crests (T07, #82)
+
+The audit of the merged tickets ran every south-pole site through the engine. Four sat on
+points from Bussey et al. (2010), found on Kaguya topography and printed to 0.01 degrees, and
+on our LOLA 240 m map they miss the crests they name. #70 had already fixed the same fault for
+the rim.
+
+### web/public/data/sites.json
+
+| id | Was | Lit on our map in 2020 | Now |
+|---|---|---|---|
+| `connecting-ridge` | "Connecting ridge (Point B)", -89.44, -141.8 | 42.6 % | -89.4398, -137.17 (Gläser et al. 2018, C1) |
+| `shackleton-ridge-120e` | "Shackleton ridge at 120 E (Point D)", -88.79, 124.5 | 56.8 % | -88.8089, 123.76 (NASA's LOLA sunlight map) |
+| `de-gerlache-rim` | "de Gerlache rim (Point C)", -88.71, -68.7 | 64.6 % | -88.7061, -68.52 (same map) |
+| `malapert-massif` | "Malapert massif (Point M1)", -86.04, 2.7 | 43.2 % | -86.0412, 3.16 (same map) |
+
+- All four had agency "JHU APL (Bussey et al. 2010)", year 2010, and the paper's DOI as source.
+- Their notes quoted Bussey's figures: "lit 82% of 2020; often lit when the rim is dark", "Most
+  sunlit point in the study, lit 86% of 2020", "lit 85% of 2020 with the shortest eclipses in
+  the study", "lit 74% of 2020". Those are true of Bussey's points on Bussey's map, and the app
+  showed about half of each. Now the notes say where the point comes from and quote no
+  percentage.
+- `shackleton-rim` was named "Shackleton rim (Gläser et al. 2018, cluster S0)". The name shows
+  in the dropdown, the cards, the compare header and the pins, so it is now "Shackleton rim";
+  the citation stays in the other fields.
+
+### docs/sources/T07.md
+
+- The Bussey row listed the four points as sources of coordinates, and a note said they "may
+  sit a few hundred metres from the true crest". A paragraph told how the rim was corrected and
+  ended "The other Bussey points (B, C, D, M1) are unchanged". Now one section, "Why no
+  coordinate is Bussey's", holds all five points, old and new, and a "don't put a point back on
+  a paper's rounded coordinate" guard.
+- The Gläser row set the paper's 85.5 % average illumination beside our 83.9 % of time lit. The
+  like-for-like figure is the paper's solar visibility, 89.4 %; the row now gives both.
+
+### tasks/T07-sites.md
+
+- `Status:` said "in review (draft PR open; Quickmap tick list still to do by a person)" after
+  #42 and #70 had merged, with every "Done when" box unticked. Four boxes are now ticked; the
+  Quickmap line stays open, and the status line says so.
+
 ## 14 Nov 2026: compare has a Live column; first-open example is rim (live) against floor (A)
 
 #47 added a Live column to the compare table and strips. Yi Hung approved both follow-ups there
