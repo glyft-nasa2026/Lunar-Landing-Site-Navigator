@@ -166,6 +166,30 @@ row = (y_max_m - y) / pixel_m
 
 `size` 509, `pixel_m` 1200; 0.52 MB. File budget: 1 MB.
 
+### `tiles.json` + `tiles/rRRcCC.bin` (made by `data-prep/make_globe.py`, issue #66)
+
+Level of detail for the 3D globe: finer whole-Moon heights, cut into tiles so the page fetches
+only the one to four under the selected site, when a site is picked in the 3D globe view. For
+the picture only, like `globe.bin`, and loaded by `web/src/scene/patch.ts`. From the same LOLA
+gridded data record as `dem.bin`.
+
+`tiles.json`:
+
+```json
+{
+  "cells_per_deg": 32,
+  "tile_deg": 15,
+  "height_scale": 0.5,
+  "source": "LOLA product name and version here"
+}
+```
+
+The whole grid is laid out like `globe.bin` at `cells_per_deg` cells a degree (about 950 m at the
+equator). Tile row `RR` counts from 90 N and tile column `CC` from 180 W, each `tile_deg`
+degrees: 12 rows of 24. A tile is little-endian int16, `(tile_deg * cells_per_deg)` squared
+values (480 x 480, 0.46 MB), row by row from its north edge. 288 tiles, 132.7 MB in all, of
+which a visit downloads only what it looks at. Budget: 140 MB in all.
+
 ### `sites.json` (made by T07)
 
 ```json

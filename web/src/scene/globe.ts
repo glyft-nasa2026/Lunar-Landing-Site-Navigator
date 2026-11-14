@@ -150,35 +150,62 @@ export function globeColors(globe: GlobeHeights, low: Color, high: Color, range:
 }
 
 /**
- * RGBA bytes: each cell's surface normal in the render frame (+X = 90 E, +Y = south,
- * -Z = longitude 0), stored as n * 0.5 + 0.5. Slopes are `relief` times steeper than measured.
+ * A cell's surface normal in the render frame (+X = 90 E, +Y = south, -Z = longitude 0), with
+ * slopes `relief` times steeper than measured. Written to `out` as x, y, z.
  */
-export function globeNormals(globe: GlobeHeights, relief = GLOBE_RELIEF): Uint8Array {
+export function globeNormalAt(globe: GlobeHeights, row: number, col: number, relief: number, out: number[]): void {
   const { width, height } = globe.meta;
   const cellM = Math.PI * MOON_RADIUS_KM * 1000 / height;
-  const out = new Uint8Array(width * height * 4);
+  const lat = (90 - (row + 0.5) * 180 / height) * RAD, lon = (-180 + (col + 0.5) * 360 / width) * RAD;
+  const cl = Math.cos(lat), sl = Math.sin(lat), cn = Math.cos(lon), sn = Math.sin(lon);
+  // One row below and above, except at the poles where there is only one neighbour.
+  const rowsApart = Math.min(height - 1, row + 1) - Math.max(0, row - 1);
+  // Toward a pole the columns crowd together. Measuring the east slope between next-door
+  // columns there, over a fraction of the ground the north slope spans, drew streaks along
+  // the meridians; so step as many columns as cover about one row's worth of ground.
+  const step = Math.min(width >> 2, Math.max(1, Math.round(1 / cl)));
+  const east = (globe.cell(row, col + step) - globe.cell(row, col - step)) / (2 * step * cellM * cl) * relief;
+  const north = (globe.cell(row - 1, col) - globe.cell(row + 1, col)) / (rowsApart * cellM) * relief;
+  // up - slope east * east - slope north * north, with the three unit vectors written out.
+  const x = cl * sn - east * cn + north * sl * sn;
+  const y = -sl + north * cl;
+  const z = -cl * cn - east * sn - north * sl * cn;
+  const n = Math.hypot(x, y, z);
+  out[0] = x / n; out[1] = y / n; out[2] = z / n;
+}
+
+/**
+ * The normal the globe's texture shows at a point: globeNormalAt blended between the four
+ * nearest cell centres, as the renderer blends the texture.
+ */
+export function globeNormalNear(globe: GlobeHeights, lat: number, lon: number, relief: number, out: number[]): void {
+  const { width, height } = globe.meta;
+  const fr = (90 - lat) * height / 180 - 0.5, fc = (lon + 180) * width / 360 - 0.5;
+  const r0 = Math.floor(fr), c0 = Math.floor(fc), wr = fr - r0, wc = fc - c0;
+  const n = [0, 0, 0];
+  let x = 0, y = 0, z = 0;
+  for (let k = 0; k < 4; k++) {
+    const row = Math.min(height - 1, Math.max(0, r0 + (k >> 1)));
+    const col = (((c0 + (k & 1)) % width) + width) % width;
+    globeNormalAt(globe, row, col, relief, n);
+    const w = ((k >> 1) ? wr : 1 - wr) * ((k & 1) ? wc : 1 - wc);
+    x += n[0] * w; y += n[1] * w; z += n[2] * w;
+  }
+  const len = Math.hypot(x, y, z) || 1;
+  out[0] = x / len; out[1] = y / len; out[2] = z / len;
+}
+
+/** RGBA bytes: every cell's globeNormalAt, stored as n * 0.5 + 0.5. */
+export function globeNormals(globe: GlobeHeights, relief = GLOBE_RELIEF): Uint8Array {
+  const { width, height } = globe.meta;
+  const out = new Uint8Array(width * height * 4), n = [0, 0, 0];
   for (let row = 0; row < height; row++) {
-    const lat = (90 - (row + 0.5) * 180 / height) * RAD;
-    const cl = Math.cos(lat), sl = Math.sin(lat);
-    // One row below and above, except at the poles where there is only one neighbour.
-    const rowsApart = Math.min(height - 1, row + 1) - Math.max(0, row - 1);
-    // Toward a pole the columns crowd together. Measuring the east slope between next-door
-    // columns there, over a fraction of the ground the north slope spans, drew streaks along
-    // the meridians; so step as many columns as cover about one row's worth of ground.
-    const step = Math.min(width >> 2, Math.max(1, Math.round(1 / cl)));
     for (let col = 0; col < width; col++) {
-      const lon = (-180 + (col + 0.5) * 360 / width) * RAD;
-      const cn = Math.cos(lon), sn = Math.sin(lon);
-      const east = (globe.cell(row, col + step) - globe.cell(row, col - step)) / (2 * step * cellM * cl) * relief;
-      const north = (globe.cell(row - 1, col) - globe.cell(row + 1, col)) / (rowsApart * cellM) * relief;
-      // up - slope east * east - slope north * north, with the three unit vectors written out.
-      const x = cl * sn - east * cn + north * sl * sn;
-      const y = -sl + north * cl;
-      const z = -cl * cn - east * sn - north * sl * cn;
-      const n = Math.hypot(x, y, z), o = (row * width + col) * 4;
-      out[o] = Math.round((x / n * 0.5 + 0.5) * 255);
-      out[o + 1] = Math.round((y / n * 0.5 + 0.5) * 255);
-      out[o + 2] = Math.round((z / n * 0.5 + 0.5) * 255);
+      globeNormalAt(globe, row, col, relief, n);
+      const o = (row * width + col) * 4;
+      out[o] = Math.round((n[0] * 0.5 + 0.5) * 255);
+      out[o + 1] = Math.round((n[1] * 0.5 + 0.5) * 255);
+      out[o + 2] = Math.round((n[2] * 0.5 + 0.5) * 255);
       out[o + 3] = 255;
     }
   }

@@ -1,16 +1,18 @@
 """Issue #66: the heights the 3D globe is drawn from north of the south-pole height map
-(docs/data-contract.md, 2: globe.bin + globe.json, north.bin + north.json).
+(docs/data-contract.md, 2: globe.bin + globe.json, north.bin + north.json, tiles.json + tiles/).
 
 Source: the same LRO LOLA gridded data record as dem.bin (data set LRO-L-LOLA-4-GDR-V1.0, PDS
 Geosciences Node, https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/):
 - cylindrical/img/LDEM_16 (16 cells per degree, V3.1) for the whole Moon;
+- cylindrical/img/LDEM_64 (64 cells per degree, V3.1) for the finer tiles the page fetches
+  only round the selected site (level of detail);
 - polar/img/LDEM_75N_240M (240 m, V2.1), the northern twin of T04's LDEM_75S_240M, for the cap
   north of 80 N, where a latitude-longitude grid pinches together.
 
 Run from anywhere:
     python data-prep/make_globe.py          download (if needed), resample, write, check
 
-The downloads (33 MB and 29 MB) go into data-prep/raw/ (git-ignored). Each source layout is read
+The downloads (33 MB, 531 MB and 29 MB) go into data-prep/raw/ (git-ignored). Each source layout is read
 from its PDS label and checked against what this script expects; if a label says something else
 the script stops rather than guess.
 
@@ -19,6 +21,10 @@ Whole Moon. Source: int16, little-endian, 2880 rows x 5760 columns, height = DN 
 each 2 x 2 block averaged (8 cells per degree, which keeps the file and the textures made from
 it a size a phone can take), and the columns rotated so longitude runs -180 to 180 (CLAUDE.md:
 never 0 to 360).
+
+Tiles. LDEM_64 has the layout of LDEM_16 at 23040 x 11520. Ours: each 2 x 2 block averaged (32
+cells per degree, about 950 m), columns rotated to -180..180, cut into 15-degree squares of
+480 x 480 cells: tiles/rRRcCC.bin, tile row 0 at 90 N, tile column 0 at 180 W.
 
 North cap. Source: int16, 3812 x 3812, polar stereographic about the north pole, 240 m a cell,
 X = (i - 1905.5) * 240, Y = (1905.5 - j) * 240. Which way longitude 0 points is not taken on
@@ -49,6 +55,13 @@ HEIGHT_SCALE = 0.5
 BLOCK = 2                      # source cells averaged per globe cell, each way
 SOURCE = ("LRO LOLA LDEM_16, product version V3.1 (LRO-L-LOLA-4-GDR-V1.0, "
           "created 2019-03-15), 2 x 2 cells averaged, PDS Geosciences Node")
+
+# The level-of-detail tiles (contract section 2).
+T_BLOCK = 2                    # LDEM_64 cells averaged per tile cell, each way
+T_CPD = 32
+T_DEG = 15
+T_SOURCE = ("LRO LOLA LDEM_64, product version V3.1 (LRO-L-LOLA-4-GDR-V1.0, "
+            "created 2019-03-15), 2 x 2 cells averaged, PDS Geosciences Node")
 
 # The north cap's grid: the mirror image of dem.bin's (contract section 2).
 N_PIXEL_M = 1200
@@ -119,28 +132,53 @@ def common(lbl: dict[str, str]) -> list[tuple]:
             (num(lbl, "MAP_PROJECTION_ROTATION"), 0.0)]
 
 
-def load_cylindrical() -> np.ndarray:
+def load_cylindrical(product: str = "ldem_16", per_deg: float = 16.0) -> np.ndarray:
     """The whole Moon as the source has it: row 0 at 90 N, longitude 0 to 360."""
-    lbl = read_label(download("ldem_16.lbl"))
+    lbl = read_label(download(product + ".lbl"))
     lines, samples = int(num(lbl, "LINES")), int(num(lbl, "LINE_SAMPLES"))
     expect_label(common(lbl) + [
         (lbl["PRODUCT_VERSION_ID"].strip('"'), "V3.1"),
         (lbl["MAP_PROJECTION_TYPE"].strip('"'), "SIMPLE CYLINDRICAL"),
-        (num(lbl, "MAP_RESOLUTION"), 16.0), (num(lbl, "MAXIMUM_LATITUDE"), 90.0),
+        (num(lbl, "MAP_RESOLUTION"), per_deg), (num(lbl, "MAXIMUM_LATITUDE"), 90.0),
         (num(lbl, "MINIMUM_LATITUDE"), -90.0), (num(lbl, "WESTERNMOST_LONGITUDE"), 0.0),
         (num(lbl, "EASTERNMOST_LONGITUDE"), 360.0), (num(lbl, "CENTER_LONGITUDE"), 180.0),
         (num(lbl, "LINE_PROJECTION_OFFSET"), (lines - 1) / 2),
         (num(lbl, "SAMPLE_PROJECTION_OFFSET"), (samples - 1) / 2),
-        (samples, 2 * lines), (lines % BLOCK, 0), ((samples // BLOCK) % 2, 0),
+        (samples, 2 * lines), (lines, int(180 * per_deg)),
     ])
-    return load_image("ldem_16", lbl)
+    return load_image(product, lbl)
+
+
+def block_mean(src: np.ndarray, block: int) -> np.ndarray:
+    """Each block x block square averaged, columns rotated so longitude runs -180 to 180."""
+    h, w = src.shape
+    out = np.empty((h // block, w // block), dtype="<i2")
+    step = 720 * block                                       # in strips, to keep memory down
+    for r in range(0, h, step):
+        part = src[r:r + step].astype(np.float32)
+        out[r // block:(r + step) // block] = np.rint(
+            part.reshape(part.shape[0] // block, block, w // block, block).mean(axis=(1, 3)))
+    return np.roll(out, out.shape[1] // 2, axis=1)
+
+
+def write_tiles(grid: np.ndarray) -> None:
+    t = T_DEG * T_CPD
+    if grid.shape != (180 * T_CPD, 360 * T_CPD):
+        sys.exit(f"tile grid is {grid.shape}, expected {(180 * T_CPD, 360 * T_CPD)}")
+    folder = OUT / "tiles"
+    folder.mkdir(parents=True, exist_ok=True)
+    for old in folder.glob("r*c*.bin"):
+        old.unlink()
+    for row in range(180 // T_DEG):
+        for col in range(360 // T_DEG):
+            tile = grid[row * t:(row + 1) * t, col * t:(col + 1) * t]
+            (folder / f"r{row:02d}c{col:02d}.bin").write_bytes(tile.astype("<i2").tobytes(order="C"))
+    meta = {"cells_per_deg": T_CPD, "tile_deg": T_DEG, "height_scale": HEIGHT_SCALE, "source": T_SOURCE}
+    (OUT / "tiles.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
 
 
 def make_globe(src: np.ndarray) -> np.ndarray:
-    h, w = src.shape
-    mean = src.astype(np.float64).reshape(h // BLOCK, BLOCK, w // BLOCK, BLOCK).mean(axis=(1, 3))
-    grid = np.rint(mean).astype("<i2")
-    return np.roll(grid, grid.shape[1] // 2, axis=1)         # 0..360 becomes -180..180
+    return block_mean(src, BLOCK)
 
 
 def cyl_height(src: np.ndarray, lat: np.ndarray, lon: np.ndarray) -> np.ndarray:
@@ -307,6 +345,29 @@ def check() -> bool:
     line(float(np.median(ndiffs)) < 300,
          f"north.bin against globe.bin at {len(ndiffs)} points north of 80 N: median difference "
          f"{np.median(ndiffs):.0f} m, largest {max(ndiffs):.0f} m")
+    # The tiles, read back and put together again, against globe.bin: two separate LOLA products.
+    tm = json.loads((OUT / "tiles.json").read_text(encoding="utf-8"))
+    t = tm["tile_deg"] * tm["cells_per_deg"]
+    files = sorted((OUT / "tiles").glob("r*c*.bin"))
+    want = (180 // tm["tile_deg"]) * (360 // tm["tile_deg"])
+    sizes = {f.stat().st_size for f in files}
+    total = sum(f.stat().st_size for f in files)
+    line(len(files) == want and sizes == {t * t * 2},
+         f"{len(files)} tiles of {want}, each {t} x {t} x 2 bytes; {total / 1e6:.1f} MB in all")
+    line(total <= 140_000_000, f"tile budget: {total / 1e6:.1f} MB of 140 MB")
+    whole = np.empty((180 * tm["cells_per_deg"], 360 * tm["cells_per_deg"]), dtype="<i2")
+    for f in files:
+        r, c = int(f.name[1:3]), int(f.name[4:6])
+        whole[r * t:(r + 1) * t, c * t:(c + 1) * t] = np.fromfile(f, dtype="<i2").reshape(t, t)
+    k = whole.shape[0] // g.v.shape[0]
+    coarse = whole.astype(np.float32).reshape(g.v.shape[0], k, g.v.shape[1], k).mean(axis=(1, 3))
+    diff = np.abs(coarse - g.v) * HEIGHT_SCALE
+    line(float(np.median(diff)) < 30 and float(np.percentile(diff, 99)) < 300,
+         f"tiles averaged to globe.bin's cells: median difference {np.median(diff):.1f} m, "
+         f"99 % under {np.percentile(diff, 99):.0f} m")
+    for name, lat, lon, low, high in KNOWN[:2]:
+        v = float(whole[int((90 - lat) * tm["cells_per_deg"]), int((lon + 180) * tm["cells_per_deg"])]) * HEIGHT_SCALE
+        line(low <= v <= high + 300, f"tiles, {name}: {v:.0f} m")
     return ok
 
 
@@ -315,7 +376,8 @@ def main() -> None:
     polar, s0, l0 = load_north()
     sign = north_orientation(polar, s0, l0, cyl)
     write(make_globe(cyl), make_north(polar, s0, l0, sign))
-    print(f"wrote globe.bin, globe.json, north.bin and north.json in {OUT}")
+    write_tiles(block_mean(load_cylindrical("ldem_64", 64.0), T_BLOCK))
+    print(f"wrote globe.bin, globe.json, north.bin, north.json, tiles.json and tiles/ in {OUT}")
     if not check():
         sys.exit(1)
 
