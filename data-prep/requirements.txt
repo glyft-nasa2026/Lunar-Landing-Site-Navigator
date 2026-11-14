@@ -1,0 +1,5 @@
+skyfield==1.55
+numpy==2.5.4
+rasterio==1.5.2
+requests==2.34.2
+pillow==13.0.0
