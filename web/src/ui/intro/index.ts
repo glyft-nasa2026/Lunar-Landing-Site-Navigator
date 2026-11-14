@@ -1,30 +1,17 @@
-// Loading screen and main page, after docs/design/loading.png and hero.png (T22).
-// A full-screen layer over the site: it shows how far the data files have loaded, then, for a
-// plain link, the main page with "Start exploring". It never blocks the site for good: "Skip"
-// and Escape close it at any time, and a file that fails to load still lets it finish.
+// Main page and loading screen, after docs/design/hero.png and loading.png (T22).
+// A full-screen layer over the site, in this order:
+//   1. The main page, as soon as the site opens. Its big logo starts where the loading screen's
+//      logo sits, in the middle, and glides out to the right. The data files load behind it.
+//   2. "Start exploring": if the data is still loading, the big logo glides back to the middle
+//      and the loading screen shows how far the data is.
+//   3. When every file has loaded (or failed: the page's status line says which), the site.
 // Not a slot of contract section 5: main.ts starts it and feeds it the loading progress.
 import './intro.css';
-import { allSettled, loadFraction, showHero, type LoadProgress } from './model';
+import { logo } from './logo';
+import { allSettled, loadFraction, type LoadProgress } from './model';
 
-// Read before state.ts writes the scenarios into the address.
-const HASH_AT_START = typeof window !== 'undefined' ? window.location.hash : '';
-const SEEN_KEY = 'darksight-intro-seen';
-
-function seenThisTab(): boolean {
-  try {
-    return sessionStorage.getItem(SEEN_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function markSeen(): void {
-  try {
-    sessionStorage.setItem(SEEN_KEY, '1');
-  } catch {
-    // Private windows may refuse storage: the main page then shows again next time.
-  }
-}
+const GLIDE_MS = 900;
+const GLIDE_EASE = 'cubic-bezier(0.2, 0.7, 0.2, 1)';
 
 function make<K extends keyof HTMLElementTagNameMap>(
   tag: K, className = '', text = '',
@@ -35,27 +22,8 @@ function make<K extends keyof HTMLElementTagNameMap>(
   return el;
 }
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
-/** The Darksight mark: a ring with an orbit and its arrow tip. Colours come from intro.css. */
-function logo(className: string): SVGSVGElement {
-  const svg = document.createElementNS(SVG_NS, 'svg');
-  svg.setAttribute('viewBox', '0 0 100 100');
-  svg.setAttribute('class', `intro-logo ${className}`);
-  svg.setAttribute('aria-hidden', 'true');
-  const ring = document.createElementNS(SVG_NS, 'circle');
-  ring.setAttribute('cx', '50');
-  ring.setAttribute('cy', '50');
-  ring.setAttribute('r', '36');
-  ring.setAttribute('class', 'ring');
-  const orbit = document.createElementNS(SVG_NS, 'path');
-  orbit.setAttribute('d', 'M12 74 C2 88 30 92 60 74 C80 62 98 42 86 28');
-  orbit.setAttribute('class', 'orbit');
-  const tip = document.createElementNS(SVG_NS, 'path');
-  tip.setAttribute('d', 'M78 20 L96 14 L90 32 Z');
-  tip.setAttribute('class', 'tip');
-  svg.append(ring, orbit, tip);
-  return svg;
+function reducedMotion(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 /** A still star field: decorative, placed in percent so it fits any screen. */
@@ -72,20 +40,28 @@ function stars(count: number): HTMLElement {
   return field;
 }
 
+/** The transform that puts `from`'s box exactly on `to`'s box (both measured on screen). */
+function boxToBox(from: DOMRect, to: DOMRect): string {
+  const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+  const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+  const s = to.width / from.width;
+  return `translate(${dx}px, ${dy}px) scale(${s})`;
+}
+
 export interface Intro {
   /** Called by main.ts whenever a data file makes progress, loads or fails. */
   update(progress: LoadProgress): void;
 }
 
 export function startIntro(): Intro {
-  const hero = showHero(HASH_AT_START, seenThisTab());
   const root = make('div', 'intro');
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-modal', 'true');
   root.setAttribute('aria-label', 'Darksight: Lunar Landing Site Navigator');
 
-  // Loading view
+  // 2. The loading screen. Built now: its logo's place is where the big logo glides from and to.
   const loading = make('div', 'intro-loading');
+  const smallLogo = logo('intro-logo-pulse');
   const bar = make('div', 'intro-bar');
   const fill = make('span');
   bar.append(fill);
@@ -93,75 +69,121 @@ export function startIntro(): Intro {
   bar.setAttribute('aria-valuemin', '0');
   bar.setAttribute('aria-valuemax', '100');
   bar.setAttribute('aria-label', 'Lunar data loaded');
+  bar.tabIndex = -1; // focus moves here from the button, so screen readers follow the progress
   const caption = make('p', 'intro-caption', 'INITIALISING LUNAR DATA…');
   caption.setAttribute('aria-live', 'polite');
-  const skip = make('button', 'btn intro-skip', 'Skip');
-  skip.type = 'button';
-  loading.append(logo('intro-logo-pulse'), bar, caption, skip);
-  root.append(stars(60), loading);
+  loading.append(smallLogo, bar, caption);
 
-  document.body.append(root);
-  document.body.classList.add('intro-open');
-  skip.focus();
+  // 1. The main page.
+  const page = make('section', 'intro-hero');
+  const glow = make('div', 'intro-glow');
+  glow.setAttribute('aria-hidden', 'true');
+  const bigLogo = logo('intro-logo-big');
+  const mark = make('div', 'intro-mark');
+  const word = make('span', 'intro-wordmark');
+  word.append('DARK', make('br'), 'SIGHT');
+  mark.append(logo('intro-logo-sm'), word);
+  const title = make('h1', 'intro-title', 'DARKSIGHT');
+  const sub = make('p', 'intro-sub');
+  sub.append('Lunar Landing', make('br'), 'Site Navigator');
+  const start = make('button', 'btn intro-start', 'Start exploring →');
+  start.type = 'button';
+  const text = make('div', 'intro-text');
+  text.append(title, sub, start);
+  page.append(glow, bigLogo, mark, text);
 
+  let latest: LoadProgress | null = null;
+  let started = false;
   let closed = false;
-  let heroShown = false;
 
+  /** Where the loading screen's logo sits on this screen, measured without showing it. */
+  function smallLogoBox(): DOMRect {
+    loading.classList.add('intro-measure');
+    root.append(loading);
+    const box = smallLogo.getBoundingClientRect();
+    loading.remove();
+    loading.classList.remove('intro-measure');
+    return box;
+  }
+
+  function drawProgress(): void {
+    const pct = latest ? Math.round(loadFraction(latest) * 100) : 0;
+    fill.style.width = `${pct}%`;
+    bar.setAttribute('aria-valuenow', String(pct));
+    caption.textContent = `INITIALISING LUNAR DATA… ${pct}%`;
+  }
+
+  // 3. The site.
   function close(): void {
     if (closed) return;
     closed = true;
-    markSeen();
-    document.removeEventListener('keydown', onKey);
     root.classList.add('intro-closing');
     document.body.classList.remove('intro-open');
     const remove = (): void => root.remove();
     // The fade lasts as long as intro.css says; under reduced motion there is none.
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) remove();
+    if (reducedMotion()) remove();
     else {
       root.addEventListener('transitionend', remove, { once: true });
       setTimeout(remove, 1000); // in case the transition never fires
     }
   }
 
-  function onKey(e: KeyboardEvent): void {
-    if (e.key === 'Escape') close();
+  function showLoading(): void {
+    if (latest && allSettled(latest)) {
+      close(); // the data finished while the logo was gliding back
+      return;
+    }
+    drawProgress();
+    page.replaceWith(loading);
+    bar.focus();
   }
-  document.addEventListener('keydown', onKey);
-  skip.addEventListener('click', close);
 
-  function showMainPage(): void {
-    heroShown = true;
-    const page = make('section', 'intro-hero');
-    const glow = make('div', 'intro-glow');
-    glow.setAttribute('aria-hidden', 'true');
-    const mark = make('div', 'intro-mark');
-    const word = make('span', 'intro-wordmark');
-    word.append('DARK', make('br'), 'SIGHT');
-    mark.append(logo('intro-logo-sm'), word);
-    const title = make('h1', 'intro-title', 'DARKSIGHT');
-    const sub = make('p', 'intro-sub');
-    sub.append('Lunar Landing', make('br'), 'Site Navigator');
-    const start = make('button', 'btn intro-start', 'Start exploring →');
-    start.type = 'button';
-    start.addEventListener('click', close);
-    const text = make('div', 'intro-text');
-    text.append(title, sub, start);
-    page.append(glow, logo('intro-logo-big'), mark, text);
-    loading.replaceWith(page);
-    start.focus();
+  start.addEventListener('click', () => {
+    if (started) return;
+    started = true;
+    for (const a of page.getAnimations({ subtree: true })) a.finish();
+    if (latest && allSettled(latest)) {
+      close();
+      return;
+    }
+    if (reducedMotion()) {
+      showLoading();
+      return;
+    }
+    // The big logo glides back to the middle and shrinks to the loading screen's logo.
+    const to = smallLogoBox();
+    const from = bigLogo.getBoundingClientRect();
+    const fade = { duration: GLIDE_MS / 2, easing: 'ease-out', fill: 'forwards' } as const;
+    for (const el of [text, mark, glow]) el.animate([{ opacity: 1 }, { opacity: 0 }], fade);
+    bigLogo.animate(
+      [{ transform: 'none', opacity: getComputedStyle(bigLogo).opacity }, { transform: boxToBox(from, to), opacity: 1 }],
+      { duration: GLIDE_MS, easing: GLIDE_EASE, fill: 'forwards' },
+    ).finished.then(showLoading, showLoading);
+  });
+
+  root.append(stars(60), page);
+  document.body.append(root);
+  document.body.classList.add('intro-open');
+  start.focus();
+
+  // The big logo starts as the loading screen's logo, in the middle, and glides to the right.
+  if (!reducedMotion()) {
+    const from = smallLogoBox();
+    const to = bigLogo.getBoundingClientRect();
+    bigLogo.animate(
+      [{ transform: boxToBox(to, from), opacity: 1 }, { transform: 'none', opacity: getComputedStyle(bigLogo).opacity }],
+      { duration: GLIDE_MS, easing: GLIDE_EASE },
+    );
+    const appear = { duration: GLIDE_MS / 2, delay: GLIDE_MS / 2, easing: 'ease-out', fill: 'backwards' } as const;
+    for (const el of [text, mark, glow]) el.animate([{ opacity: 0 }, { opacity: getComputedStyle(el).opacity }], appear);
   }
 
   return {
     update(progress: LoadProgress): void {
-      if (closed || heroShown) return;
-      const pct = Math.round(loadFraction(progress) * 100);
-      fill.style.width = `${pct}%`;
-      bar.setAttribute('aria-valuenow', String(pct));
-      caption.textContent = `INITIALISING LUNAR DATA… ${pct}%`;
-      if (allSettled(progress)) {
-        if (hero) showMainPage();
-        else close();
-      }
+      latest = progress;
+      if (closed || !started || !loading.isConnected) return;
+      drawProgress();
+      if (allSettled(progress)) close();
     },
   };
 }

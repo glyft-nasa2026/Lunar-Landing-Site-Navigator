@@ -1,10 +1,13 @@
 // Placeholder by T00. T16 replaces this file with the About bar and panel.
 import './about.css';
 import { getState, subscribe } from '../../state';
+import { logo } from '../intro/logo';
 
 export function mount(el: HTMLElement): void {
+  // The Darksight mark beside the name, as in docs/design/desktop.png (T22).
   const title = document.createElement('strong');
-  title.textContent = 'Darksight';
+  title.className = 'about-brand';
+  title.append(logo('about-logo'), 'Darksight');
   const slot = document.createElement('span');
   slot.className = 'badge';
   slot.textContent = 'About';
