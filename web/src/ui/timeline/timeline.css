@@ -1,1 +1,67 @@
-/* Styles for #timeline. Written by T10; use only the variables and classes of ui/theme.css. */
+/* Styles for #timeline. Written by T10; use only the variables and classes of ui/theme.css.
+   After T10 merges, this file belongs to T23. */
+
+#timeline .timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+#timeline h2 {
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+
+#timeline .timeline-buttons {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+#timeline .btn[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+#timeline .timeline-note {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+/* Plotly needs a box with a height. Horizontal drags scrub; vertical swipes still scroll a phone. */
+#timeline .timeline-chart {
+  width: 100%;
+  height: calc(var(--space-5) * 11);
+  touch-action: pan-y;
+  cursor: ew-resize;
+}
+
+#timeline .timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+#timeline .timeline-swatch {
+  display: inline-block;
+  width: var(--space-4);
+  height: calc(var(--space-1) / 2);
+  margin-right: var(--space-1);
+  vertical-align: middle;
+}
+
+#timeline .timeline-swatch-area {
+  height: var(--space-2);
+  border: 1px solid var(--border);
+}
+
+@media (max-width: 800px) {
+  #timeline .timeline-chart {
+    height: calc(var(--space-5) * 9);
+  }
+}
