@@ -1,6 +1,6 @@
 # T22: Design in Figma
 
-Status: not started
+Status: in review. docs/design.md and pictures done from the brief, PDF and SVG (no Figma link yet); waiting for the team's yes in the chat
 
 | | |
 |---|---|
