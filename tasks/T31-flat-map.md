@@ -1,6 +1,6 @@
 # T31: A true flat 2D map
 
-Status: done, in review (pull request #59); 16 of 16 browser checks pass on fixture and real data
+Status: done (zoom-out limit for issue #65, pull request #69, in review; first delivery #59); 18 of 18 browser checks pass on fixture and real data
 
 | | |
 |---|---|
