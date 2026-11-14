@@ -176,11 +176,13 @@ function stripData(cols: Column[]): { data: Data[]; rows: string[] } {
   return { data, rows };
 }
 
-function stripLayout(rows: string[]): Partial<Layout> {
+/** `width` is the strips box's own width, measured just before drawing. */
+function stripLayout(rows: string[], width: number): Partial<Layout> {
   const base = plotLayout();
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
   return {
     ...base,
+    width,
     height: (rows.length * 2 + 5) * rem,
     barmode: 'overlay',
     bargap: 0.3,
@@ -214,15 +216,18 @@ export function mount(el: HTMLElement): void {
   let shown: Shown | null = null;
   let drawId = 0;
   let frame = 0;
-  // The strips last drawn, so a resize can draw them again at the new width.
+  // The strips last drawn, and the width they were drawn at, so a resize can draw them again.
   let plotted: { data: Data[]; rows: string[] } | null = null;
+  let plottedWidth = 0;
 
-  // A fresh layout every time: Plotly's own resize stops once it has written a width into the
-  // layout next to our height, so the strips stuck at one width after the first resize (#49).
+  // Plotly sizes a plot to its box only on the first draw: later draws without a width keep
+  // the old one, so the strips stuck at one width and spilled over the page (#49). Every draw
+  // therefore passes the box's width as measured now.
   const plot = (id: number): void => {
     void loadPlotly().then((P) => {
-      if (id !== drawId || !plotted) return;
-      void P.react(strips, plotted.data, stripLayout(plotted.rows), { displayModeBar: false });
+      if (id !== drawId || !plotted || strips.hidden) return;
+      plottedWidth = Math.floor(strips.getBoundingClientRect().width);
+      void P.react(strips, plotted.data, stripLayout(plotted.rows, plottedWidth), { displayModeBar: false });
     });
   };
 
@@ -276,14 +281,15 @@ export function mount(el: HTMLElement): void {
   };
 
   subscribe(render);
-  // Redraw the strips at the box's new width, at most once per animation frame.
+  // Redraw the strips when the box's width changes, at most once per animation frame. Height
+  // changes are skipped: drawing the strips changes the box's height itself.
   let resizeFrame = 0;
   if (typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(() => {
       if (resizeFrame || !plotted) return;
       resizeFrame = requestAnimationFrame(() => {
         resizeFrame = 0;
-        if (!strips.hidden) plot(drawId);
+        if (Math.floor(strips.getBoundingClientRect().width) !== plottedWidth) plot(drawId);
       });
     }).observe(strips);
   }
