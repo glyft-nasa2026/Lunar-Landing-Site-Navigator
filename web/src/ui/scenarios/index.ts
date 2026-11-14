@@ -88,8 +88,8 @@ export function mount(el: HTMLElement): void {
   el.replaceChildren(title, editor, list, actions, shareNote, shareLink);
 
   // --- Actions ----------------------------------------------------------------------------
-  // A box applies on change (Enter, or leaving the box). A rejected value stays in the box with
-  // its message and changes nothing.
+  // A box applies on change (Enter, or leaving the box); the time box is held back further,
+  // below. A rejected value stays in the box with its message and changes nothing.
   const apply = <T>(result: Checked<T>, setError: (m: string) => void, use: (v: T) => void): void => {
     if (!result.ok) {
       setError(result.message);
@@ -103,8 +103,34 @@ export function mount(el: HTMLElement): void {
     apply(checkLat(latBox.value), latField.setError, (lat) => setLiveSite({ ...getState().live.site, lat })));
   lonBox.addEventListener('change', () =>
     apply(checkLon(lonBox.value), lonField.setError, (lon) => setLiveSite({ ...getState().live.site, lon })));
-  timeBox.addEventListener('change', () =>
-    apply(checkUtc(timeBox.value, getState().eph), timeField.setError, (tMs) => setLiveTime(tMs)));
+  // The time box waits until the person has finished typing. Chromium fires 'change' after each
+  // part of a date box (month, day, year, hour, minute) once every part is filled, so applying
+  // on 'change' moved the live time through half-typed dates. While keys are being typed into
+  // the box, 'change' is held back and the value applies on Enter or when the box loses focus.
+  // A value set in one go (the calendar picker, a paste, a script) still applies at once.
+  const applyTime = (): void =>
+    apply(checkUtc(timeBox.value, getState().eph), timeField.setError, (tMs) => setLiveTime(tMs));
+  let typing = false;
+  const finishTyping = (): void => {
+    if (!typing) return;
+    typing = false;
+    applyTime();
+  };
+  timeBox.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      if (typing) e.preventDefault();
+      finishTyping();
+      return;
+    }
+    // Keys that change a part's value. Left, right and Tab only move between parts or out.
+    if (e.key.length === 1 || ['Backspace', 'Delete', 'ArrowUp', 'ArrowDown'].includes(e.key)) typing = true;
+  });
+  timeBox.addEventListener('blur', finishTyping);
+  // A click (on a part, or to open the picker) starts fresh: what was typed so far applies first.
+  timeBox.addEventListener('pointerdown', finishTyping);
+  timeBox.addEventListener('change', () => {
+    if (!typing) applyTime();
+  });
   siteBox.addEventListener('change', () => {
     const c = getState().sites.find((s) => s.id === siteBox.value);
     if (!c) return;
