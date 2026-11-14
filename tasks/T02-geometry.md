@@ -1,6 +1,6 @@
 # T02: Angles for any site: geometry.ts
 
-Status: done, in review (pull request #26)
+Status: done (pull request #26; `destination` from a pole fixed in #40)
 
 | | |
 |---|---|
@@ -31,6 +31,11 @@ Status: done, in review (pull request #26)
 - [ ] At latitude -90, the Sun's altitude is within +-1.6 degrees for 1,000 random times in the table.
 - [ ] `destination(lat, lon, 0, 1000)` moves 1 km north: latitude rises by 0.03298 degrees within 0.0001, longitude unchanged.
 - [ ] `npm test` and `npm run build` pass.
+
+## After the merge
+
+- 14 Nov 2026, pull request #31: `altaz.json` grew to 30 cases across 1900-2100, and the tests read every decade of the table through `realTable.testutil.ts`.
+- 14 Nov 2026, pull request #40 (`t02-geometry-b`): `destination` works from a start exactly at latitude -90 or 90. Bearings there are measured from the meridian of the longitude the site was given: bearing b from the south pole heads down longitude lon + b. Step 2's formula divides 0 by 0 at a pole, so the code turns the site's "up" vector instead; the formula is now what the tests check it against.
 
 ## Prompt to paste into Claude Code
 

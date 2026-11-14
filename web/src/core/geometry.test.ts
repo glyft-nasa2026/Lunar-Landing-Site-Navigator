@@ -119,22 +119,23 @@ describe('destination', () => {
     }
   });
 
-  it('agrees with a rotation of the site vector for 500 random starts, bearings and distances', () => {
-    // Independent of the formula in geometry.ts: walk the angle g = dist / R from the site's
-    // "up" vector towards the starting direction, cos(b) north + sin(b) east.
+  it('agrees with the great-circle formula for 500 random starts, bearings and distances', () => {
+    // Independent of geometry.ts, which turns the site's "up" vector: this is the textbook
+    // "start point, bearing, distance" formula in latitude and longitude. It is sound away
+    // from the poles, so the starts stop 0.1 degrees short of them.
     const RAD = Math.PI / 180;
     const random = seededRandom(1737);
     for (let i = 0; i < 500; i++) {
       const lat = -89.9 + random() * 179.8, lon = -180 + random() * 360;
       const bearing = random() * 360, distM = random() * 200_000;
-      const cl = Math.cos(lat * RAD), sl = Math.sin(lat * RAD);
-      const co = Math.cos(lon * RAD), so = Math.sin(lon * RAD);
-      const cb = Math.cos(bearing * RAD), sb = Math.sin(bearing * RAD);
       const g = distM / (1737.4 * 1000);
-      const n = [cl * co, cl * so, sl];
-      const dir = [-sl * co * cb - so * sb, -sl * so * cb + co * sb, cl * cb];
-      const q = n.map((v, k) => Math.cos(g) * v + Math.sin(g) * dir[k]);
-      const wantLat = Math.asin(q[2]) / RAD, wantLon = Math.atan2(q[1], q[0]) / RAD;
+      const sinLat2 = Math.sin(lat * RAD) * Math.cos(g)
+        + Math.cos(lat * RAD) * Math.sin(g) * Math.cos(bearing * RAD);
+      const wantLat = Math.asin(sinLat2) / RAD;
+      const wantLon = lon + Math.atan2(
+        Math.sin(bearing * RAD) * Math.sin(g) * Math.cos(lat * RAD),
+        Math.cos(g) - Math.sin(lat * RAD) * sinLat2,
+      ) / RAD;
 
       const got = destination(lat, lon, bearing, distM);
       const label = `(${lat}, ${lon}) bearing ${bearing} for ${distM} m`;
@@ -147,6 +148,70 @@ describe('destination', () => {
 
   it('stays put for a distance of 0', () => {
     expect(destination(-87.67, 45, 123, 0)).toEqual({ lat: expect.closeTo(-87.67, 9), lon: expect.closeTo(45, 9) });
+    expect(destination(-90, 45, 123, 0)).toEqual({ lat: expect.closeTo(-90, 9), lon: expect.closeTo(45, 9) });
+    expect(destination(90, -120, 7, 0)).toEqual({ lat: expect.closeTo(90, 9), lon: expect.closeTo(-120, 9) });
+  });
+
+  // At a pole "north" has no meaning by itself, so bearings are measured from the meridian of
+  // the longitude the site was given (the contract's `north` and `east` for that longitude).
+  const ONE_KM_DEG = 1000 / (1737.4 * 1000) * (180 / Math.PI);
+  const POLE_LONS = [0, 30, -120, 179, -180];
+  const POLE_BEARINGS = [0, 45, 90, 135, 180, 270, 359];
+
+  it('from the exact south pole, bearing b lands on longitude lon + b', () => {
+    for (const lon of POLE_LONS) {
+      for (const bearing of POLE_BEARINGS) {
+        const p = destination(-90, lon, bearing, 1000);
+        const label = `from (-90, ${lon}) bearing ${bearing}`;
+        expect(p.lat, label).toBeCloseTo(-90 + ONE_KM_DEG, 9);
+        expect(azGap(p.lon, lon + bearing), label).toBeLessThan(1e-9);
+        expect(p.lon, label).toBeGreaterThanOrEqual(-180);
+        expect(p.lon, label).toBeLessThan(180);
+      }
+    }
+  });
+
+  it('from the exact north pole, bearing b lands on longitude lon + 180 - b', () => {
+    for (const lon of POLE_LONS) {
+      for (const bearing of POLE_BEARINGS) {
+        const p = destination(90, lon, bearing, 1000);
+        const label = `from (90, ${lon}) bearing ${bearing}`;
+        expect(p.lat, label).toBeCloseTo(90 - ONE_KM_DEG, 9);
+        expect(azGap(p.lon, lon + 180 - bearing), label).toBeLessThan(1e-9);
+        expect(p.lon, label).toBeGreaterThanOrEqual(-180);
+        expect(p.lon, label).toBeLessThan(180);
+      }
+    }
+  });
+
+  it('a start a hair off a pole lands within a millimetre of the start at the pole', () => {
+    // No jump as the start reaches the pole: 1e-9 degrees is 0.03 mm on the ground.
+    const RAD = Math.PI / 180;
+    const onSphere = (q: { lat: number; lon: number }): number[] => [
+      Math.cos(q.lat * RAD) * Math.cos(q.lon * RAD),
+      Math.cos(q.lat * RAD) * Math.sin(q.lon * RAD),
+      Math.sin(q.lat * RAD),
+    ];
+    for (const pole of [-90, 90]) {
+      const near = pole < 0 ? pole + 1e-9 : pole - 1e-9;
+      for (const lon of POLE_LONS) {
+        for (const bearing of POLE_BEARINGS) {
+          for (const distM of [1, 1000, 150_000]) {
+            const a = onSphere(destination(pole, lon, bearing, distM));
+            const b = onSphere(destination(near, lon, bearing, distM));
+            const gapM = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) * 1737.4 * 1000;
+            expect(gapM, `pole ${pole}, lon ${lon}, bearing ${bearing}, ${distM} m`).toBeLessThan(0.001);
+          }
+        }
+      }
+    }
+  });
+
+  it('keeps the start longitude when it lands exactly on a pole', () => {
+    const quarter = (Math.PI / 2) * 1737.4 * 1000;
+    const p = destination(0, 30, 0, quarter);
+    expect(p.lat).toBeCloseTo(90, 9);
+    expect(p.lon).toBeCloseTo(30, 9);
   });
 });
 
