@@ -1,6 +1,6 @@
-// First pass by T00, straight from the contract's Visibility block and wording table. T06 owns
-// this file next: it adds the real tests and fixes what they find. Names and signatures never
-// change.
+// Written from the contract's Visibility block and wording table, and proven by the tests in
+// windows.test.ts (T06). Names and signatures never change: state.ts and the UI modules call
+// them.
 
 import type { Ephemeris } from './ephemeris';
 import { earthAltAz, sunAltAz } from './geometry';
