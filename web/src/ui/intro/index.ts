@@ -40,6 +40,22 @@ function stars(count: number): HTMLElement {
   return field;
 }
 
+/**
+ * Jump every animation inside `el` to its end, so the page is in its final state before the next
+ * step. A never-ending one (the title's glow, the arrow's nudge) has no end to jump to, and
+ * finish() throws for it: those are stopped instead.
+ */
+function settleAnimations(el: Element): void {
+  for (const a of el.getAnimations({ subtree: true })) {
+    try {
+      if (a.effect?.getComputedTiming().endTime === Infinity) a.cancel();
+      else a.finish();
+    } catch {
+      a.cancel();
+    }
+  }
+}
+
 /** The transform that puts `from`'s box exactly on `to`'s box (both measured on screen). */
 function boxToBox(from: DOMRect, to: DOMRect): string {
   const dx = to.left + to.width / 2 - (from.left + from.width / 2);
@@ -153,7 +169,7 @@ export function startIntro(): Intro {
   start.addEventListener('click', () => {
     if (started) return;
     started = true;
-    for (const a of page.getAnimations({ subtree: true })) a.finish();
+    settleAnimations(page);
     if (latest && allSettled(latest)) {
       close();
       return;
