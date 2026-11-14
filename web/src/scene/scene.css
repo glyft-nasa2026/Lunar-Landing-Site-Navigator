@@ -1,1 +1,17 @@
-/* Styles for #scene. Written by T12; use only the variables and classes of ui/theme.css. */
+/* T12's initial styling. After merge this file belongs to T23. */
+.scene-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3); }
+.scene-toolbar h2 { margin-inline-end: auto; }
+.scene-modes { display: flex; gap: var(--space-1); }
+.scene-stretch { display: flex; align-items: center; gap: var(--space-2); }
+.scene-stretch input { width: calc(var(--space-5) * 4); accent-color: var(--accent); }
+.scene-stretch output { min-width: var(--space-5); font-family: var(--font-num); }
+.scene-viewport { position: relative; width: 100%; height: clamp(calc(var(--space-5) * 12), 48vh, calc(var(--space-5) * 24)); background: var(--bg); }
+.scene-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.scene-canvas:focus-visible { outline: solid var(--accent); outline-offset: calc(var(--space-1) * -1); }
+.scene-message { position: absolute; inset: var(--space-3); pointer-events: none; }
+.scene-help, .scene-caption { padding: var(--space-2) var(--space-3); font-size: var(--fs-sm); }
+.scene-caption { padding-top: 0; }
+@media (max-width: 800px) {
+  .scene-toolbar { gap: var(--space-2); }
+  .scene-toolbar h2, .scene-stretch { flex-basis: 100%; }
+}

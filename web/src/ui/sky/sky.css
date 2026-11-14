@@ -1,1 +1,24 @@
-/* Styles for #sky. Written by T11; use only the variables and classes of ui/theme.css. */
+/* Styles for #sky. Written by T11; use only the variables and classes of ui/theme.css.
+   After T11 merges, this file belongs to T23. */
+
+#sky h2 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-lg);
+}
+
+#sky .sky-note {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+/* Plotly needs a box with a height. Twelve of the largest gap: a short, wide panorama. */
+#sky .sky-chart {
+  width: 100%;
+  height: calc(var(--space-5) * 12);
+}
+
+@media (max-width: 800px) {
+  #sky .sky-chart {
+    height: calc(var(--space-5) * 10);
+  }
+}

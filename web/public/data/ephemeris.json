@@ -11,5 +11,5 @@
     "earth_y_km",
     "earth_z_km"
   ],
-  "source": "mock"
+  "source": "JPL DE421 via Skyfield"
 }

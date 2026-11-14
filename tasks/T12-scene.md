@@ -1,6 +1,6 @@
 # T12: 3D scene and map
 
-Status: not started
+Status: implemented, in review (pull request #7); real LOLA terrain verified after T04; laptop measured 30 FPS (requirement is above 30)
 
 | | |
 |---|---|

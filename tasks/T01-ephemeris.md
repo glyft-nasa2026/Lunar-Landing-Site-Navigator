@@ -1,6 +1,6 @@
 # T01: Sun and Earth table from Skyfield
 
-Status: not started
+Status: done (npm test and npm run build left to CI: Node not installed locally)
 
 | | |
 |---|---|

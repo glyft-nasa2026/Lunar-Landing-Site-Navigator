@@ -4,7 +4,7 @@ import { getState, subscribe } from '../../state';
 
 export function mount(el: HTMLElement): void {
   const title = document.createElement('h2');
-  title.textContent = '#nudge';
+  title.textContent = 'Explore nearby sites';
   const value = document.createElement('p');
   value.className = 'muted';
   el.replaceChildren(title, value);
