@@ -142,11 +142,15 @@ export function mount(el: HTMLElement): void {
   // view with its message until the scenario moves some other way.
   const shown = { lat: '', lon: '', time: '' };
   let shownSites: CuratedSite[] | null = null;
+  // Chromium commits a date box part by part as it is typed, and drops focus from it when its
+  // min or max is written mid-typing. So the bounds are written only when the table's range
+  // changes, and a box isn't rewritten with the value it already shows.
+  let shownRange = '';
 
   const sync = (box: HTMLInputElement, key: keyof typeof shown, value: string, setError: (m: string) => void): void => {
     if (shown[key] === value) return;
     shown[key] = value;
-    box.value = value;
+    if (box.value !== value) box.value = value;
     setError('');
   };
 
@@ -212,8 +216,12 @@ export function mount(el: HTMLElement): void {
     sync(lonBox, 'lon', String(live.site.lon), lonField.setError);
     sync(timeBox, 'time', toBoxValue(live.tMs), timeField.setError);
     if (s.eph) {
-      timeBox.min = toBoxValue(s.eph.startMs);
-      timeBox.max = toBoxValue(s.eph.endMs - 60_000);
+      const min = toBoxValue(s.eph.startMs), max = toBoxValue(s.eph.endMs - 60_000);
+      if (`${min}|${max}` !== shownRange) {
+        shownRange = `${min}|${max}`;
+        timeBox.min = min;
+        timeBox.max = max;
+      }
     }
 
     list.replaceChildren(
