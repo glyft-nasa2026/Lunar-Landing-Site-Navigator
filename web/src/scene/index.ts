@@ -1,7 +1,7 @@
 import {
   AmbientLight, Box3, CanvasTexture, Color, DirectionalLight, Group, Mesh, MeshBasicMaterial,
-  MeshLambertMaterial, OrthographicCamera, PCFShadowMap, PerspectiveCamera, Raycaster,
-  Scene, SphereGeometry, Sprite, SpriteMaterial, SRGBColorSpace, Vector2, Vector3, WebGLRenderer,
+  MeshLambertMaterial, MOUSE, OrthographicCamera, PCFShadowMap, PerspectiveCamera, Raycaster,
+  Scene, SphereGeometry, Sprite, SpriteMaterial, SRGBColorSpace, TOUCH, Vector2, Vector3, WebGLRenderer,
   type Camera, type Material,
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -118,6 +118,9 @@ export function mount(el: HTMLElement): void {
   mapCamera.up.set(0, 0, -1);
   const mapControls = new OrbitControls(mapCamera, canvas);
   mapControls.enableRotate = false; mapControls.screenSpacePanning = true;
+  // A plain drag pans the map, as the help line says. OrbitControls keeps the left button and
+  // one finger for turning, which is switched off here, so without this a plain drag did nothing.
+  mapControls.mouseButtons.LEFT = MOUSE.PAN; mapControls.touches.ONE = TOUCH.PAN;
   mapControls.minZoom = 0.1; mapControls.maxZoom = 200;
   mapControls.addEventListener('change', invalidate);
   let orbitControls = makeOrbitControls(false, new Vector3(0, 1, 0));
@@ -378,7 +381,12 @@ export function mount(el: HTMLElement): void {
     else if (changedSite || changedMode || changedStretch) follow();
     updatePins(s);
     sun.target.position.copy(target);
-    if (s.eph) {
+    // vectorsAt answers a time it has no row for (outside 1900-2100, or in a decade that failed
+    // to download) with the nearest row it does have. Lighting the scene from that would show a
+    // picture of some other date while the readout says the time is outside the table.
+    const tabled = !!s.eph && sc.tMs >= s.eph.startMs && sc.tMs <= s.eph.endMs
+      && s.eph.missing(sc.tMs, sc.tMs).length === 0;
+    if (s.eph && tabled) {
       const vectors = s.eph.vectorsAt(sc.tMs);
       sun.position.copy(target).addScaledVector(moonDirection(vectors.sun), 2000); sun.intensity = 3;
       sun.castShadow = polar;
@@ -388,7 +396,10 @@ export function mount(el: HTMLElement): void {
       earth.position.copy(target).addScaledVector(toEarth.normalize(), EARTH_DRAWN_KM);
       earth.scale.setScalar(2 * EARTH_RADIUS_KM * EARTH_DRAWN_KM / distance); earth.visible = true;
     } else { sun.intensity = 0; earth.visible = false; }
-    if (!lost) { message.hidden = !!s.eph; message.textContent = 'Loading Sun and Earth table…'; }
+    if (!lost) {
+      message.hidden = tabled;
+      message.textContent = s.eph ? 'This time is outside the Sun and Earth table' : 'Loading Sun and Earth table…';
+    }
     // The same cached sample the readout shows, so the two never disagree.
     const now: Sample | undefined = samplesFor(sc, '30d')[0];
     const mock = dem?.meta.source === 'mock' || s.eph?.meta.source === 'mock';
