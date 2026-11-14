@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { parseDem } from './core/dem';
 import { indexEphemeris, parseEphemeris, type Ephemeris } from './core/ephemeris';
 import {
   flipFor, getState, LIVE_ID, neverLitFor, pin, restoreFromAddress, samplesFor, select, selected,
   setData, setGhost, setLiveSite, setLiveTime, setMode, setRange, shiftWindow, skylineFor,
-  stateToAddress, subscribe, summaryFor, timelineFor, unpin,
+  stateToAddress, subscribe, summaryFor, timelineFor, unpin, type Scenario,
 } from './state';
 
 const HOUR = 3_600_000;
@@ -303,6 +304,30 @@ describe('cached accessors', () => {
     expect(samplesFor(live, '30d')).not.toBe(first);
   });
 
+  it('the summary follows the scenario time, not only its site', () => {
+    setData({ eph: circlingSun(400) });
+    setLiveSite({ lat: 0, lon: 0 });
+    // From noon: 7.4 days of light, a night, then light again until day 30 cuts it short.
+    expect(summaryFor(getState().live).longestLit_h).toBeLessThan(200);
+    // From just after sunset: the night first, then one whole day of 14.8 days.
+    setLiveTime(T0 + 7.5 * DAY);
+    expect(summaryFor(getState().live).longestLit_h).toBeGreaterThan(340);
+  });
+
+  it('each site gets its own skyline', () => {
+    // A flat made-up grid around the south pole: terrain there, none at the equator.
+    const size = 16;
+    const dem = parseDem({
+      size, pixel_m: 10_000, x_min_m: -80_000, y_max_m: 80_000, height_scale: 1, nodata: -32768,
+      min_lat: -80, source: 'made up for a test',
+    }, new ArrayBuffer(size * size * 2));
+    setData({ dem });
+    setLiveSite({ lat: -89.9, lon: 0 });
+    expect(skylineFor(getState().live).terrain).toBe(true);
+    setLiveSite({ lat: 0, lon: 0 });
+    expect(skylineFor(getState().live).terrain).toBe(false);
+  });
+
   it('the timeline starts at the window for live and at its own time for a pinned scenario', () => {
     setData({ eph: circlingSun(400) });
     setLiveTime(T0 + 10 * DAY);                       // inside the window: it stays at T0
@@ -413,8 +438,95 @@ describe('decades of the table (loaded as needed)', () => {
     warn.mockRestore();
   });
 
-  it('"never lit" needs no download where the Sun rises within 60 days', () => {
+  it('a decade that failed still leaves the days before it readable', async () => {
+    answer = async () => new Response('', { status: 404 });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    setLiveSite({ lat: 0, lon: 0 });
+    setLiveTime(T0 + (DAYS - 20) * DAY);      // 20 days before the file that fails
+    await settle();
+    const live = getState().live;
+    expect(getState().eph).not.toBeNull();
+    // The Sun is up and sets 4.6 days on, well inside the file that is in memory.
+    const flip = flipFor(live, 'sun');
+    expect(flip?.type).toBe('set');
+    expect(flip?.tMs).toBeGreaterThan(live.tMs + 4 * DAY);
+    expect(flip?.tMs).toBeLessThan(live.tMs + 5 * DAY);
+    // The hours stop where the failed file starts, as they do at the end of the table.
+    const samples = samplesFor(live, '30d');
+    expect(samples).toHaveLength(20 * 24);
+    expect(samples[samples.length - 1].tMs).toBe(T0 + DAYS * DAY - HOUR);
+    expect(asked).toHaveLength(1);
+    warn.mockRestore();
+  });
+
+  it('a decade file that arrives too short counts as failed: no endless "Loading"', async () => {
+    // A host that answers a missing file with a web page and "200 OK".
+    answer = async () => new Response('<!doctype html><title>Not the file</title>');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    let calls = 0;
+    const stop = subscribe(() => { calls++; });
+    setLiveTime(later);
+    expect(getState().eph).toBeNull();
+    await settle();
+    stop();
+    expect(calls).toBe(2);                    // the change of time, then the file that was no use
+    expect(getState().eph).not.toBeNull();    // reads as outside the table, like any failed decade
+    expect(samplesFor(getState().live, '30d')).toEqual([]);
+    setLiveTime(later + DAY);
+    expect(asked).toHaveLength(1);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('a summary asked for while its decade downloads is worked out again once it is in', async () => {
+    const ghost: Scenario = { id: 'ghost', label: 'Ghost', color: '--scn-ghost', site: { lat: 0, lon: 0 }, tMs: later };
+    expect(getState().eph).not.toBeNull();    // a ghost never holds the page on "Loading"
+    expect(summaryFor(ghost).litPct).toBe(0); // nothing to go on yet; this asks for the file
+    await settle();
+    expect(asked).toEqual(['/data/ephemeris/second.bin']);
+    expect(summaryFor(ghost).litPct).toBeGreaterThan(45);
+  });
+
+  it('waits for the 60 days after the live time, which the countdowns read', async () => {
+    setLiveTime(T0 + (DAYS - 35) * DAY);      // its 30-day window ends 5 days short of the next file
+    expect(getState().eph).toBeNull();
+    await settle();
+    expect(asked).toEqual(['/data/ephemeris/second.bin']);
+    expect(getState().eph).not.toBeNull();
+  });
+
+  it('waits for the whole timeline window', async () => {
+    for (let k = 0; k < 12; k++) shiftWindow(1);   // 12 half-ranges: the window is now days 180 to 210
+    expect(getState().live.tMs).toBe(T0);
+    expect(getState().eph).toBeNull();
+    await settle();
+    expect(asked).toEqual(['/data/ephemeris/second.bin']);
+    expect(getState().eph).not.toBeNull();
+  });
+
+  it('waits for the range after a pinned scenario when that is longer than 60 days', async () => {
+    setLiveTime(T0 + (DAYS - 80) * DAY);
+    pin();
+    setLiveTime(T0);
+    expect(getState().eph).not.toBeNull();    // 60 days on from the pin is still the first file
+    setRange('90d');                          // 90 days on is not
+    expect(getState().eph).toBeNull();
+    await settle();
+    expect(asked).toEqual(['/data/ephemeris/second.bin']);
+    expect(getState().eph).not.toBeNull();
+  });
+
+  it('"never lit" needs no download while the Sun is up', async () => {
     expect(neverLitFor(getState().live)).toBe(false);
+    await settle();
+    expect(asked).toEqual([]);
+  });
+
+  it('"never lit" needs no download where the Sun rises within 60 days', async () => {
+    setLiveSite({ lat: 0, lon: 180 });        // midnight at the start; sunrise about a week on
+    expect(flipFor(getState().live, 'sun')?.type).toBe('rise');
+    expect(neverLitFor(getState().live)).toBe(false);
+    await settle();
     expect(asked).toEqual([]);
   });
 });
