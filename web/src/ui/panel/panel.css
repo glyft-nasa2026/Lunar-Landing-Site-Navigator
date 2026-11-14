@@ -1,0 +1,42 @@
+/* Styles for #panel. Written by T15; use only the variables and classes of ui/theme.css.
+   Once T15 has merged, this file belongs to T23. */
+
+#panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pn-intro,
+.pn-why {
+  font-size: var(--fs-sm);
+}
+
+.pn-table thead th {
+  font-family: var(--font);
+  font-weight: normal;
+  color: var(--muted);
+  text-align: right;
+}
+
+.pn-table thead th:first-child {
+  text-align: left;
+}
+
+.pn-table tbody th {
+  font-family: var(--font);
+  font-weight: normal;
+}
+
+.pn-table td,
+.pn-table thead th {
+  white-space: nowrap;
+}
+
+.pn-table td {
+  text-align: right;
+}
+
+.pn-error {
+  color: var(--bad);
+}
