@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allSettled, loadFraction, showHero, type LoadProgress } from './model';
+import { allSettled, loadFraction, type LoadProgress } from './model';
 
 const start: LoadProgress = { eph: 'loading', sites: 'loading', dem: 'loading', demFraction: 0 };
 
@@ -31,17 +31,5 @@ describe('allSettled', () => {
     expect(allSettled(start)).toBe(false);
     expect(allSettled({ ...start, eph: 'ok', sites: 'ok' })).toBe(false);
     expect(allSettled({ eph: 'ok', sites: 'missing', dem: 'ok', demFraction: 1 })).toBe(true);
-  });
-});
-
-describe('showHero', () => {
-  it('shows for a plain link, once per tab', () => {
-    expect(showHero('', false)).toBe(true);
-    expect(showHero('#', false)).toBe(true);
-    expect(showHero('', true)).toBe(false);
-  });
-
-  it('never covers a shared link', () => {
-    expect(showHero('#lat=-89.4&lon=136.9', false)).toBe(false);
   });
 });

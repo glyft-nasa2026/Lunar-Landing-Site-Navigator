@@ -1,4 +1,4 @@
-// Pure helpers for the loading screen and the main page (docs/design/loading.png, hero.png).
+// Pure helpers for the main page and the loading screen (docs/design/hero.png, loading.png).
 // No DOM here, so they can be tested in node.
 
 export type FileState = 'loading' | 'ok' | 'missing';
@@ -27,12 +27,4 @@ export function loadFraction(p: LoadProgress): number {
 /** True once every file has loaded or failed: the loading screen has nothing left to wait for. */
 export function allSettled(p: LoadProgress): boolean {
   return p.eph !== 'loading' && p.sites !== 'loading' && p.dem !== 'loading';
-}
-
-/**
- * The main page shows for a plain link only, once per browser tab. A shared link (scenarios
- * after the #, docs/data-contract.md F17) opens straight onto the comparison it carries.
- */
-export function showHero(hashAtStart: string, seenThisTab: boolean): boolean {
-  return !seenThisTab && hashAtStart.replace(/^#/, '').trim() === '';
 }
