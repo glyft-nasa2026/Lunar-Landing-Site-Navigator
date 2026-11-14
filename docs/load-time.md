@@ -7,9 +7,9 @@ browser by a person; nothing here is estimated. A cell reading "–" is not meas
 |---|---|
 | Measured on | 14 Nov 2026 |
 | Commit measured | `577f394` on `main` (issue #66, pull request #71). darksight.space serves `assets/index-C1VpZADL.js`, the bundle in the `deploy` branch's build of `577f394` (`0af8056`). The site has no `version.txt`: that address returns the page itself |
-| Laptop | Lenovo 83JC, AMD Ryzen 7 7435HS, Windows 11 Home; Chrome – (version from `chrome://version`) |
+| Laptop | Lenovo 83JC, AMD Ryzen 7 7435HS, Windows 11 Home; Brave 1.99.57 (Chromium 157) |
 | Phone | – (model, browser, mobile network) |
-| Method | Chrome developer tools, cache off, plain address typed and Enter pressed. Site data cleared before each "Loading" measurement |
+| Method | Brave's developer tools (the same as Chrome's: Chromium), cache off, plain address typed and Enter pressed. Site data cleared before each "Loading" measurement |
 
 ## 1. What goes over the network
 
