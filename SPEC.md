@@ -19,7 +19,7 @@ seconds, and showing how much a 1 km move or a 1 day slip changes the answer.
 
 | Must ship | If time (not before milestone M2) | Out |
 |---|---|---|
-| F1-F13, F17, F18 below | F14 map layers | Atmospheric refraction (the Moon has none) |
+| F1-F13, F17, F18, F19 below | F14 map layers | Atmospheric refraction (the Moon has none) |
 | | F15 solar panel choice | GPS, relay satellites, constellations |
 | | F16 animated 2D to 3D transition | Landing trajectories, thermal models |
 | | | Server, database, accounts |
@@ -72,6 +72,7 @@ can be pinned.
 | F16 | Transition (if time) | The camera glides between top-down and orbit | |
 | F17 | Share link | Scenarios are stored in the page address, so a link reopens the same comparison | Reloading the page keeps the pinned scenarios |
 | F18 | Look and feel | One dark theme, one layout and one chart style across every module, from shared variables. Works from 1280 px desktop down to a phone | Text contrast 4.5 to 1; no colour code outside the theme files; nothing overlaps at 1280 px or 390 px |
+| F19 | Example on first open | A link with no scenarios in it opens on a ready comparison: the crater rim (live, and pinned as A) against the crater floor (pinned as B), at the current hour. A link with scenarios in it opens exactly those | The plain link shows two columns in the compare table; unpinning both and reloading leaves nothing pinned |
 
 ## 5. How it works
 
@@ -144,3 +145,4 @@ Fill in the clock times once the submission deadline is known.
 | Repo made public (GitHub refuses the branch rule and Pages on a private repo in a free organisation) | P1 | blocks T21 |
 | Figma seat for the designer: Full or Dev on Professional or Education | P5 | costs time (a fallback is in `docs/mcp-and-skills.md`) |
 | Demo format and length, read from the submission form | P4 | blocks T17 |
+| Load-time budgets in T27 (numbers in 3 s, height map in 20 s, no freeze over 0.5 s, on "Fast 4G"): proposed, not yet agreed | P1 | costs time |
