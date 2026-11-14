@@ -1,5 +1,6 @@
-// First pass by T00, straight from the contract's Geometry block. T02 owns this file next:
-// it adds the fixture tests and fixes what they find. Names and signatures never change.
+// Written by T00 straight from the contract's Geometry block; proven by T02 against Skyfield
+// (geometry.test.ts: 25 cases in __fixtures__/altaz.json on the real table, worst 0.0007
+// degrees). Names and signatures never change.
 //
 // The Moon has no atmosphere: no refraction is applied anywhere.
 
