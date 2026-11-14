@@ -3,6 +3,80 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: T25 to T30 reach `main`
+
+Pull request #4 added six tasks on 13 Nov. It was stacked on #3 (`workflow-fixes`) and was
+merged 8 seconds after #3, before GitHub had moved its base to `main`. So it merged into the
+`workflow-fixes` branch, GitHub showed it as merged, and the six tasks never reached `main`. An
+audit of the merged tickets on 14 Nov found them missing. This entry adds them, with the facts
+that changed in between brought up to date. The reasons for the six tasks are the ones written
+on 13 Nov, kept below.
+
+### tasks/README.md and the task files
+
+- **The board** had 25 tasks, T00 to T24. Now 31: T25 to T30 are new. P1's row gains T25 and
+  T26, P2's gains T27.
+- **The mirror** on rickphobia.com was in spec section 5 and in `docs/decisions.md`, with no
+  task. Now T28, if time.
+- **F16**, the camera glide, was an "if time" feature in the spec with no task file, unlike F14
+  and F15. Now T29.
+- **The freeze.** T16 and T17 collect the sources and AI-use notes, but no task checked that
+  every file was filled in, put the live address in the README, closed spec section 10, or
+  marked the submitted commit. T21 step 7 asks P1 for the README line with no task to do it in.
+  Now T26.
+- **Load time.** T05 and T24 time one skyline. Nothing measured the page loading a 12.8 MB
+  height map on a slow connection. Now T27, which measures and hands each fix to its owner.
+- **CI** runs the unit tests and the build and never opens the page. Now T30, if time, kept
+  apart from the "not before M2" rule because it is not a feature.
+
+What the 13 Nov task files said that is no longer true, and what they say now:
+
+- **T25** had no Notes. Added: until T07 merges the site list is mock, and on the real height
+  map `mock-rim` and `mock-floor` are two ordinary points.
+- **T26** step 1 took the live address from "P3 posts it in T21"; it is `https://darksight.space`.
+  Step 2 said the title stays "Lunar Landing Site Navigator" unless P5 picks a name; the product
+  was named Darksight on 14 Nov. Step 3 was "real names against P2 to P5", which the board
+  already has; it now checks the board against the task files. Step 7 said "the deploy run";
+  two workflows publish now, so it names both.
+- **T27** said the height map "may be 15 MB" and listed `ephemeris.bin`. The map is 12.8 MB and
+  the table is one file per decade (pull request #31). It gains the two checks issue #32 asks
+  for on the final version: the pause on a crater floor, and "Loading" between decades.
+- **T28** called the mirror a backup for GitHub Pages, "the submitted link". The submitted link
+  is `https://darksight.space`, published through Cloudflare Pages. Step 1 now also points at
+  the `deploy` branch, which already holds each build.
+- **T30** said "one of the eight slots". The page has nine since T15 added `#panel`; it now says
+  "the slots in contract section 5".
+- **`tickets-summary.md`**, every task in one line, was in the same pull request. It is not
+  brought over: it repeated the board and would go stale with it.
+
+### SPEC.md
+
+- **Section 2 and section 4.** There was no F19. The page opened on whatever `state.ts` chose as
+  a default (latitude -89.5, longitude 0, nothing pinned). Now F19: the plain link opens on the
+  rim-against-floor example.
+- **Section 10.** Added the load-time budgets as an open decision: T27's numbers were proposed
+  by the session that wrote the task, not agreed by the team.
+
+### docs/data-contract.md
+
+- **Section 4.** Was silent on what state holds when the address is empty. Added "First open".
+  Modules can no longer assume nothing is pinned at the start.
+
+## 14 Nov 2026: T13's first "Done when" line is checked on real terrain
+
+### tasks/T13-nudge.md
+
+- **Done when, line 1** was "On the mock grid, starting at the crater rim (-87.67, 45.0) and
+  nudging 1 km south, down the inside wall, reports a large loss of sunlight." It could not
+  pass. `make_mock.py` keeps the mock rim crest flat for 1.5 km either side of the rim
+  (`FLAT_M`, there so a read between cells sees the exact height), so 1 km south is still on
+  the crest and the nudge rightly says "No meaningful change"; the loss starts 2 km in (pull
+  request #35). Now the line starts at -89.45, -137.3 on the real height map, which `main` has
+  served since T04 merged, so T13 can check it before it merges. P1 saw "−14 days of sunlight
+  in 30 days" and "sunset 17 days earlier" there on pull request #35's preview. Not chosen:
+  two nudges on the mock (the site no longer serves the mock crater), or a narrower `FLAT_M`
+  (P2's file, and the mock files and their tests would have to be made again).
+
 ## 14 Nov 2026: T15 taken by P1, `#panel` slot
 
 ### docs/data-contract.md
