@@ -3,6 +3,24 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: T15 taken by P1, `#panel` slot
+
+### docs/data-contract.md
+
+- **5. Page slots:** said "T00 wires all of them in `main.ts` with placeholders, so no later
+  task needs to touch `main.ts` or `index.html`." T15 needs a slot T00 didn't make. Now P1 adds
+  the slot for an "if time" task, and the module's own task still never touches those files.
+  The `#panel` row and the `panel.ts` row of section 3 are new.
+
+### tasks/README.md and tasks/T15-panel.md
+
+- T15's owner was "unassigned". Now P1 (Yi Hung), whose other tasks are merged.
+- T15's files were only `web/src/ui/panel/`, but its percentages are numbers the user sees,
+  which must come from `core/`. Now `core/panel.ts` and its test are T15's too.
+- Step 3 was "Needs a slot in `index.html`: agree with P1." P1 owns the task, so it now says
+  where the slot is. Step 2 adds the 30-day average, which shows the difference between the
+  panels even at an hour when the Sun is down.
+
 ## 14 Nov 2026: dates 1900-2100, one file per decade, DE440
 
 From pull request #31 (MarsRon). The team asked to pick any date over a much wider span. One

@@ -19,7 +19,7 @@ Nobody waits at the start: five tasks begin at kickoff. Read your row left to ri
 
 | | From kickoff | Then, in this order |
 |---|---|---|
-| P1 | T00 | T02 (once T01 is in; if it isn't, skip ahead), T06, T12 |
+| P1 | T00 | T02 (once T01 is in; if it isn't, skip ahead), T06, T12, then T15 after M2 |
 | P2 | T20, with the LOLA download running beside it | T05 (while the download finishes), T04, T11 |
 | P3 | T21; while its pull request waits for T00, go through the design with P5 | T08, T09, T10, T13 |
 | P4 | Set up Python and start the lookup for T07; T01 as soon as T20 merges | T03, T07, T18 at M1, T17, T24 and T18 again at M2 |
@@ -57,7 +57,7 @@ order given in `docs/team-workflow.md`, "The first three merges".
 | [T17](T17-pitch.md) | Slides, demo video, submission text | P4 | must | M1 for screenshots, M2 for the video |
 | [T18](T18-qa.md) | Testing with a real person, bug list | P4 | must | M1, repeated at M2 |
 | [T14](T14-layers.md) | Map layers | unassigned | if time | M2 |
-| [T15](T15-panel.md) | Solar panel choice | unassigned | if time | M2 |
+| [T15](T15-panel.md) | Solar panel choice | P1 | if time | M2 |
 
 ## Order
 
