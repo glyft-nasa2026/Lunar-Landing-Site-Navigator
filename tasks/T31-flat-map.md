@@ -4,7 +4,6 @@ Status: done, in review (pull request #59); 16 of 16 browser checks pass on fixt
 
 | | |
 |---|---|
-| Owner | P3 (approved by P1, 14 Nov 2026) |
 | Tier | must |
 | Waits for | T12 (all its pull requests, the last being #52) |
 | Branch | `t31-flat-map` |
@@ -25,23 +24,25 @@ coordinate from, and carrying the whole 3D pipeline (shadow map, raycasting, dep
 Both drawn on a plain 2D canvas: no three.js, no WebGL, no shadow map, no raycaster. A click
 turns into latitude and longitude through the inverse projection in `core/`.
 
-## Files you own
+## Files in scope
 
 - `web/src/core/projection.ts`, `web/src/core/projection.test.ts` (new): forward and inverse for
   both projections, and the screen view (pan and zoom) on top of them
 - `web/src/core/shade.ts`, `web/src/core/shade.test.ts` (new): the illustrative light layers,
   so the map computes no Sun angle itself
 - `web/src/map/` (new): the flat map, `index.ts` exporting `mount(el)`, and `map.css`
-- `web/src/scene/index.ts` and `web/src/scene/browser-check.py`, shared with T12's owner: no
-  other branch may be open on `web/src/scene/` while this one is
+- `web/src/scene/index.ts` and `web/src/scene/browser-check.py`; coordinate overlapping files
+  with active scene and map work before editing
 - `docs/ai-use/T31.md`, `docs/sources/T31.md`, this file's `Status:` line
 
-P1's files changed for this task, by P1's approval: `SPEC.md` (F10 and F16 wording),
+Integration files in this task's scope: `SPEC.md` (F10 and F16 wording),
 `docs/decisions.md` (one line), `docs/data-contract.md` (the two new `core/` files),
 `tasks/README.md` (this task on the board), `tasks/T29-transition.md` (what the glide means now).
 
-Not yours: `web/src/scene/scene.css` (T23). `main.ts` and `index.html` are not touched: the map
-is mounted by the scene module inside its own `#scene` slot.
+T23 covers the scene's CSS polish; include changes to `web/src/scene/scene.css` here only if
+needed for the map, and coordinate any active T23 delivery. The map is mounted by the scene
+module inside its own `#scene` slot, so this implementation needs no `main.ts` or `index.html`
+change.
 
 ## Steps
 
@@ -90,5 +91,5 @@ to glide; T29 becomes a cross-fade. P1 chose the flat map over the easy glide.
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T31-flat-map.md. Do only that task, on branch t31-flat-map. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T31-flat-map.md. Do only that task, on branch t31-flat-map. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

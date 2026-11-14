@@ -4,7 +4,6 @@ Status: done (pull request #15; tests tightened in #53)
 
 | | |
 |---|---|
-| Owner | P2 |
 | Tier | must |
 | Waits for | T00 |
 | Branch | `t05-horizon` |
@@ -13,7 +12,7 @@ Status: done (pull request #15; tests tightened in #53)
 
 `skylineAt` and `skylineElev` exactly as contract section 3.
 
-## Files you own
+## Files in scope
 
 - `web/src/core/horizon.ts` (taken over from T00's flat skyline), `web/src/core/horizon.test.ts`
 - `docs/ai-use/T05.md`, `docs/sources/T05.md`, this file's `Status:` line
@@ -46,5 +45,5 @@ The check on the real Shackleton floor is T24's, once T04 has merged.
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T05-horizon.md. Do only that task, on branch t05-horizon. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T05-horizon.md. Do only that task, on branch t05-horizon. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

@@ -16,11 +16,11 @@ Kuala Lumpur. The repo is `glyft-nasa2026/Darksight`.
 | `CLAUDE.md` | Rules every Claude session follows in this repo | Loaded automatically by Claude Code |
 | `docs/data-contract.md` | File formats and function names both halves follow | Everyone, before writing code |
 | `docs/team-workflow.md` | How to take a task: branch, Claude, pull request | Everyone, once |
-| `tasks/README.md` | The board: every task, its owner, what it waits for | Everyone, often |
-| `tasks/Txx-*.md` | One task each, with its own "done when" tests | The task's owner |
-| `docs/ai-use/` | One file per task: how AI was used (the submission needs this) | Each owner writes their own |
-| `docs/sources/` | One file per task: every data source and library used | Each owner writes their own |
-| `docs/decisions.md` | Decisions and why | P1 writes it |
+| `tasks/README.md` | Shared task queue, priorities and dependencies; anyone can claim a task | Everyone, often |
+| `tasks/Txx-*.md` | One task each, with scope, status and "done when" tests | Whoever takes the task |
+| `docs/ai-use/` | One file per task: how AI was used (the submission needs this) | The task's contributors |
+| `docs/sources/` | One file per task: every data source and library used | The task's contributors |
+| `docs/decisions.md` | Decisions and why | Anyone records an agreed decision |
 | `history.md` | What a rule or fact used to say, and why it changed | Read before changing a rule |
 | `docs/design.md`, `docs/design/` | The look: palette, type, one picture per part of the screen | Everyone building a UI module |
 | `docs/mcp-and-skills.md` | Which MCP servers and skills each person installs; the Figma rules | Everyone, once; the UI designer closely |

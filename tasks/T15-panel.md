@@ -4,7 +4,6 @@ Status: done (pull request #36)
 
 | | |
 |---|---|
-| Owner | P1 |
 | Tier | if time |
 | Waits for | M2 |
 | Branch | `t15-panel` |
@@ -13,11 +12,11 @@ Status: done (pull request #36)
 
 Spec feature F15: flat panel or upright Sun-facing panel, with relative power.
 
-## Files you own
+## Files in scope
 
 - `web/src/ui/panel/`
 - `web/src/core/panel.ts`, `web/src/core/panel.test.ts`
-- As P1: the `#panel` slot in `web/index.html`, its line in `web/src/main.ts`, and the `panel.ts`
+- The `#panel` slot in `web/index.html`, its line in `web/src/main.ts`, and the `panel.ts`
   and `#panel` rows of `docs/data-contract.md`
 - `docs/ai-use/T15.md`, `docs/sources/T15.md`, this file's `Status:` line
 
@@ -36,5 +35,5 @@ Spec feature F15: flat panel or upright Sun-facing panel, with relative power.
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T15-panel.md. Do only that task, on branch t15-panel. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T15-panel.md. Do only that task, on branch t15-panel. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

@@ -1,10 +1,9 @@
 # T09: Compare table and strips
 
-Status: done (second delivery, pull request #47; first delivery #21)
+Status: done (resize fix for issue #49, pull request #64; second delivery #47; first delivery #21)
 
 | | |
 |---|---|
-| Owner | P3 |
 | Tier | must |
 | Waits for | T00 |
 | Branch | `t09-ui-compare` |
@@ -13,7 +12,7 @@ Status: done (second delivery, pull request #47; first delivery #21)
 
 Spec features F6 and F7.
 
-## Files you own
+## Files in scope
 
 - `web/src/ui/compare/`
 - `docs/ai-use/T09.md`, `docs/sources/T09.md`, this file's `Status:` line
@@ -36,5 +35,5 @@ Spec features F6 and F7.
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T09-ui-compare.md. Do only that task, on branch t09-ui-compare. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T09-ui-compare.md. Do only that task, on branch t09-ui-compare. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

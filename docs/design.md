@@ -25,7 +25,7 @@ exists, paste its link here: _(link to come)_.
 | `phone.png` | Whole screen, 390 wide, slots stacked in contract order: about, scene, scenarios, readout, nudge, panel, compare, timeline, sky |
 | `about.png` `scene.png` `scenarios.png` `readout.png` `nudge.png` `panel.png` `compare.png` `timeline.png` `sky.png` | One per slot, at its desktop width (nine slots) |
 | `components.png` | Every state: button (secondary, hover, pressed, focus, selected, disabled), primary, tab, toggle, site chip (filled, selected, empty), info pill, field (focus, error), toast, tooltip on disabled Proceed |
-| `loading.png`, `hero.png` | Brief frames 1 and 2. **Proposals only**: they aren't slots (see "Needs P1") |
+| `loading.png`, `hero.png` | Brief frames 1 and 2. **Proposals only**: they aren't slots (see "Needs team decision") |
 | `cvd.png` | Scenario, Sun and Earth colours under protanopia, deuteranopia, tritanopia |
 
 Mock-up numbers are made up. Nobody copies an angle or a time from a picture into code.
@@ -116,7 +116,7 @@ pixel values left are line widths (1 px borders, 2 px focus outline and tab unde
 knob inset), the pill rounding in item 1 below, the canvas sizes (1280, 390, 1440 × 900), and
 positions in the two proposal frames (loading, hero).
 
-## Needs P1 (asked once, all together)
+## Needs team decision
 
 Values the design needs that the contract doesn't name. Nothing below was given a name.
 
