@@ -1,6 +1,6 @@
 # T11: Sky panorama
 
-Status: not started
+Status: done, pull request open (chart to be looked at in the browser)
 
 | | |
 |---|---|
