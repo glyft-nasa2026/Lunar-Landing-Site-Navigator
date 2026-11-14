@@ -7,8 +7,8 @@
 import type { Dem } from '../core/dem';
 import type { Ephemeris, Vec3 } from '../core/ephemeris';
 import {
-  cylForward, cylInverse, panView, polarForward, polarInverse, screenToView, viewToScreen, zoomView,
-  type LatLon, type MapView,
+  clampView, cylForward, cylInverse, fitScale, panView, polarForward, polarInverse, screenToView,
+  viewToScreen, zoomView, type LatLon, type MapBounds, type MapView,
 } from '../core/projection';
 import { shadeGlobal, shadePolar, subPoint, type PolarShade } from '../core/shade';
 import { MOON_RADIUS_KM, type Site } from '../core/types';
@@ -190,26 +190,54 @@ export function mount(el: HTMLElement): void {
     return kind === 'polar' ? polarInverse(p.x, p.y) : cylInverse(p.x, p.y);
   }
 
-  /** Starting view of the selected site: about 150 km across at the pole, the whole Moon elsewhere. */
-  function centre(): void {
+  /**
+   * How far the view zooms for the current canvas size: out until the whole map just fits (the
+   * height map's square, or the whole Moon), and no further (issue #65); in to a few pixels a cell.
+   */
+  function setLimits(): void {
     const { width, height } = view;
     if (kind === 'polar' && dem) {
-      const spanKm = Math.max(8, Math.min(80, dem.meta.size * dem.meta.pixel_m / 8000));
       const whole = dem.meta.size * dem.meta.pixel_m;
-      view = { ...view, scale: height / (2 * spanKm * 1000) };
-      minScale = Math.min(width, height) / whole / 2;
+      minScale = fitScale(width, height, whole, whole);
       maxScale = 8 / dem.meta.pixel_m;
     } else {
-      view = { ...view, scale: Math.min(width / (2 * HALF_WORLD_KM), height / HALF_WORLD_KM) };
-      minScale = view.scale / 2;
+      minScale = fitScale(width, height, 2 * HALF_WORLD_KM, HALF_WORLD_KM);
       maxScale = 4;   // 4 pixels per km: a click lands within a few hundred metres
+    }
+  }
+  /**
+   * What the map covers: the height map's square (its outer cells' edges, half a cell beyond the
+   * stored corners), or the whole Moon from pole to pole, free east and west because it repeats.
+   */
+  function bounds(): MapBounds {
+    if (kind === 'polar' && dem) {
+      const { size, pixel_m, x_min_m, y_max_m } = dem.meta;
+      return {
+        xMin: x_min_m - pixel_m / 2, xMax: x_min_m + (size - 0.5) * pixel_m,
+        yMin: y_max_m - (size - 0.5) * pixel_m, yMax: y_max_m + pixel_m / 2,
+      };
+    }
+    return { xMin: -Infinity, xMax: Infinity, yMin: -HALF_WORLD_KM / 2, yMax: HALF_WORLD_KM / 2 };
+  }
+  /** Every pan and zoom goes through here, so the map never slides out of the canvas (issue #65). */
+  function setView(next: MapView): void {
+    view = clampView(next, bounds());
+  }
+  /** Starting view of the selected site: about 150 km across at the pole, the whole Moon elsewhere. */
+  function centre(): void {
+    setLimits();
+    if (kind === 'polar' && dem) {
+      const spanKm = Math.max(8, Math.min(80, dem.meta.size * dem.meta.pixel_m / 8000));
+      view = { ...view, scale: Math.min(maxScale, Math.max(minScale, view.height / (2 * spanKm * 1000))) };
+    } else {
+      view = { ...view, scale: minScale };
     }
     follow();
   }
-  /** Brings the selected site to the middle of the view, keeping the zoom. */
+  /** Brings the selected site to the middle of the view, keeping the zoom, as far as the map's edges allow. */
   function follow(): void {
     const p = project(selected().site);
-    view = { ...view, cx: p.x, cy: p.y };
+    setView({ ...view, cx: p.x, cy: p.y });
     invalidate();
   }
 
@@ -220,7 +248,11 @@ export function mount(el: HTMLElement): void {
     canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
     const first = view.width <= 1;
     view = { ...view, width, height };
-    if (first) { framed = false; update(getState()); }
+    if (first) { framed = false; update(getState()); } else {
+      // A bigger canvas raises the zoom-out limit and shows more of the map: hold the view to both.
+      setLimits();
+      setView(zoomView(view, width / 2, height / 2, 1, minScale, maxScale));
+    }
     invalidate();
   }
 
@@ -424,15 +456,15 @@ export function mount(el: HTMLElement): void {
     if (!last) return;
     const now = local(e);
     if (pointers.size === 1) {
-      view = panView(view, now.x - last.x, now.y - last.y);
+      setView(panView(view, now.x - last.x, now.y - last.y));
       if (press) press.moved = Math.max(press.moved, Math.hypot(now.x - press.x, now.y - press.y));
     } else if (pointers.size === 2) {
       const [a, b] = [...pointers.entries()].map(([id, p]) => id === e.pointerId ? now : p);
       const [a0, b0] = [...pointers.values()];
       const before = Math.hypot(a0.x - b0.x, a0.y - b0.y), after = Math.hypot(a.x - b.x, a.y - b.y);
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, mid0 = { x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2 };
-      view = panView(view, mid.x - mid0.x, mid.y - mid0.y);
-      if (before > 0) view = zoomView(view, mid.x, mid.y, after / before, minScale, maxScale);
+      const panned = panView(view, mid.x - mid0.x, mid.y - mid0.y);
+      setView(before > 0 ? zoomView(panned, mid.x, mid.y, after / before, minScale, maxScale) : panned);
     }
     pointers.set(e.pointerId, now);
     invalidate();
@@ -448,15 +480,15 @@ export function mount(el: HTMLElement): void {
     e.preventDefault();
     const p = local(e);
     const lines = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? view.height : 1;
-    view = zoomView(view, p.x, p.y, Math.exp((-e.deltaY * lines) / 600), minScale, maxScale);
+    setView(zoomView(view, p.x, p.y, Math.exp((-e.deltaY * lines) / 600), minScale, maxScale));
     invalidate();
   };
   const key = (e: KeyboardEvent): void => {
     const stepPx = Math.min(view.width, view.height) / 8;
     const moves: Record<string, [number, number]> = { ArrowLeft: [stepPx, 0], ArrowRight: [-stepPx, 0], ArrowUp: [0, stepPx], ArrowDown: [0, -stepPx] };
-    if (moves[e.key]) view = panView(view, ...moves[e.key]);
-    else if (e.key === '+' || e.key === '=') view = zoomView(view, view.width / 2, view.height / 2, 1.5, minScale, maxScale);
-    else if (e.key === '-' || e.key === '_') view = zoomView(view, view.width / 2, view.height / 2, 1 / 1.5, minScale, maxScale);
+    if (moves[e.key]) setView(panView(view, ...moves[e.key]));
+    else if (e.key === '+' || e.key === '=') setView(zoomView(view, view.width / 2, view.height / 2, 1.5, minScale, maxScale));
+    else if (e.key === '-' || e.key === '_') setView(zoomView(view, view.width / 2, view.height / 2, 1 / 1.5, minScale, maxScale));
     else if (e.key === 'Enter' || e.key === ' ') pick(view.width / 2, view.height / 2);
     else return;
     e.preventDefault(); invalidate();
