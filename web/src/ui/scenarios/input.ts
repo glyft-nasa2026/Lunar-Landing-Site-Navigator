@@ -27,18 +27,22 @@ export function checkLon(text: string): Checked<number> {
   return { ok: true, value: v };
 }
 
+const UTC_FORMAT = 'Enter a UTC date and time as YYYY-MM-DD HH:MM';
+
 /**
- * The value of an `<input type="datetime-local">`, read as UTC ("2027-01-01T06:30" or with
- * seconds). The table's own bounds are passed in when it has loaded; a time at or after
- * endMs has no hour after it, so the readout couldn't show it.
+ * The time box's text, read as UTC: "2027-01-01 06:30", with optional seconds, and a "T" in
+ * place of the space also works. The table's own bounds are passed in when it has loaded; a
+ * time at or after endMs has no hour after it, so the readout couldn't show it.
  */
 export function checkUtc(text: string, table: { startMs: number; endMs: number } | null): Checked<number> {
-  const t = text.trim();
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(t)) {
-    return { ok: false, message: 'Enter a full UTC date and time' };
+  const m = /^(\d{4}-\d{2}-\d{2})[T ]+(\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)$/.exec(text.trim());
+  if (!m) return { ok: false, message: UTC_FORMAT };
+  const iso = `${m[1]}T${m[2]}`;
+  const tMs = Date.parse(iso + 'Z');
+  // Date.parse rolls 2027-02-30 over to March; a real date reads back the same.
+  if (!Number.isFinite(tMs) || new Date(tMs).toISOString().slice(0, 16) !== iso.slice(0, 16)) {
+    return { ok: false, message: UTC_FORMAT };
   }
-  const tMs = Date.parse(t + 'Z');
-  if (!Number.isFinite(tMs)) return { ok: false, message: 'Enter a full UTC date and time' };
   if (table && (tMs < table.startMs || tMs >= table.endMs)) {
     return {
       ok: false,
@@ -48,8 +52,13 @@ export function checkUtc(text: string, table: { startMs: number; endMs: number }
   return { ok: true, value: tMs };
 }
 
-/** tMs as the value a datetime-local box takes, in UTC, to the minute: "2027-01-01T06:30". */
+/** tMs as the time box shows it, in UTC, to the minute: "2027-01-01 06:30". */
 export function toBoxValue(tMs: number): string {
+  return utcText(tMs);
+}
+
+/** tMs as a datetime-local box's value, in UTC, to the minute: "2027-01-01T06:30". */
+export function toPickerValue(tMs: number): string {
   return new Date(tMs).toISOString().slice(0, 16);
 }
 
