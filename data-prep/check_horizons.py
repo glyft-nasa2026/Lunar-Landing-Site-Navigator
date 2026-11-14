@@ -138,11 +138,35 @@ def separation(a: dict, b: dict) -> float:
 
 def ours_skyfield(ts, eph, pc, frame, lat, lon, body, times):
     """Same method as T01's fixtures: Skyfield, surface point at 0 m, apparent alt/az."""
-    t = ts.from_datetimes([datetime.strptime(x, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-                           for x in times])
+    t = ts.from_datetimes([parse_utc(x) for x in times])
     place = eph["moon"] + pc.build_latlon_degrees(frame, lat, lon, elevation_m=0.0)
     alt, az, _ = place.at(t).observe(eph[body]).apparent().altaz()
     return [{"alt": float(alt.degrees[i]), "az": float(az.degrees[i])} for i in range(len(times))]
+
+
+def parse_utc(text: str) -> datetime:
+    return datetime.strptime(text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+
+
+def table_row(meta: dict, t: datetime, files: dict) -> np.ndarray:
+    """The table's six values at time t, with a straight-line step between rows as in
+    ephemeris.ts. Reads the decade files listed under "chunks", or the one-file form
+    (ephemeris.bin) when there are none. `files` keeps what was already read."""
+    parts = meta.get("chunks") or [{"file": "ephemeris.bin", "start": meta["start"]}]
+    begun = [p for p in parts if parse_utc(p["start"]) <= t]
+    if not begun:
+        raise RuntimeError(f"{t.isoformat()} is before the table starts ({meta['start']})")
+    part = max(begun, key=lambda p: parse_utc(p["start"]))   # the last file starting at or before t
+    if part["file"] not in files:
+        files[part["file"]] = (np.fromfile(OUT / part["file"], dtype="<f4")
+                               .reshape(-1, 6).astype(np.float64))
+    a = files[part["file"]]
+    h = (t - parse_utc(part["start"])).total_seconds() / meta["step_s"]
+    if h > len(a) - 1:
+        raise RuntimeError(f"{t.isoformat()} is after the table ends")
+    i = min(int(h), len(a) - 2)
+    f = h - i
+    return a[i] * (1 - f) + a[i + 1] * f
 
 
 def main() -> int:
@@ -219,15 +243,10 @@ def check() -> bool:
     if meta["source"] == "mock":
         print("[skip] ephemeris table is mock: no table-vs-Horizons check")
         return ok_all
-    a = np.fromfile(OUT / "ephemeris.bin", dtype="<f4").reshape(meta["rows"], 6).astype(np.float64)
-    t0 = datetime.strptime(meta["start"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    files: dict = {}
     worst = 0.0
     for c in cases:
-        t = datetime.strptime(c["t"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-        h = (t - t0).total_seconds() / meta["step_s"]
-        i = min(int(h), meta["rows"] - 2)
-        f = h - i
-        row = a[i] * (1 - f) + a[i + 1] * f
+        row = table_row(meta, parse_utc(c["t"]), files)
         (sa, sz), (ea, ez) = contract_altaz(c["lat"], c["lon"], row[:3], row[3:])
         mine = {"alt": float(sa), "az": float(sz)} if c["body"] == "sun" else {"alt": float(ea), "az": float(ez)}
         worst = max(worst, separation(mine, c["horizons"]))
