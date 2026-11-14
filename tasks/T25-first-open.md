@@ -1,6 +1,6 @@
 # T25: Example on first open
 
-Status: not started
+Status: in progress (Yi Hung, branch `t25-first-open`, draft pull request #72)
 
 | | |
 |---|---|
@@ -23,17 +23,17 @@ arbitrary point, nothing pinned, and "Pin a scenario to compare".
 
 1. The rule is in contract section 4, "First open". The example is built when two things are both true: the page address names no scenario (no live one, none pinned), and the site list has arrived with a crater rim and a crater floor in it.
 2. The two sites are found by id: `shackleton-rim` and `shackleton-floor`, or `mock-rim` and `mock-floor` on mock data (contract section 2). Don't write their coordinates into the code.
-3. The example: live at the rim, the rim pinned as A, the floor pinned as B, all at the current hour, live selected.
-4. An address that names any scenario opens exactly what it says, with no example added. So a share link is never changed, and someone who unpins everything and reloads stays unpinned.
+3. The example: live at the rim, the floor pinned as A, both at the current hour, live selected. Don't also pin the rim as A: the compare table has a Live column, so the page would open on two identical columns.
+4. An address that names any scenario opens exactly what it says, with no example added. So a share link is never changed, and someone who unpins everything and reloads stays unpinned. An edit to live or a pin made before the site list arrives also means no example.
 5. If the site list never arrives, or has neither pair of ids, nothing happens and nothing crashes.
 
 ## Done when
 
-- [ ] A state test: empty address, then a site list with `shackleton-rim` and `shackleton-floor`: live is at the rim, A is the rim, B is the floor, live is selected.
+- [ ] A state test: empty address, then a site list with `shackleton-rim` and `shackleton-floor`: live is at the rim, A is the floor, nothing else is pinned, live is selected.
 - [ ] A state test: the same with `mock-rim` and `mock-floor`.
 - [ ] A state test: an address with one pinned scenario, then the site list: state is unchanged.
 - [ ] A state test: empty address, then a site list with neither pair: nothing pinned, no error.
-- [ ] On `npm run dev` with the plain address, the compare slot shows two columns. Unpin both, reload: nothing is pinned.
+- [ ] On `npm run dev` with the plain address, the compare slot shows two different columns, Live and A. Unpin A, reload: nothing is pinned.
 - [ ] `npm test` and `npm run build` pass.
 
 ## Notes
@@ -43,7 +43,7 @@ Until T07 merges, `sites.json` is the mock list, and on the real height map `moc
 rim-against-floor story only once T07's `shackleton-rim` and `shackleton-floor` are in. The
 code needs nothing from T07: it uses whichever pair is there.
 
-The example's three scenarios are at the current hour, so they need only the decade the page
+The example's two scenarios are at the current hour, so they need only the decade the page
 loads first (contract section 4, "Decades").
 
 ## Prompt to paste into Claude Code
