@@ -1,6 +1,7 @@
 // For tests only (node): the real Sun and Earth table from web/public/data/, every decade
-// loaded. Null while the files are missing or the table is T20's mock, so the tests that need
-// real data can skip.
+// loaded. Null while there is no index file or the table is T20's mock, so the tests that need
+// real data can skip. A real index with one of its decade files missing is an error, not a
+// reason to skip: the tests against Skyfield and Horizons would otherwise pass by not running.
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { indexEphemeris, type Ephemeris, type EphemerisMeta } from './ephemeris';
@@ -19,6 +20,9 @@ export function readRealTable(): Ephemeris | null {
   const meta = JSON.parse(readFileSync(metaFile, 'utf8')) as EphemerisMeta;
   if (meta.source === 'mock') return null;
   const files = meta.chunks ? meta.chunks.map((c) => c.file) : ['ephemeris.bin'];
-  if (!files.every((f) => existsSync(dataFile(f)))) return null;
+  const absent = files.filter((f) => !existsSync(dataFile(f)));
+  if (absent.length > 0) {
+    throw new Error(`web/public/data/ephemeris.json lists files that are not there: ${absent.join(', ')}`);
+  }
   return files.reduce((eph, f, i) => eph.withChunk(i, readBuffer(dataFile(f))), indexEphemeris(meta));
 }

@@ -225,15 +225,23 @@ async function pruneCache(eph: Ephemeris): Promise<void> {
   }
 }
 
-/** One decade's file, as named in the index: from the device if kept there, else downloaded. */
+/**
+ * One decade's file, as named in the index: from the device if kept there, else downloaded.
+ * Rejects a file shorter than its rows need. Some hosts answer a missing file with a web page
+ * and "200 OK"; kept on the device, that page would be read again on every later visit.
+ */
 export async function loadEphemerisChunk(eph: Ephemeris, i: number): Promise<ArrayBuffer> {
   const url = chunkUrl(eph, i);
   if (!url) throw new Error(`ephemeris: no chunk ${i}`);
+  const rows = eph.meta.chunks ? eph.meta.chunks[i].rows : eph.meta.rows;
+  const need = rows * VALUES_PER_ROW * BYTES_PER_VALUE;
   const cache = await openCache();
   if (cache) {
     try {
       const kept = await cache.match(url);
-      if (kept) return await kept.arrayBuffer();
+      const buffer = kept ? await kept.arrayBuffer() : null;
+      // A kept copy that is too short is no use: download again, which replaces it.
+      if (buffer && buffer.byteLength >= need) return buffer;
     } catch {
       // A broken entry: download it again below.
     }
@@ -241,6 +249,7 @@ export async function loadEphemerisChunk(eph: Ephemeris, i: number): Promise<Arr
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
   const buffer = await res.arrayBuffer();
+  if (buffer.byteLength < need) throw new Error(`${url}: ${buffer.byteLength} bytes, expected ${need}`);
   if (cache) {
     // Not awaited: the page needn't wait for the disk. A Response copies the bytes it is given.
     cache.put(url, new Response(buffer)).catch(() => {

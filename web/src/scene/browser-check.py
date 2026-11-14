@@ -215,14 +215,62 @@ with sync_playwright() as p:
     page.wait_for_timeout(250)
     canvas.screenshot(path='/tmp/t12-orbit.png')
     # A drag that returns near its origin must still count as a drag, not select a new point.
+    # It starts away from the centre: the selected site's pin sits there, and a pick on that pin
+    # returns the same site, so a drag from the centre could never fail this check.
     box = canvas.bounding_box()
-    page.mouse.move(box['x']+box['width']/2, box['y']+box['height']/2)
-    page.mouse.down(); page.mouse.move(box['x']+box['width']/2+80, box['y']+box['height']/2, steps=8)
-    page.mouse.move(box['x']+box['width']/2, box['y']+box['height']/2, steps=8); page.mouse.up()
+    off_x, off_y = box['x']+box['width']/2+150, box['y']+box['height']/2+80
+    page.mouse.move(off_x, off_y)
+    page.mouse.down(); page.mouse.move(off_x+80, off_y, steps=8)
+    page.mouse.move(off_x, off_y, steps=8); page.mouse.up()
+    page.wait_for_timeout(250)
     assert page.evaluate("async () => (await import('/src/state.ts')).getState().live.site") == old_site
+    # The control: a plain click at the same point does select, so the drag above was a real test.
+    page.mouse.click(off_x, off_y)
+    page.wait_for_timeout(250)
+    clicked_site = page.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
+    assert clicked_site != old_site, clicked_site
+    page.evaluate("async site => (await import('/src/state.ts')).setLiveSite(site)", old_site)
+    page.wait_for_timeout(250)
     page.get_by_role('button', name='2D map', exact=True).click()
     assert page.evaluate("async () => (await import('/src/state.ts')).getState().live.site") == old_site
-    passed('camera switch and drag', '2D → 3D → 2D preserves site; return-to-origin drag does not select')
+    passed('camera switch and drag', '2D → 3D → 2D preserves site; an out-and-back drag away from the pin does not select, a click there does')
+    # A plain left-drag pans the 2D map, as the help line says, and does not pick a site.
+    page.wait_for_timeout(300)
+    def canvas_bytes(path):
+        canvas.screenshot(path=path)
+        return Image.open(path).convert('RGB').tobytes()
+    def channels_changed(a, b):
+        return sum(x != y for x, y in zip(a, b))
+    box = canvas.bounding_box()
+    off_x, off_y = box['x']+box['width']/2+150, box['y']+box['height']/2+80
+    before_pan = canvas_bytes('/tmp/t12-map-before-pan.png')
+    page.mouse.move(off_x, off_y); page.mouse.down(); page.mouse.move(off_x+120, off_y+60, steps=10); page.mouse.up()
+    page.wait_for_timeout(400)
+    panned = channels_changed(before_pan, canvas_bytes('/tmp/t12-map-panned.png'))
+    assert panned > 1000, panned
+    assert 'drag to pan' in page.locator('.scene-help').inner_text()
+    assert page.evaluate("async () => (await import('/src/state.ts')).getState().live.site") == old_site
+    page.locator('.scene-reset').click()
+    page.wait_for_timeout(300)
+    passed('2D pan', {'changed_color_channels_after_left_drag': panned})
+    # A time the table has no row for: the scene goes dark and says so, as the readout does.
+    # Before, it was lit from the table's last row, which is the picture of another date.
+    END = T0 + 72*3600000
+    page.evaluate(f"async () => (await import('/src/state.ts')).setLiveTime({END})")
+    page.wait_for_timeout(300)
+    assert page.locator('.scene-message').is_hidden()
+    last_row = canvas_bytes('/tmp/t12-map-last-row.png')
+    page.evaluate(f"async () => (await import('/src/state.ts')).setLiveTime({END + 28*3600000})")
+    page.wait_for_timeout(300)
+    assert 'outside the Sun and Earth table' in page.locator('.scene-message').inner_text()
+    assert page.locator('.scene-message').is_visible()
+    outside = canvas_bytes('/tmp/t12-map-outside-table.png')
+    unlit = channels_changed(last_row, outside)
+    assert unlit > 1000, unlit
+    page.evaluate(f"async () => (await import('/src/state.ts')).setLiveTime({T0 + 12*3600000})")
+    page.wait_for_timeout(300)
+    assert page.locator('.scene-message').is_hidden()
+    passed('time outside the table', {'changed_color_channels_vs_last_row': unlit, 'message': 'This time is outside the Sun and Earth table'})
     # Zoomed right out, 3D shows the whole Moon with the terrain set into it, not a lone terrain disc.
     def drawn_fraction(path):
         shot = Image.open(path).convert('RGB')
