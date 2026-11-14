@@ -19,8 +19,8 @@ Nobody waits at the start: five tasks begin at kickoff. Read your row left to ri
 
 | | From kickoff | Then, in this order |
 |---|---|---|
-| P1 | T00 | T02 (once T01 is in; if it isn't, skip ahead), T06, T12, then T15 after M2 |
-| P2 | T20, with the LOLA download running beside it | T05 (while the download finishes), T04, T11 |
+| P1 | T00 | T02 (once T01 is in; if it isn't, skip ahead), T06, T12, T25, then T15 after M2, T26 at M3 |
+| P2 | T20, with the LOLA download running beside it | T05 (while the download finishes), T04, T11, T27 |
 | P3 | T21; while its pull request waits for T00, go through the design with P5 | T08, T09, T10, T13 |
 | P4 | Set up Python and start the lookup for T07; T01 as soon as T20 merges | T03, T07, T18 at M1, T17, T24 and T18 again at M2 |
 | P5 | T22 | T19, T16, T23 |
@@ -54,10 +54,16 @@ order given in `docs/team-workflow.md`, "The first three merges".
 | [T19](T19-ui-design.md) | Theme, layout, chart style | P5 | must | T00, T22 |
 | [T23](T23-ui-polish.md) | UI polish: every module matches the design | P5 | must | T19, and each module's own task |
 | [T24](T24-real-data-checks.md) | Terrain checks on the real data | P4 | must | T01, T04, T05, T06, T07 |
+| [T25](T25-first-open.md) | Example on first open: rim against floor | P1 | must | T00 |
+| [T27](T27-load-time.md) | Load time on the real data, measured | P2 | must | T04, T21 |
 | [T17](T17-pitch.md) | Slides, demo video, submission text | P4 | must | M1 for screenshots, M2 for the video |
 | [T18](T18-qa.md) | Testing with a real person, bug list | P4 | must | M1, repeated at M2 |
+| [T26](T26-freeze.md) | Freeze checklist: README, notes, open decisions, tag | P1 | must | M3 |
 | [T14](T14-layers.md) | Map layers | unassigned | if time | M2 |
 | [T15](T15-panel.md) | Solar panel choice | P1 | if time | M2 |
+| [T29](T29-transition.md) | Camera glide between 2D and 3D | unassigned | if time | T12, M2 |
+| [T28](T28-mirror.md) | Mirror on rickphobia.com | P1 | if time | T21, M1 |
+| [T30](T30-smoke-test.md) | Page smoke test in CI | P3 | if time | T00, T20, T21 |
 
 ## Order
 
@@ -65,6 +71,7 @@ order given in `docs/team-workflow.md`, "The first three merges".
 kickoff ─┬─ T00 ──┬── T02 (also needs T01)
          │        ├── T06
          │        ├── T12
+         │        ├── T25
          │        ├── T05 ──┬── T11
          │        │         └── T13
          │        ├── T08, T09, T10
@@ -77,6 +84,7 @@ kickoff ─┬─ T00 ──┬── T02 (also needs T01)
          └─ T22
 
 T24 needs T01, T04, T05, T06 and T07. T17 and T18 run alongside from M1.
+T27 needs T04 and T21. T26 runs at M3.
 ```
 
 After T00 and T20, every person has a task that nothing blocks: the page already shows live
