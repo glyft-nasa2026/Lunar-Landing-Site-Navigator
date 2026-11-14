@@ -1,6 +1,6 @@
 # T20: Mock data
 
-Status: in progress (P2, branch t20-mock-data)
+Status: done (pull request #12; guard against replacing real data in #46)
 
 | | |
 |---|---|
@@ -44,6 +44,12 @@ runs: it is the slow part of your next task.
 
 If this merges before T21, its pull request has no `test-and-build` check. The printed checks
 above, pasted in, are the review (`docs/team-workflow.md`, "The first three merges").
+
+## After the merge
+
+- 14 Nov 2026: T04 (#13), T01 (#16) and T03 (#30) replaced their mock files with real ones. `sites.json` is still this task's mock until T07 merges.
+- 14 Nov 2026, pull request #31: the real table is now 1900-2100, one row every 3 hours, one file per decade. The mock stays hourly, 2026-2035, in one `ephemeris.bin`, which still loads. So step 3's "same dates as the real one" no longer holds.
+- 14 Nov 2026, pull request #46 (`t20-mock-data-b`): `make_mock.py` lists any real file in `web/public/data/`, changes nothing and exits 2. `--force` writes the mock files over them.
 
 ## Prompt to paste into Claude Code
 

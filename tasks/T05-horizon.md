@@ -1,6 +1,6 @@
 # T05: Terrain skyline: horizon.ts
 
-Status: done, pull request open
+Status: done (pull request #15; tests tightened in #53)
 
 | | |
 |---|---|
@@ -35,6 +35,13 @@ Status: done, pull request open
 ## Notes
 
 The check on the real Shackleton floor is T24's, once T04 has merged.
+
+## After the merge
+
+- 14 Nov 2026, pull request #53 (`t05-horizon-b`), from the audit of merged tickets. Tests only:
+  - The walk test checks that the look-out distance is 150 km. Before, it passed with any distance.
+  - The timing test reads the fastest of five runs. The median failed on a busy machine with the code unchanged.
+- 14 Nov 2026, pull request #40 (T02): `destination()` works from exactly latitude -90, with the rule `horizon.ts` already used (bearing b runs down longitude lon + b). The special case for the pole in `horizon.ts` is no longer needed. It is harmless and stays until P2 removes it; #53 only corrects its comment, which said `destination()` can't compute there.
 
 ## Prompt to paste into Claude Code
 

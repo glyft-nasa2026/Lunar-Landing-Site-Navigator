@@ -1,6 +1,6 @@
 # T10: Timeline chart with scrubber
 
-Status: done, pull request open
+Status: done (pull request #34; time zone, pinned press and "Loading" fixes in #54)
 
 | | |
 |---|---|
@@ -32,6 +32,13 @@ Spec feature F8.
 - [ ] With a pinned scenario selected, a click on the chart changes the live scenario and selects it; the pinned one is unchanged.
 - [ ] The Sun line crosses zero at the same time the readout's countdown reaches zero.
 - [ ] `npm test` and `npm run build` pass.
+
+## After the merge
+
+- 14 Nov 2026, pull request #54 (`t10-ui-timeline-b`): three defects found by the audit of merged tickets.
+  - The axis and the hover showed the browser's local time under the label UTC (8 hours ahead in Malaysia). Plotly now gets UTC times as strings with no zone, which it shows as written.
+  - With a pinned scenario selected, a press on the chart followed by any pointer move threw the live time by up to the whole range. Such a press now sets the live time once and never starts a drag; the third "Done when" line holds with or without movement.
+  - With the table loaded, a window with fewer than two samples said "Loading" for good (from 2100-12-31 23:00, and in a decade whose file failed to download). The module now says the window is outside the table, or that the table ends within two hours.
 
 ## Prompt to paste into Claude Code
 
