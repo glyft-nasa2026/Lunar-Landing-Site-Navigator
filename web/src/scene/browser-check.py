@@ -55,6 +55,16 @@ assets = {'dem.json': json.dumps(meta), 'dem.bin': heights, 'ephemeris.json': js
 checks = []
 
 
+def wait_state(page, test, timeout_s=60):
+    """Polls an async state test. wait_for_function treats an async function's promise as truthy."""
+    for _ in range(int(timeout_s * 4)):
+        if page.evaluate(f"async () => {{ const s=(await import('/src/state.ts')).getState(); return !!({test}); }}"):
+            return
+        page.wait_for_timeout(250)
+    raise AssertionError(f'app state never met: {test}. If Vite hot-reloaded state.ts or core/, restart Vite: '
+                         'the page then holds a different copy of state.ts than /src/state.ts')
+
+
 def passed(name, detail):
     checks.append({'check': name, 'result': 'PASS', 'output': detail})
     print(json.dumps(checks[-1]), flush=True)
@@ -70,7 +80,7 @@ with sync_playwright() as p:
 
     if '--public' in sys.argv or '--t20' in sys.argv:
         page.goto(BASE + '/#live=-88.4,45,2026-01-01T00:00:00Z')
-        page.wait_for_function("async () => { const s=(await import('/src/state.ts')).getState(); return s.eph && s.dem && s.sites.length; }")
+        wait_state(page, 's.eph && s.dem && s.sites.length')
         actual = page.evaluate("""async () => {
           const s=(await import('/src/state.ts')).getState();
           const served=await fetch('/data/dem.json').then(r=>r.json());
@@ -107,20 +117,29 @@ with sync_playwright() as p:
           const lit=samples.reduce((a,b)=>a.sun.alt > b.sun.alt ? a : b);
           return {dark:dark.tMs, lit:lit.tMs, darkFrac:dark.sunFrac, litFrac:lit.sunFrac};
         }""")
-        assert times['darkFrac'] == 0 and times['litFrac'] > 0, times
+        # With a terrain horizon (T05), a permanently shadowed floor is hidden even at the highest Sun.
+        assert times['darkFrac'] == 0, times
+        never_lit = times['litFrac'] == 0
         from PIL import Image
         rendered = []
         for label in ('dark', 'lit'):
             page.evaluate("async t => (await import('/src/state.ts')).setLiveTime(t)", times[label])
             page.wait_for_timeout(300)
-            assert ('Sun hidden' if label == 'dark' else 'Sun visible') in page.locator('.scene-caption').inner_text()
+            hidden = label == 'dark' or never_lit
+            assert ('Sun hidden' if hidden else 'Sun visible') in page.locator('.scene-caption').inner_text()
             path = f'/tmp/t12-public-{label}.png'
             actual_canvas.screenshot(path=path)
             rendered.append(Image.open(path).convert('RGB'))
         w, h = rendered[0].size
-        floor = [rendered[0].getpixel((w//2+x, h//2+y)) for x in range(-10, 11) for y in range(-10, 11) if 6**2 <= x*x+y*y <= 10**2]
-        actual_luma = sum(sum(v)/3 for v in floor) / len(floor)
+        def floor_luma(image):
+            ring = [image.getpixel((w//2+x, h//2+y)) for x in range(-10, 11) for y in range(-10, 11) if 6**2 <= x*x+y*y <= 10**2]
+            return sum(sum(v)/3 for v in ring) / len(ring)
+        actual_luma = floor_luma(rendered[0])
         assert actual_luma < 55, actual_luma
+        # Whenever the readout says hidden, the floor must look dark, at the Sun's highest too.
+        lit_luma = floor_luma(rendered[1])
+        if never_lit:
+            assert lit_luma < 55, lit_luma
         actual_changed = sum(a != b for a, b in zip(rendered[0].tobytes(), rendered[1].tobytes()))
         assert actual_changed > 1000, actual_changed
         page.get_by_role('button', name='3D orbit', exact=True).click()
@@ -128,7 +147,7 @@ with sync_playwright() as p:
         page.get_by_role('button', name='2D map', exact=True).click()
         assert page.evaluate("async () => (await import('/src/state.ts')).getState().live.site") == floor_site
         assert not errors and not graphics_warnings, (errors, graphics_warnings)
-        passed('public data files', {'height_map': actual['dem']['source'], 'grid_size': actual['dem']['size'], 'pixel_m': actual['dem']['pixel_m'], 'ephemeris': actual['eph']['source'], 'ephemeris_rows': actual['eph']['rows'], 'sites': actual['sites'], 'clicked_site': actual_site, 'error_cells': actual_error, 'dark_floor_at': floor_site, 'hidden_floor_mean_rgb': round(actual_luma, 2), 'changed_color_channels': actual_changed, 'camera_switch': 'site preserved'})
+        passed('public data files', {'height_map': actual['dem']['source'], 'grid_size': actual['dem']['size'], 'pixel_m': actual['dem']['pixel_m'], 'ephemeris': actual['eph']['source'], 'ephemeris_rows': actual['eph']['rows'], 'sites': actual['sites'], 'clicked_site': actual_site, 'error_cells': actual_error, 'dark_floor_at': floor_site, 'hidden_floor_mean_rgb': round(actual_luma, 2), 'floor_never_lit': never_lit, 'floor_mean_rgb_at_highest_sun': round(lit_luma, 2), 'changed_color_channels': actual_changed, 'camera_switch': 'site preserved'})
         # A hash-only navigation would retain the actual data and pins instead of loading fixtures.
         page.goto('about:blank')
 
@@ -142,7 +161,7 @@ with sync_playwright() as p:
     page.route('**/data/*', route_data)
     page.goto(BASE + '/#live=-88.4,45,2026-01-01T00:00:00Z')
     page.wait_for_selector('.scene-canvas')
-    page.wait_for_function("async () => !!(await import('/src/state.ts')).getState().dem")
+    wait_state(page, 's.dem')
     page.wait_for_timeout(700)
     canvas = page.locator('.scene-canvas')
     box = canvas.bounding_box()
