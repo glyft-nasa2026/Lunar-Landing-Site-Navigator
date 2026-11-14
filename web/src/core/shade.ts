@@ -159,12 +159,17 @@ export function shadeGlobal(sun: Vec3, width: number, height: number): Float32Ar
   const n = Math.hypot(sun[0], sun[1], sun[2]) || 1;
   const [sx, sy, sz] = [sun[0] / n, sun[1] / n, sun[2] / n];
   const out = new Float32Array(width * height);
+  // The longitude terms are the same on every row: work them out once.
+  const cosLon = new Float64Array(width), sinLon = new Float64Array(width);
+  for (let i = 0; i < width; i++) {
+    const lon = (-180 + ((i + 0.5) * 360) / width) * RAD;
+    cosLon[i] = Math.cos(lon); sinLon[i] = Math.sin(lon);
+  }
   for (let j = 0; j < height; j++) {
     const lat = (90 - ((j + 0.5) * 180) / height) * RAD;
     const cl = Math.cos(lat), sl = Math.sin(lat);
     for (let i = 0; i < width; i++) {
-      const lon = (-180 + ((i + 0.5) * 360) / width) * RAD;
-      out[j * width + i] = cl * Math.cos(lon) * sx + cl * Math.sin(lon) * sy + sl * sz;
+      out[j * width + i] = cl * cosLon[i] * sx + cl * sinLon[i] * sy + sl * sz;
     }
   }
   return out;

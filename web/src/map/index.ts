@@ -2,7 +2,8 @@
 // the height map in its own south polar stereographic grid when the selected site is on it, and
 // equidistant cylindrical for the whole Moon otherwise. Every coordinate and every light value
 // comes from core/ (projection.ts, shade.ts); this file only draws them and turns pointer
-// positions into calls to core/.
+// positions into calls to core/. The whole-Moon picture is coloured by height and its relief
+// lit from the whole-Moon height grid (globe.bin, issue #66): illustration, as on the 3D globe.
 
 import type { Dem } from '../core/dem';
 import type { Ephemeris, Vec3 } from '../core/ephemeris';
@@ -12,6 +13,7 @@ import {
 } from '../core/projection';
 import { shadeGlobal, shadePolar, subPoint, type PolarShade } from '../core/shade';
 import { MOON_RADIUS_KM, type Site } from '../core/types';
+import { globeSlopes, sharedGlobe, type GlobeHeights } from '../scene/globeHeights';
 import { getState, select, selected, setLiveSite, subscribe, type AppState } from '../state';
 import { themeColor } from '../ui/plotTheme';
 import './map.css';
@@ -30,7 +32,11 @@ function demId(d: Dem | null): number {
   return demIds.get(d)!;
 }
 const HALF_WORLD_KM = Math.PI * MOON_RADIUS_KM;   // 180 degrees of longitude, in map km
-const GLOBAL_W = 1440, GLOBAL_H = 720;            // the whole-Moon layer: 0.25 degrees a cell
+const GLOBAL_W = 1440, GLOBAL_H = 720;            // the whole-Moon layer without globe.bin: 0.25 degrees a cell
+/** How strongly a slope toward or away from the Sun brightens or darkens the whole-Moon map. */
+const RELIEF_LIGHT = 1.2;
+/** Cosine of the Sun's zenith angle at which the whole-Moon map reaches full daylight (about 5 degrees up). */
+const DAWN = 0.08;
 /** A press that moves less than this many CSS pixels is a click, not a drag (as in the 3D scene). */
 const CLICK_SLOP = 5;
 const POLAR_STEPS = [5, 2, 1, 0.5, 0.25, 0.1];    // parallels, degrees apart
@@ -89,6 +95,9 @@ export function mount(el: HTMLElement): void {
   let base: HTMLCanvasElement | null = null, baseKey = '', baseDirty = true;
   let shade: PolarShade | null = null, shadeKey = '';
   let sunPoint: LatLon | null = null, earthPoint: LatLon | null = null;
+  // The whole-Moon heights, once fetched; the map is plain grey outside the polar grid until then.
+  let globe: GlobeHeights | null = null, slopes: Int8Array | null = null;
+  let tones: Uint8Array | null = null, tonesKey = '';
   let theme = { key: '', lo: [0, 0, 0] as Rgb, hi: [0, 0, 0] as Rgb, pinPx: 4, fontPx: 12, font: '' };
 
   function readTheme(): void {
@@ -145,30 +154,74 @@ export function mount(el: HTMLElement): void {
   function buildGlobalBase(s: AppState, lit: boolean): void {
     const sc = selected();
     const vectors = lit ? s.eph!.vectorsAt(sc.tMs) : null;
-    const key = `global|${theme.key}|${demId(dem)}|${vectors ? vectors.sun.join(',') : 'unlit'}`;
+    const key = `global|${theme.key}|${demId(dem)}|${globe ? 'heights' : 'plain'}|${vectors ? vectors.sun.join(',') : 'unlit'}`;
     sunPoint = vectors ? subPoint(vectors.sun) : null;
     earthPoint = vectors ? subPoint(vectors.earthKm) : null;
     if (base && baseKey === key) return;
-    const day = vectors ? shadeGlobal(vectors.sun, GLOBAL_W, GLOBAL_H) : null;
-    const image = new ImageData(GLOBAL_W, GLOBAL_H);
-    // The polar cap's own heights, where the height map covers it; mid-ramp grey elsewhere.
-    const range = dem ? capRange(dem) : [0, 1];
-    for (let j = 0; j < GLOBAL_H; j++) {
-      const lat = 90 - ((j + 0.5) * 180) / GLOBAL_H;
-      for (let i = 0; i < GLOBAL_W; i++) {
-        const lon = -180 + ((i + 0.5) * 360) / GLOBAL_W;
-        let t = 0.5;
-        if (dem && lat <= dem.meta.min_lat && dem.covers(lat, lon)) {
-          t = Math.min(1, Math.max(0, (dem.heightAt(lat, lon) - range[0]) / Math.max(1, range[1] - range[0])));
+    const W = globe ? globe.meta.width : GLOBAL_W, H = globe ? globe.meta.height : GLOBAL_H;
+    const day = vectors ? shadeGlobal(vectors.sun, W, H) : null;
+    const image = new ImageData(W, H);
+    // The same colour ramp as the polar map's, so a site keeps its colour when the map changes.
+    const range = dem ? capRange(dem) : globe ? globe.range : [0, 1];
+    const span = Math.max(1, range[1] - range[0]);
+    if (globe) paintHeights(image.data, globe, range, span, vectors ? vectors.sun : null, day);
+    else {
+      // No whole-Moon heights: the polar cap's own, where the height map covers it; grey elsewhere.
+      for (let j = 0; j < H; j++) {
+        const lat = 90 - ((j + 0.5) * 180) / H;
+        for (let i = 0; i < W; i++) {
+          const lon = -180 + ((i + 0.5) * 360) / W;
+          let t = 0.5;
+          if (dem && lat <= dem.meta.min_lat && dem.covers(lat, lon)) {
+            t = Math.min(1, Math.max(0, (dem.heightAt(lat, lon) - range[0]) / span));
+          }
+          const k = j * W + i;
+          paint(image.data, k * 4, t, day ? (day[k] > 0 ? 0.6 + 0.4 * day[k] : 0.3) : 0.6);
         }
-        const k = j * GLOBAL_W + i;
-        paint(image.data, k * 4, t, day ? (day[k] > 0 ? 0.6 + 0.4 * day[k] : 0.3) : 0.6);
       }
     }
-    base = base && base.width === GLOBAL_W ? base : document.createElement('canvas');
-    base.width = GLOBAL_W; base.height = GLOBAL_H;
+    base = base && base.width === W ? base : document.createElement('canvas');
+    base.width = W; base.height = H;
     base.getContext('2d')!.putImageData(image, 0, 0);
     baseKey = key;
+  }
+  /**
+   * The whole Moon from its height grid: height colour, times core's day and night, with slopes
+   * facing the Sun brighter and slopes facing away darker so craters and mountains show.
+   */
+  function paintHeights(data: Uint8ClampedArray, g: GlobeHeights, range: number[], span: number, sun: Vec3 | null, day: Float32Array | null): void {
+    const { width, height } = g.meta, count = width * height;
+    slopes ??= globeSlopes(g);
+    const key = `${range[0]},${range[1]}`;
+    if (!tones || tonesKey !== key) {
+      // Each cell's place on the colour ramp, 0..255: it changes only with the ramp's range.
+      tones = new Uint8Array(count);
+      for (let row = 0, k = 0; row < height; row++) {
+        for (let col = 0; col < width; col++, k++) {
+          tones[k] = Math.round(255 * Math.min(1, Math.max(0, (g.cell(row, col) - range[0]) / span)));
+        }
+      }
+      tonesKey = key;
+    }
+    const { lo, hi } = theme;
+    const ramp = new Float32Array(256 * 3);
+    for (let i = 0; i < 256; i++) for (let c = 0; c < 3; c++) ramp[i * 3 + c] = lo[c] + ((hi[c] - lo[c]) * i) / 255;
+    const n = sun ? Math.hypot(sun[0], sun[1], sun[2]) || 1 : 1;
+    // Slopes are stored as n * 127: fold that into the Sun's direction.
+    const sx = sun ? sun[0] / n / 127 : 0, sy = sun ? sun[1] / n / 127 : 0, sz = sun ? sun[2] / n / 127 : 0;
+    for (let k = 0; k < count; k++) {
+      let light = 0.6;
+      if (day) {
+        const up = day[k];
+        if (up > 0) {
+          const facing = slopes[k * 3] * sx + slopes[k * 3 + 1] * sy + slopes[k * 3 + 2] * sz;
+          // Daylight comes in over the first few degrees of Sun, so the day's edge is not a hard step.
+          light = Math.min(1, Math.max(0.3, 0.3 + Math.min(1, up / DAWN) * (0.3 + 0.4 * up + RELIEF_LIGHT * (facing - up))));
+        } else light = 0.3;
+      }
+      const r = tones[k] * 3, o = k * 4;
+      data[o] = ramp[r] * light; data[o + 1] = ramp[r + 1] * light; data[o + 2] = ramp[r + 2] * light; data[o + 3] = 255;
+    }
   }
   const capRanges = new WeakMap<Dem, [number, number]>();
   function capRange(d: Dem): [number, number] {
@@ -505,6 +558,12 @@ export function mount(el: HTMLElement): void {
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] });
   const unsubscribe = subscribe(update);
   update(getState()); resize();
+  // The whole-Moon heights arrive after the first frame (the 3D globe shares the same download).
+  // Without the files the map stays as it was: plain outside the polar grid.
+  sharedGlobe().then((g) => {
+    if (disposed) return;
+    globe = g; baseDirty = true; invalidate();
+  }).catch(() => undefined);
 
   function dispose(): void {
     if (disposed) return;
@@ -513,7 +572,7 @@ export function mount(el: HTMLElement): void {
     canvas.removeEventListener('pointerup', up); canvas.removeEventListener('pointercancel', cancel);
     canvas.removeEventListener('wheel', wheel); canvas.removeEventListener('keydown', key);
     el.removeEventListener('map:centre', onCentre);
-    canvas.remove(); base = null; shade = null; mounts.delete(el);
+    canvas.remove(); base = null; shade = null; globe = null; slopes = null; tones = null; mounts.delete(el);
   }
   mounts.set(el, dispose);
 }
