@@ -1,4 +1,4 @@
-"""T01: hourly Sun and Earth table from Skyfield, plus altitude/azimuth fixtures.
+"""T01: Sun and Earth table (one row every 3 hours) from Skyfield, plus altitude/azimuth fixtures.
 
 Run from anywhere:  python data-prep/make_ephemeris.py
 Needs skyfield and numpy (data-prep/requirements.txt). On first run it downloads the JPL/NAIF
@@ -6,26 +6,30 @@ kernels (about 50 MB) into data-prep/raw/, which is git-ignored.
 
 Writes (docs/data-contract.md, section 2):
   web/public/data/ephemeris.json            the index: whole span plus one entry per decade
-  web/public/data/ephemeris/<decade>.bin    1950.bin .. 2040.bin, hourly rows
+  web/public/data/ephemeris/<decade>.bin    1900.bin .. 2090.bin, one row every 3 hours
   web/src/core/__fixtures__/altaz.json
 then reads them back and prints the "Done when" checks from tasks/T01-ephemeris.md.
 Exits with code 1 if any check fails.
 
-The table covers 1950-01-01T00Z to 2051-01-01T00Z. It is split by decade so the browser
-downloads only the decades it needs (2020s first). Each decade's file ends with the first hour
-of the next decade, so any time inside a decade is served by that one file alone.
+The table covers 1900-01-01T00Z to 2101-01-01T00Z, one row every 3 hours (the browser steps in
+a straight line between rows; against Skyfield that stays well inside the 0.02 degree test
+limit). It is split by decade so the browser downloads only the decades it needs (2020s
+first). Each decade's file ends with the first row of the next decade, so any time inside a
+decade is served by that one file alone. The index gives each file a short content hash, so a
+browser that keeps a copy can tell when the file has changed.
 
 The Moon frame is built as on the Skyfield page "Planetary Reference Frames"
 (https://rhodesmill.org/skyfield/planetary.html), with the DE440 kernels in place of DE421:
 moon_de440_250416.tf + pck00011.tpc + moon_pa_de440_200625.bpc, frame MOON_ME_DE440_ME421
-(the mean-Earth frame LOLA uses). DE421's Moon orientation file stops in 2050; DE440's runs
-1550-2650.
+(the mean-Earth frame LOLA uses). DE421's Moon orientation file stops in 2050; DE440's
+orientation runs 1550-2650 and de440s.bsp 1849-2150.
 
-Each decade is computed in one vectorised Skyfield call; there is no Python loop over hours.
+Each decade is computed in one vectorised Skyfield call; there is no Python loop over rows.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import sys
@@ -52,10 +56,11 @@ KERNELS = {
 }
 FRAME = "MOON_ME_DE440_ME421"
 SOURCE = "JPL DE440 via Skyfield"
-FIRST_YEAR, LAST_YEAR = 1950, 2050        # inclusive; the table ends 2051-01-01T00Z
-DECADES = list(range(FIRST_YEAR, LAST_YEAR, 10))  # 1950 .. 2040; the 2040s file runs to 2051
+FIRST_YEAR, LAST_YEAR = 1900, 2100        # inclusive; the table ends 2101-01-01T00Z
+DECADES = list(range(FIRST_YEAR, LAST_YEAR, 10))  # 1900 .. 2090; the 2090s file runs to 2101
 HOME = 2020                               # the decade the page loads first
-STEP_S = 3600
+STEP_S = 3 * 3600
+STEP_H = STEP_S // 3600
 R_KM = 1737.4
 COLUMNS = ["sun_x", "sun_y", "sun_z", "earth_x_km", "earth_y_km", "earth_z_km"]
 
@@ -82,11 +87,11 @@ def decade_end(start: int) -> int:
     return LAST_YEAR + 1 if start == DECADES[-1] else start + 10
 
 
-def hours_between(a: int, b: int) -> int:
+def steps_between(a: int, b: int) -> int:
     return int((utc(b) - utc(a)).total_seconds() // STEP_S)
 
 
-TOTAL_ROWS = hours_between(FIRST_YEAR, LAST_YEAR + 1) + 1
+TOTAL_ROWS = steps_between(FIRST_YEAR, LAST_YEAR + 1) + 1
 
 
 def load_skyfield():
@@ -113,7 +118,7 @@ def load_skyfield():
 
 def make_table(ts, eph, frame, start: int, end: int) -> np.ndarray:
     """(rows, 6) float64 for start-01-01T00Z .. end-01-01T00Z inclusive, Moon-fixed frame."""
-    hours = np.arange(hours_between(start, end) + 1)
+    hours = np.arange(steps_between(start, end) + 1) * STEP_H
     # Calendar day plus hour of day, not "hours since start": Skyfield counts an hour offset in
     # elapsed seconds, which would slip each row off the UTC hour by every leap second (9 s by
     # 1980). The browser reads row i as start + i * 3600 s of Unix time, which has no leap seconds.
@@ -129,7 +134,7 @@ def make_table(ts, eph, frame, start: int, end: int) -> np.ndarray:
 def fixture_times(ts):
     """Spread over the century, deliberately off the hour so they land between table rows."""
     n = len(FIXTURE_SITES) * FIXTURE_TIMES_PER_SITE
-    span_h = (TOTAL_ROWS - 1) - 48
+    span_h = (TOTAL_ROWS - 1) * STEP_H - 48
     minutes = np.round((24 + np.linspace(0, span_h, n) + 0.37) * 60.0 + 13.0 * np.arange(n) % 60)
     return ts.utc(FIRST_YEAR, 1, 1 + minutes // 1440, 0, minutes % 1440)
 
@@ -158,8 +163,10 @@ def make_fixtures(ts, eph, pc, frame) -> list[dict]:
 
 def write_chunk(start: int, table: np.ndarray) -> dict:
     (OUT / CHUNK_DIR).mkdir(parents=True, exist_ok=True)
-    table.astype("<f4").tofile(OUT / CHUNK_DIR / f"{start}.bin")
-    return {"file": f"{CHUNK_DIR}/{start}.bin", "start": iso(start), "rows": len(table)}
+    raw = table.astype("<f4").tobytes()
+    (OUT / CHUNK_DIR / f"{start}.bin").write_bytes(raw)
+    return {"file": f"{CHUNK_DIR}/{start}.bin", "start": iso(start), "rows": len(table),
+            "hash": hashlib.sha256(raw).hexdigest()[:16]}
 
 
 def write_index(chunks: list[dict], cases: list[dict]) -> None:
@@ -179,6 +186,10 @@ def write_index(chunks: list[dict], cases: list[dict]) -> None:
     old = OUT / "ephemeris.bin"  # the single-file table this split replaces
     if old.exists():
         old.unlink()
+    keep = {c["file"].split("/")[-1] for c in chunks}
+    for f in (OUT / CHUNK_DIR).glob("*.bin"):  # decades from an earlier, different range
+        if f.name not in keep:
+            f.unlink()
 
 
 # --- Checks ("Done when" in tasks/T01-ephemeris.md), on the files as written --------------------
@@ -213,14 +224,15 @@ def check() -> bool:
     expect_start = meta["start"]
     for c in chunks:
         raw = (OUT / c["file"]).read_bytes()
-        ok = len(raw) == c["rows"] * 24 and c["start"] == expect_start
+        ok = (len(raw) == c["rows"] * 24 and c["start"] == expect_start
+              and hashlib.sha256(raw).hexdigest()[:16] == c["hash"])
         joined &= ok
         if not ok:
             print(f"       {c['file']}: {len(raw)} bytes, rows {c['rows']}, start {c['start']}")
         parts.append(np.frombuffer(raw, dtype="<f4").reshape(c["rows"], 6).astype(np.float64))
         expect_start = iso(decade_end(int(c["start"][:4])))
     report(joined and len(chunks) == len(DECADES),
-           f"{len(chunks)} decade files, each rows * 24 bytes, each starting where the last ends")
+           f"{len(chunks)} decade files, each rows * 24 bytes, hash as listed, each starting where the last ends")
     # Neighbouring files share their boundary row: the last row of one is the first of the next.
     seams = max(float(np.abs(a[-1] - b[0]).max()) for a, b in zip(parts, parts[1:]))
     report(seams == 0.0, f"boundary rows match between decades (max difference {seams})")

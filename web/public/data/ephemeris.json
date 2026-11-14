@@ -1,7 +1,7 @@
 {
-  "start": "1950-01-01T00:00:00Z",
-  "step_s": 3600,
-  "rows": 885361,
+  "start": "1900-01-01T00:00:00Z",
+  "step_s": 10800,
+  "rows": 587313,
   "frame": "MOON_ME_DE440_ME421",
   "columns": [
     "sun_x",
@@ -12,57 +12,127 @@
     "earth_z_km"
   ],
   "source": "JPL DE440 via Skyfield",
-  "home": 7,
+  "home": 12,
   "chunks": [
+    {
+      "file": "ephemeris/1900.bin",
+      "start": "1900-01-01T00:00:00Z",
+      "rows": 29217,
+      "hash": "4087c9f312215c1f"
+    },
+    {
+      "file": "ephemeris/1910.bin",
+      "start": "1910-01-01T00:00:00Z",
+      "rows": 29217,
+      "hash": "26a2f7c381e95ec4"
+    },
+    {
+      "file": "ephemeris/1920.bin",
+      "start": "1920-01-01T00:00:00Z",
+      "rows": 29225,
+      "hash": "354c2928febf4684"
+    },
+    {
+      "file": "ephemeris/1930.bin",
+      "start": "1930-01-01T00:00:00Z",
+      "rows": 29217,
+      "hash": "a9dc1aa011825699"
+    },
+    {
+      "file": "ephemeris/1940.bin",
+      "start": "1940-01-01T00:00:00Z",
+      "rows": 29225,
+      "hash": "ef9a23d2c77ad331"
+    },
     {
       "file": "ephemeris/1950.bin",
       "start": "1950-01-01T00:00:00Z",
-      "rows": 87649
+      "rows": 29217,
+      "hash": "f549e6fa2ef77a03"
     },
     {
       "file": "ephemeris/1960.bin",
       "start": "1960-01-01T00:00:00Z",
-      "rows": 87673
+      "rows": 29225,
+      "hash": "1a054b71f13dcb02"
     },
     {
       "file": "ephemeris/1970.bin",
       "start": "1970-01-01T00:00:00Z",
-      "rows": 87649
+      "rows": 29217,
+      "hash": "fd82cdd6b515076b"
     },
     {
       "file": "ephemeris/1980.bin",
       "start": "1980-01-01T00:00:00Z",
-      "rows": 87673
+      "rows": 29225,
+      "hash": "f350bb4cf5b54cd1"
     },
     {
       "file": "ephemeris/1990.bin",
       "start": "1990-01-01T00:00:00Z",
-      "rows": 87649
+      "rows": 29217,
+      "hash": "69ec687345743f89"
     },
     {
       "file": "ephemeris/2000.bin",
       "start": "2000-01-01T00:00:00Z",
-      "rows": 87673
+      "rows": 29225,
+      "hash": "9bb6b281775856d9"
     },
     {
       "file": "ephemeris/2010.bin",
       "start": "2010-01-01T00:00:00Z",
-      "rows": 87649
+      "rows": 29217,
+      "hash": "84f0a3b93d802fe5"
     },
     {
       "file": "ephemeris/2020.bin",
       "start": "2020-01-01T00:00:00Z",
-      "rows": 87673
+      "rows": 29225,
+      "hash": "9af851504b0ef377"
     },
     {
       "file": "ephemeris/2030.bin",
       "start": "2030-01-01T00:00:00Z",
-      "rows": 87649
+      "rows": 29217,
+      "hash": "33dfc88d601ba7a4"
     },
     {
       "file": "ephemeris/2040.bin",
       "start": "2040-01-01T00:00:00Z",
-      "rows": 96433
+      "rows": 29225,
+      "hash": "5f887e16356a4fec"
+    },
+    {
+      "file": "ephemeris/2050.bin",
+      "start": "2050-01-01T00:00:00Z",
+      "rows": 29217,
+      "hash": "5bdc21e1fc7823f6"
+    },
+    {
+      "file": "ephemeris/2060.bin",
+      "start": "2060-01-01T00:00:00Z",
+      "rows": 29225,
+      "hash": "8914427115b75ab1"
+    },
+    {
+      "file": "ephemeris/2070.bin",
+      "start": "2070-01-01T00:00:00Z",
+      "rows": 29217,
+      "hash": "2e4248c2ff1d5021"
+    },
+    {
+      "file": "ephemeris/2080.bin",
+      "start": "2080-01-01T00:00:00Z",
+      "rows": 29225,
+      "hash": "49cf99a340b601f7"
+    },
+    {
+      "file": "ephemeris/2090.bin",
+      "start": "2090-01-01T00:00:00Z",
+      "rows": 32137,
+      "hash": "cfcf9e643a152242"
     }
   ]
 }
