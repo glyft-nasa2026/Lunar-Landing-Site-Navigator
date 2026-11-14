@@ -6,6 +6,7 @@ import {
   Color, DataTexture, LinearFilter, LinearMipmapLinearFilter, NoColorSpace, RepeatWrapping,
   RGBAFormat, SRGBColorSpace, UnsignedByteType, type BufferGeometry,
 } from 'three';
+import { parseDem, type Dem, type DemMeta } from '../core/dem';
 import { MOON_RADIUS_KM } from '../core/types';
 
 export type GlobeMeta = {
@@ -26,7 +27,7 @@ export type GlobeHeights = {
 };
 
 const RAD = Math.PI / 180;
-/** Slopes are drawn this many times steeper, or relief 7.6 km a cell would barely shade. */
+/** Slopes are drawn this many times steeper, or relief a few km a cell would barely shade. */
 export const GLOBE_RELIEF = 6;
 
 /** Builds the grid from its two files. No network: tests call this with made-up grids. */
@@ -71,6 +72,29 @@ export async function loadGlobe(): Promise<GlobeHeights> {
   const binRes = await fetch(base + 'globe.bin');
   if (!binRes.ok) throw new Error(`globe.bin: HTTP ${binRes.status}`);
   return parseGlobe(meta, await binRes.arrayBuffer());
+}
+
+/**
+ * The north cap's height grid (contract section 2: north.bin + north.json) as a height map of
+ * mirrored latitudes: its grid is the mirror image of dem.bin's, so the south-pole code reads
+ * it unchanged when every latitude is negated. Ask it for (-lat, lon).
+ */
+export function parseNorth(meta: DemMeta, buffer: ArrayBuffer): Dem {
+  if (!(meta.min_lat > 0)) throw new Error('north.json: "min_lat" must be a northern latitude');
+  return parseDem({ ...meta, min_lat: -meta.min_lat }, buffer);
+}
+
+/** Fetches the north cap from data/ next to the page. Rejects if it is missing or malformed. */
+export async function loadNorth(): Promise<Dem> {
+  const base = import.meta.env.BASE_URL + 'data/';
+  const metaRes = await fetch(base + 'north.json');
+  if (!metaRes.ok) throw new Error(`north.json: HTTP ${metaRes.status}`);
+  const meta = (await metaRes.json().catch(() => {
+    throw new Error('north.json: missing, or not JSON');
+  })) as DemMeta;
+  const binRes = await fetch(base + 'north.bin');
+  if (!binRes.ok) throw new Error(`north.bin: HTTP ${binRes.status}`);
+  return parseNorth(meta, await binRes.arrayBuffer());
 }
 
 /** The latitude and longitude a texture coordinate of the globe's textures stands for. */
@@ -138,10 +162,14 @@ export function globeNormals(globe: GlobeHeights, relief = GLOBE_RELIEF): Uint8A
     const cl = Math.cos(lat), sl = Math.sin(lat);
     // One row below and above, except at the poles where there is only one neighbour.
     const rowsApart = Math.min(height - 1, row + 1) - Math.max(0, row - 1);
+    // Toward a pole the columns crowd together. Measuring the east slope between next-door
+    // columns there, over a fraction of the ground the north slope spans, drew streaks along
+    // the meridians; so step as many columns as cover about one row's worth of ground.
+    const step = Math.min(width >> 2, Math.max(1, Math.round(1 / cl)));
     for (let col = 0; col < width; col++) {
       const lon = (-180 + (col + 0.5) * 360 / width) * RAD;
       const cn = Math.cos(lon), sn = Math.sin(lon);
-      const east = (globe.cell(row, col + 1) - globe.cell(row, col - 1)) / (2 * cellM * cl) * relief;
+      const east = (globe.cell(row, col + step) - globe.cell(row, col - step)) / (2 * step * cellM * cl) * relief;
       const north = (globe.cell(row - 1, col) - globe.cell(row + 1, col)) / (rowsApart * cellM) * relief;
       // up - slope east * east - slope north * north, with the three unit vectors written out.
       const x = cl * sn - east * cn + north * sl * sn;

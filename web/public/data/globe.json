@@ -1,6 +1,6 @@
 {
-  "width": 1440,
-  "height": 720,
+  "width": 2880,
+  "height": 1440,
   "height_scale": 0.5,
-  "source": "LRO LOLA LDEM_4, product version V3.0 (LRO-L-LOLA-4-GDR-V1.0, created 2017-09-15), PDS Geosciences Node"
+  "source": "LRO LOLA LDEM_16, product version V3.1 (LRO-L-LOLA-4-GDR-V1.0, created 2019-03-15), 2 x 2 cells averaged, PDS Geosciences Node"
 }

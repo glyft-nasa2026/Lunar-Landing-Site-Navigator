@@ -39,8 +39,16 @@ export function detailBounds(dem: Dem, site: Site): GridBounds {
  * globe's material is pushed back in depth so the terrain wins.
  * Texture coordinates follow the whole-Moon grid (globe.ts), whatever part of the sphere is built.
  */
-export function globeGeometry(meta?: DemMeta | null): SphereGeometry {
-  if (!meta) return withGlobeUv(new SphereGeometry(MOON_RADIUS_KM, 128, 96));
+export function globeGeometry(meta?: DemMeta | null, north?: DemMeta | null): SphereGeometry {
+  const south = meta ? capAngle(meta) : 0;
+  // The north cap (northGeometry) gets the same opening at the other pole.
+  const top = north ? capAngle(north) : 0;
+  // Render frame +Y is south, and SphereGeometry measures theta from +Y.
+  return withGlobeUv(new SphereGeometry(MOON_RADIUS_KM, 128, 96, 0, Math.PI * 2, south, Math.PI - south - top));
+}
+
+/** How far from its pole, in radians, the sphere is left open for a polar height map. */
+function capAngle(meta: DemMeta): number {
   const rM = MOON_RADIUS_KM * 1000;
   const last = meta.size - 1;
   // Distance from the pole to the nearest grid edge, so a grid smaller than min_lat still has no gap.
@@ -48,9 +56,7 @@ export function globeGeometry(meta?: DemMeta | null): SphereGeometry {
     meta.y_max_m, last * meta.pixel_m - meta.y_max_m);
   const gridColat = 2 * Math.atan(Math.max(0, half) / (2 * rM));
   const overlap = 2 * coarseStride(meta) * meta.pixel_m / rM;
-  const cap = Math.max(0, Math.min((90 + meta.min_lat) * RAD, gridColat) - overlap);
-  // Render frame +Y is south, and SphereGeometry measures theta from +Y.
-  return withGlobeUv(new SphereGeometry(MOON_RADIUS_KM, 128, 96, 0, Math.PI * 2, cap, Math.PI - cap));
+  return Math.max(0, Math.min((90 - Math.abs(meta.min_lat)) * RAD, gridColat) - overlap);
 }
 
 function withGlobeUv(geometry: SphereGeometry): SphereGeometry {
@@ -159,6 +165,41 @@ export function terrainGeometry(
   if (hole) fillIndex(geometry, hole);
   geometry.computeBoundingSphere();
   geometry.userData.heightRange = Number.isFinite(min) ? [min, max] : [0, 1];
+  return geometry;
+}
+
+/**
+ * How much steeper the north cap's slopes are lit. Less than the globe's GLOBE_RELIEF because its
+ * cells are a third the size, so the same ground already measures steeper; picked by eye to match.
+ */
+export const NORTH_RELIEF = 2;
+
+/**
+ * The cap north of the whole-Moon grid's reach, as a mesh on a square polar grid like the
+ * south-pole terrain, so nothing pinches together at the pole. `mirrored` is the north height
+ * map with latitudes negated (parseNorth): the mesh is built as if at the south pole, then
+ * reflected through the equator. Slopes are lit `relief` times steeper.
+ */
+export function northGeometry(mirrored: Dem, low: Color, high: Color, relief = NORTH_RELIEF): BufferGeometry {
+  const geometry = terrainGeometry(mirrored, low, high, 1);
+  if (relief !== 1) {
+    const steep = terrainGeometry(mirrored, low, high, relief);
+    geometry.setAttribute('normal', steep.getAttribute('normal'));
+  }
+  const position = geometry.getAttribute('position'), normal = geometry.getAttribute('normal');
+  for (let i = 0; i < position.count; i++) {
+    // The equator's plane is y = -R in the render frame.
+    position.setY(i, -2 * MOON_RADIUS_KM - position.getY(i));
+    normal.setY(i, -normal.getY(i));
+  }
+  // A reflection turns every triangle to face inward; swapping two corners turns it back.
+  const index = geometry.getIndex()!;
+  for (let i = 0; i < geometry.drawRange.count; i += 3) {
+    const b = index.getX(i + 1);
+    index.setX(i + 1, index.getX(i + 2)); index.setX(i + 2, b);
+  }
+  position.needsUpdate = normal.needsUpdate = index.needsUpdate = true;
+  geometry.computeBoundingSphere(); geometry.computeBoundingBox();
   return geometry;
 }
 

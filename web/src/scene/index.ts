@@ -14,9 +14,9 @@ import { themeColor } from '../ui/plotTheme';
 import { mount as mountMap, unmount as unmountMap } from '../map';
 import { gridSite, moonCentre, moonDirection, sitePosition, siteUp, sphereSite } from './coordinates';
 import {
-  detailBounds, edgeHeight, globeGeometry, recolorTerrain, setTerrainHole, terrainGeometry, type GridBounds,
+  detailBounds, edgeHeight, globeGeometry, northGeometry, recolorTerrain, setTerrainHole, terrainGeometry, type GridBounds,
 } from './terrain';
-import { colorTexture, loadGlobe, normalTexture, type GlobeHeights } from './globe';
+import { colorTexture, loadGlobe, loadNorth, normalTexture, type GlobeHeights } from './globe';
 import './scene.css';
 
 const mounts = new WeakMap<HTMLElement, () => void>();
@@ -123,6 +123,8 @@ export function mount(el: HTMLElement): void {
   let siteKey = '', coarseKey = '', detailKey = '', pinKey = '', themeKey = '', globeKey = '';
   /** The whole-Moon heights the globe is painted from. Null until they load, or if they are missing. */
   let globeHeights: GlobeHeights | null = null;
+  /** The north cap: its heights (latitudes negated, see parseNorth) and its mesh. */
+  let north: Dem | null = null, northMesh: Mesh | null = null, northKey = '', northRelief = 0;
   let pinSites: AppState['sites'] | null = null, pinDem: Dem | null = null;
   /** Highest drawn terrain above the sphere, in km, so the near plane never cuts a peak. */
   let relief = 0;
@@ -201,7 +203,7 @@ export function mount(el: HTMLElement): void {
     // The camera moves from metres above a crater to beyond the whole Moon: keep the depth
     // range tight around what can be seen, or near surfaces fight and far ones vanish.
     const fromCentre = orbitCamera.position.distanceTo(globe.position);
-    orbitCamera.near = Math.min(1000, Math.max(0.005, (fromCentre - MOON_RADIUS_KM - relief) / 2));
+    orbitCamera.near = Math.min(1000, Math.max(0.005, (fromCentre - MOON_RADIUS_KM - Math.max(relief, northRelief)) / 2));
     orbitCamera.far = fromCentre + MOON_RADIUS_KM + EARTH_DRAWN_KM * 1.1;
     orbitCamera.updateProjectionMatrix();
     sizePins();
@@ -281,7 +283,7 @@ export function mount(el: HTMLElement): void {
   function updateTerrain(changedDem: boolean): void {
     if (changedDem) {
       clearTerrain();
-      const old = globe.geometry; globe.geometry = globeGeometry(dem?.meta); old.dispose();
+      const old = globe.geometry; globe.geometry = globeGeometry(dem?.meta, north?.meta); old.dispose();
     }
     if (!dem) return;
     const low = new Color(themeColor('--terrain-lo')), high = new Color(themeColor('--terrain-hi'));
@@ -321,6 +323,11 @@ export function mount(el: HTMLElement): void {
     globeMaterial.color.set(0xffffff);
     const range = (coarse?.geometry.userData.heightRange as number[] | undefined) ?? globeHeights.range;
     const key = `${themeKey}|${range.join(',')}`;
+    if (northMesh && northKey !== key) {
+      northKey = key;
+      recolorTerrain(northMesh.geometry,
+        new Color(themeColor('--terrain-lo')), new Color(themeColor('--terrain-hi')), range);
+    }
     if (key === globeKey) return;
     globeKey = key;
     const old = globeMaterial.map;
@@ -332,6 +339,18 @@ export function mount(el: HTMLElement): void {
       globeMaterial.normalMapType = ObjectSpaceNormalMap;
     }
     globeMaterial.needsUpdate = true;
+  }
+  /**
+   * The cap north of 80 N is a mesh on a square polar grid, like the south-pole terrain: the
+   * globe's latitude-longitude texture pinches together at a pole. Drawn only on a painted globe.
+   */
+  function buildNorth(): void {
+    if (!north || !globeHeights || northMesh) return;
+    const geometry = northGeometry(north, new Color(themeColor('--terrain-lo')), new Color(themeColor('--terrain-hi')));
+    northMesh = new Mesh(geometry, terrainMaterial); world.add(northMesh);
+    northRelief = Math.max(0, (geometry.userData.heightRange as number[])[1]) / 1000;
+    const old = globe.geometry; globe.geometry = globeGeometry(dem?.meta, north.meta); old.dispose();
+    northKey = ''; pinKey = '';
   }
   function clearPins(): void {
     for (const obj of [...pins.children]) { ((obj as Mesh).material as Material).dispose(); pins.remove(obj); }
@@ -345,7 +364,8 @@ export function mount(el: HTMLElement): void {
     pinKey = key; pinSites = s.sites; pinDem = dem;
     clearPins();
     const addPin = (site: Site, color: string, label: string, id?: string): void => {
-      const height = dem?.covers(site.lat, site.lon) ? dem.heightAt(site.lat, site.lon) : 0;
+      const height = dem?.covers(site.lat, site.lon) ? dem.heightAt(site.lat, site.lon)
+        : northMesh && north?.covers(-site.lat, site.lon) ? north.heightAt(-site.lat, site.lon) : 0;
       const pin = new Mesh(pinGeometry, new MeshBasicMaterial({ color: themeColor(color) }));
       const data: PinData = {
         site, scenarioId: id, label, base: sitePosition(site, height, stretch), up: siteUp(site),
@@ -432,14 +452,14 @@ export function mount(el: HTMLElement): void {
     pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
     sizePins(); world.updateMatrixWorld(true); orbitCamera.updateMatrixWorld(true);
     raycaster.setFromCamera(pointer, orbitCamera);
-    const surface = raycaster.intersectObjects([detail, coarse, globe].filter((m): m is Mesh => !!m), false)[0];
+    const surface = raycaster.intersectObjects([detail, coarse, northMesh, globe].filter((m): m is Mesh => !!m), false)[0];
     const pin = raycaster.intersectObjects(pins.children, false).find((hit) => !surface || hit.distance <= surface.distance + 0.01);
     if (pin) {
       const data = pin.object.userData as PinData;
       if (data.scenarioId && getState().pinned.some((p) => p.id === data.scenarioId)) select(data.scenarioId);
       else setLiveSite(data.site);
     } else if (surface) {
-      const uv = surface.object === globe ? undefined : surface.uv;
+      const uv = surface.object === coarse || surface.object === detail ? surface.uv : undefined;
       const site = uv && dem ? gridSite(dem.meta, uv.x * (dem.meta.size - 1), uv.y * (dem.meta.size - 1)) : sphereSite(surface.point);
       if (!uv || dem?.covers(site.lat, site.lon)) setLiveSite(site);
     }
@@ -466,9 +486,9 @@ export function mount(el: HTMLElement): void {
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] });
   const unsubscribe = subscribe(update);
   // Not needed for any number, so it loads beside the rest and the plain sphere shows meanwhile.
-  loadGlobe().then((loaded) => {
+  Promise.all([loadGlobe(), loadNorth().catch(() => null)]).then(([loaded, cap]) => {
     if (disposed) return;
-    globeHeights = loaded; paintGlobe(); invalidate();
+    globeHeights = loaded; north = cap; buildNorth(); update(getState());
   }).catch(() => { /* No whole-Moon heights (mock data set): the globe stays a plain sphere. */ });
   updateTheme(); resize();
   function dispose(): void {
@@ -479,7 +499,7 @@ export function mount(el: HTMLElement): void {
     canvas.removeEventListener('webglcontextlost', onLost); canvas.removeEventListener('webglcontextrestored', onRestored);
     slider.removeEventListener('input', onStretch); reset.removeEventListener('click', centre);
     buttons.forEach((b) => b.removeEventListener('click', changeMode)); window.removeEventListener('pagehide', onPageHide);
-    orbitControls.dispose(); clearTerrain(); clearPins(); unmountMap(mapHost);
+    orbitControls.dispose(); clearTerrain(); clearPins(); northMesh?.geometry.dispose(); unmountMap(mapHost);
     pinGeometry.dispose(); globe.geometry.dispose(); globeMaterial.map?.dispose(); globeMaterial.normalMap?.dispose(); globeMaterial.dispose(); terrainMaterial.dispose(); detailMaterial.dispose();
     earthMaterial.map?.dispose(); earthMaterial.dispose(); sun.dispose();
     // Free the WebGL context now: browsers allow only a few, and a remount would leak one.

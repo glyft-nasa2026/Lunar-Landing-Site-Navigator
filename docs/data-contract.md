@@ -125,29 +125,46 @@ Inverse: `r = hypot(x, y)`, `lat = 2 * atan(r / (2R)) - 90`, `lon = atan2(x, y)`
 `size` and `pixel_m` may change if T04 needs it; code reads them from `dem.json`, never
 hard-codes them. File budget: 15 MB.
 
-### `globe.bin` + `globe.json` (made by `data-prep/make_globe.py`, issue #66)
+### `globe.bin` + `globe.json`, `north.bin` + `north.json` (made by `data-prep/make_globe.py`, issue #66)
 
-Heights of the whole Moon, for the picture on the 3D globe only. No number shown to the user
-comes from it, and nothing in `core/` reads it: `web/src/scene/globe.ts` loads it by itself,
-beside the other files, and the globe is a plain sphere until it arrives or when it is missing
-(the mock data set has none).
+Heights of the Moon north of the south-pole height map, for the picture on the 3D globe only.
+No number shown to the user comes from them, and nothing in `core/` loads them:
+`web/src/scene/globe.ts` fetches them by itself, beside the other files, and the globe is a
+plain sphere until they arrive or when they are missing (the mock data set has none). Both come
+from the same LOLA gridded data record as `dem.bin`.
 
 `globe.json`:
 
 ```json
 {
-  "width": 1440,
-  "height": 720,
+  "width": 2880,
+  "height": 1440,
   "height_scale": 0.5,
   "source": "LOLA product name and version here"
 }
 ```
 
 `globe.bin`: little-endian int16, `width * height` values, row by row. Height in metres =
-`value * height_scale`, above the `R` sphere. A latitude-longitude grid, the same cells as
-`shadeGlobal`: cell (row `j`, column `i`) is centred on latitude `90 - (j + 0.5) * 180 / height`
+`value * height_scale`, above the `R` sphere. A latitude-longitude grid laid out like
+`shadeGlobal`'s: cell (row `j`, column `i`) is centred on latitude `90 - (j + 0.5) * 180 / height`
 and longitude `-180 + (i + 0.5) * 360 / width`. So row 0 is at 90 N and column 0 starts at
-180 W. 0.25 degrees a cell (7.6 km at the equator); 2.07 MB. File budget: 3 MB.
+180 W. 0.125 degrees a cell (3.8 km at the equator); 8.29 MB. File budget: 9 MB.
+
+`north.json` has the fields of `dem.json`, with `min_lat` 80 (the southern limit of the data).
+`north.bin`: little-endian int16, `size * size` values, row by row from the top. The grid is the
+mirror image of `dem.bin`'s, about the north pole, because a latitude-longitude grid pinches
+together at a pole:
+
+```
+c   = 90 - lat                      degrees from the north pole
+r   = 2 * R * tan(c / 2)            metres
+x   = r * sin(lon)
+y   = r * cos(lon)                  longitude 0 points up, 90 E points right
+col = (x - x_min_m) / pixel_m
+row = (y_max_m - y) / pixel_m
+```
+
+`size` 509, `pixel_m` 1200; 0.52 MB. File budget: 1 MB.
 
 ### `sites.json` (made by T07)
 

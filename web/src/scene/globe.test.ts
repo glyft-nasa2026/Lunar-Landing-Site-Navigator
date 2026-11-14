@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Color, Vector3 } from 'three';
 import type { DemMeta } from '../core/dem';
 import { moonCentre, sitePosition, sphereSite } from './coordinates';
-import { globeColors, globeNormals, mapGlobeUv, parseGlobe, uvSite, type GlobeMeta } from './globe';
-import { globeGeometry } from './terrain';
+import { globeColors, globeNormals, mapGlobeUv, parseGlobe, parseNorth, uvSite, type GlobeMeta } from './globe';
+import { globeGeometry, northGeometry } from './terrain';
 
 const meta: GlobeMeta = { width: 72, height: 36, height_scale: 0.5, source: 'test' };
 
@@ -135,5 +135,104 @@ describe('globe textures', () => {
     expect(risesEast.dot(east)).toBeCloseTo(-Math.sin(Math.atan(3000 / (Math.PI * 1737400 / 180))), 2);
     const drawn = normalAt(globeNormals(grid((_lat, lon) => lon * 500, fine), 6), fine, row, col);
     expect(drawn.dot(east)).toBeCloseTo(risesEast.dot(east), 2);
+  });
+});
+
+describe('north cap', () => {
+  const R_M = 1737400;
+  const northMeta: DemMeta = {
+    size: 129, pixel_m: 4800, x_min_m: -307200, y_max_m: 307200, height_scale: 0.5, nodata: -32768,
+    min_lat: 80, source: 'test',
+  };
+  /** A north grid from a height function of latitude and longitude: x = r sin lon, y = r cos lon. */
+  function northGrid(heightM: (lat: number, lon: number) => number) {
+    const view = new DataView(new ArrayBuffer(northMeta.size * northMeta.size * 2));
+    for (let row = 0; row < northMeta.size; row++) {
+      for (let col = 0; col < northMeta.size; col++) {
+        const x = northMeta.x_min_m + col * northMeta.pixel_m, y = northMeta.y_max_m - row * northMeta.pixel_m;
+        const lat = 90 - 2 * Math.atan(Math.hypot(x, y) / (2 * R_M)) * 180 / Math.PI;
+        const lon = Math.atan2(x, y) * 180 / Math.PI;
+        view.setInt16((row * northMeta.size + col) * 2, Math.round(heightM(lat, lon) / 0.5), true);
+      }
+    }
+    return parseNorth(northMeta, view.buffer);
+  }
+  const low = new Color(0, 0, 0), high = new Color(1, 1, 1);
+
+  it('reads the north grid through mirrored latitudes', () => {
+    const north = northGrid((lat, lon) => (lat - 80) * 100 + (lon > 0 ? 1000 : 0));
+    expect(north.covers(-85, 40)).toBe(true);
+    expect(north.covers(-79, 40)).toBe(false);
+    expect(north.covers(85, 40)).toBe(false);
+    expect(north.heightAt(-85, 90)).toBeCloseTo(1500, -1);
+    expect(north.heightAt(-85, -90)).toBeCloseTo(500, -1);
+    expect(() => parseNorth({ ...northMeta, min_lat: -80 }, new ArrayBuffer(0))).toThrow(/north\.json/);
+  });
+
+  it('puts the mesh at the north pole, each vertex at its own longitude and height', () => {
+    const north = northGrid((_lat, lon) => (lon > 0 ? 2000 : -1000));
+    const geometry = northGeometry(north, low, high, 1);
+    const position = geometry.getAttribute('position'), heights = geometry.getAttribute('height');
+    const { valid } = geometry.userData.layout as { valid: Uint8Array };
+    const point = new Vector3();
+    let east = 0, west = 0;
+    for (let i = 0; i < position.count; i++) {
+      if (!valid[i]) continue;
+      point.fromBufferAttribute(position, i);
+      const site = sphereSite(point);
+      expect(site.lat).toBeGreaterThan(79.9);
+      const radiusM = point.sub(moonCentre()).length() * 1000 - R_M;
+      expect(Math.abs(radiusM - heights.getX(i))).toBeLessThan(1);
+      if (Math.abs(site.lon) < 3 || Math.abs(site.lon) > 177 || site.lat > 89.5) continue;
+      if (site.lon > 0) { expect(heights.getX(i)).toBe(2000); east++; }
+      else { expect(heights.getX(i)).toBe(-1000); west++; }
+    }
+    expect(east).toBeGreaterThan(1000); expect(west).toBeGreaterThan(1000);
+  });
+
+  it('faces every triangle and normal outward after the reflection', () => {
+    const geometry = northGeometry(northGrid(() => 0), low, high);
+    const position = geometry.getAttribute('position'), normal = geometry.getAttribute('normal');
+    const index = geometry.getIndex()!;
+    const a = new Vector3(), b = new Vector3(), c = new Vector3(), n = new Vector3();
+    expect(geometry.drawRange.count).toBeGreaterThan(10_000);
+    for (let i = 0; i < geometry.drawRange.count; i += 3) {
+      a.fromBufferAttribute(position, index.getX(i));
+      b.fromBufferAttribute(position, index.getX(i + 1));
+      c.fromBufferAttribute(position, index.getX(i + 2));
+      const face = b.clone().sub(a).cross(c.clone().sub(a));
+      const up = a.clone().sub(moonCentre()).normalize();
+      expect(face.dot(up)).toBeGreaterThan(0);
+      expect(n.fromBufferAttribute(normal, index.getX(i)).dot(up)).toBeGreaterThan(0.99);
+    }
+  });
+
+  it('lights slopes steeper than they are without moving the ground', () => {
+    const north = northGrid((_lat, lon) => 500 * Math.sin(lon * Math.PI / 30));
+    const real = northGeometry(north, low, high, 1), drawn = northGeometry(north, low, high, 4);
+    expect(Array.from(drawn.getAttribute('position').array)).toEqual(Array.from(real.getAttribute('position').array));
+    const position = real.getAttribute('position'), up = new Vector3(), n = new Vector3();
+    let leanReal = 0, leanDrawn = 0;
+    for (let i = 0; i < position.count; i += 50) {
+      // A corner beyond 80 N belongs to no triangle and has no normal.
+      if (n.fromBufferAttribute(real.getAttribute('normal'), i).lengthSq() < 0.5) continue;
+      up.fromBufferAttribute(position, i).sub(moonCentre()).normalize();
+      leanReal += 1 - n.fromBufferAttribute(real.getAttribute('normal'), i).dot(up);
+      leanDrawn += 1 - n.fromBufferAttribute(drawn.getAttribute('normal'), i).dot(up);
+    }
+    expect(leanDrawn).toBeGreaterThan(leanReal * 1.5);
+  });
+
+  it('opens the globe under the cap, by less than the cap covers', () => {
+    const globe = globeGeometry(null, northMeta);
+    const position = globe.getAttribute('position'), point = new Vector3();
+    let north = -90, south = 90;
+    for (let i = 0; i < position.count; i++) {
+      const lat = sphereSite(point.fromBufferAttribute(position, i).add(moonCentre())).lat;
+      north = Math.max(north, lat); south = Math.min(south, lat);
+    }
+    expect(north).toBeGreaterThan(80);       // the globe runs on under the cap's edge: no gap
+    expect(north).toBeLessThan(81);          // and stops soon after: the cap is not buried
+    expect(south).toBeCloseTo(-90, 3);       // the other pole is closed without a south height map
   });
 });

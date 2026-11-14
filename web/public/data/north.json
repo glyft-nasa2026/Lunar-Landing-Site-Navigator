@@ -1,0 +1,10 @@
+{
+  "size": 509,
+  "pixel_m": 1200,
+  "x_min_m": -304800,
+  "y_max_m": 304800,
+  "height_scale": 0.5,
+  "nodata": -32768,
+  "min_lat": 80,
+  "source": "LRO LOLA LDEM_75N_240M, product version V2.1 (LRO-L-LOLA-4-GDR-V1.0, created 2016-09-15), averaged to 1200 m, PDS Geosciences Node"
+}
