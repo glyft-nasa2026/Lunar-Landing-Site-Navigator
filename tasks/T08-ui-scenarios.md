@@ -1,6 +1,6 @@
 # T08: Scenario panel, readout, share link
 
-Status: done (pull requests #14, #20, #25)
+Status: done (pull requests #14, #20, #25, #29; lost clicks and input checks fixed in #55)
 
 | | |
 |---|---|
@@ -34,6 +34,15 @@ Spec features F1 (list and typed coordinates), F2 (time box), F3, F4 and F5.
 - [ ] Selecting a pinned card shows its numbers in the readout; typing a new time afterwards changes the live scenario and selects it.
 - [ ] Works on mock data today; nothing in these folders needs changing when real data lands.
 - [ ] `npm test` and `npm run build` pass.
+
+## After the merge
+
+- 14 Nov 2026, pull request #29 (`t08-ui-scenarios-e`): the time box is a text box that always shows `YYYY-MM-DD HH:MM` (UTC), with a button that opens the browser's date picker. A browser date box shows its own locale's order. #28, which dropped the picker, was closed in its favour.
+- 14 Nov 2026, pull request #55 (`t08-ui-scenarios-f`), from the audit of merged tickets:
+  - A click on a card or its x straight after typing in a box is no longer lost. The cards are updated in place, and a click whose button moved under the pointer (a message line appeared or went) is passed on.
+  - Choosing a site from the list rewrites both coordinate boxes, so a rejected value doesn't stay behind.
+  - Latitude and longitude read plain decimal numbers only: `0x10`, `0b11` and `1e1` are rejected.
+  - The dropdown placeholder reads "Typed coordinates" whether the site list is loading or failed.
 
 ## Prompt to paste into Claude Code
 
