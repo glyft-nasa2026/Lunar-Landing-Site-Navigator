@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { indexEphemeris, parseEphemeris, type EphemerisChunk, type EphemerisMeta } from './ephemeris';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { indexEphemeris, loadEphemerisChunk, parseEphemeris, type EphemerisChunk, type EphemerisMeta } from './ephemeris';
 
 // A made-up table, built in memory: the tests never need a data file.
 function table(rows: number[][], step_s = 3600): { meta: EphemerisMeta; buffer: ArrayBuffer } {
@@ -138,5 +138,52 @@ describe('a table in decade files', () => {
     expect(() => indexEphemeris({ ...meta, home: 2 })).toThrow(/home/);
     expect(() => indexEphemeris(meta).withChunk(0, a.slice(0, 24))).toThrow(/a\.bin: 24 bytes, expected 72/);
     expect(() => parseEphemeris(meta, a)).toThrow(/one-file/);
+  });
+});
+
+describe('loadEphemerisChunk keeps decades on the device', () => {
+  const meta: EphemerisMeta = {
+    start: '2027-01-01T00:00:00Z', step_s: 3600, rows: 2, frame: 'MOON_ME_DE440_ME421',
+    columns: [], source: 'made up for a test',
+    chunks: [{ file: 'ephemeris/2020.bin', start: '2027-01-01T00:00:00Z', rows: 2, hash: 'abc123' }],
+  };
+  const bytes = table([[1, 0, 0, 1, 0, 0], [1, 0, 0, 2, 0, 0]]).buffer;
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  function fakeCaches(): Map<string, Response> {
+    const store = new Map<string, Response>();
+    vi.stubGlobal('caches', {
+      open: async () => ({
+        match: async (url: string) => store.get(url)?.clone(),
+        put: async (url: string, res: Response) => { store.set(url, res); },
+      }),
+    });
+    return store;
+  }
+
+  it('downloads once, under a key that carries the file hash, then reads the kept copy', async () => {
+    const store = fakeCaches();
+    const asked: string[] = [];
+    vi.stubGlobal('fetch', async (url: string) => { asked.push(url); return new Response(bytes.slice(0)); });
+    const idx = indexEphemeris(meta);
+    const first = await loadEphemerisChunk(idx, 0);
+    const again = await loadEphemerisChunk(idx, 0);
+    expect(asked).toEqual(['/data/ephemeris/2020.bin?v=abc123']);
+    expect([...store.keys()]).toEqual(['/data/ephemeris/2020.bin?v=abc123']);
+    expect(new Uint8Array(again)).toEqual(new Uint8Array(first));
+    expect(idx.withChunk(0, again).vectorsAt(START + HOUR).earthKm[0]).toBe(2);
+  });
+
+  it('still works where there is no Cache Storage, or it refuses', async () => {
+    vi.stubGlobal('fetch', async () => new Response(bytes.slice(0)));
+    vi.stubGlobal('caches', { open: async () => { throw new Error('denied'); } });
+    expect((await loadEphemerisChunk(indexEphemeris(meta), 0)).byteLength).toBe(48);
+  });
+
+  it('does not keep a failed download', async () => {
+    const store = fakeCaches();
+    vi.stubGlobal('fetch', async () => new Response('', { status: 404 }));
+    await expect(loadEphemerisChunk(indexEphemeris(meta), 0)).rejects.toThrow(/404/);
+    expect(store.size).toBe(0);
   });
 });

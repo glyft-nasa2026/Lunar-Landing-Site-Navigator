@@ -2,15 +2,19 @@
 // One table serves every site: at one moment the directions measured from the Moon's centre
 // are the same everywhere. geometry.ts turns them into angles for a site.
 //
-// The table runs 1950-2050 and is split by decade, so the page downloads the 2020s first and
-// fetches another decade only when a scenario needs it (state.ts decides when). An Ephemeris
-// value knows the whole span and which decades are in memory; withChunk() returns a new value
-// with one more decade, so a change of table is a change of object.
+// The table runs 1900-2100, one row every 3 hours, split by decade, so the page downloads the
+// 2020s first and fetches another decade only when a scenario needs it (state.ts decides when).
+// An Ephemeris value knows the whole span and which decades are in memory; withChunk() returns
+// a new value with one more decade, so a change of table is a change of object. Downloaded
+// decades are kept on the device (Cache Storage) and reused on the next visit.
 
 export type Vec3 = [number, number, number];
 
-/** One decade file. It ends on the first row of the next file, so the two share that row. */
-export type EphemerisChunk = { file: string; start: string; rows: number };
+/**
+ * One decade file. It ends on the first row of the next file, so the two share that row.
+ * hash: the start of the file's SHA-256, so a copy kept on the device is known to be current.
+ */
+export type EphemerisChunk = { file: string; start: string; rows: number; hash?: string };
 
 export type EphemerisMeta = {
   start: string;       // ISO 8601 with Z: the first row of the whole table
@@ -186,13 +190,64 @@ function build(
 
 const dataUrl = (file: string): string => import.meta.env.BASE_URL + 'data/' + file;
 
-/** Fetches one decade's file, as named in the index. */
+// Decade files kept on the device. The key carries the file's hash, so a regenerated table is
+// downloaded again and the old copies are removed. Where Cache Storage is missing (an http://
+// page other than localhost, some private windows) the files are simply fetched each visit.
+const CACHE_NAME = 'darksight-ephemeris';
+
+function chunkUrl(eph: Ephemeris, i: number): string | null {
+  const c = eph.meta.chunks ? eph.meta.chunks[i] : i === 0 ? { file: 'ephemeris.bin' } as EphemerisChunk : undefined;
+  if (!c) return null;
+  return dataUrl(c.file) + (c.hash ? `?v=${c.hash}` : '');
+}
+
+async function openCache(): Promise<Cache | null> {
+  try {
+    return typeof caches === 'undefined' ? null : await caches.open(CACHE_NAME);
+  } catch {
+    return null;
+  }
+}
+
+/** Removes kept decade files that the current index no longer lists. Never throws. */
+async function pruneCache(eph: Ephemeris): Promise<void> {
+  const cache = await openCache();
+  if (!cache) return;
+  try {
+    const keep = new Set<string>();
+    for (let i = 0; i < (eph.meta.chunks?.length ?? 1); i++) {
+      const url = chunkUrl(eph, i);
+      if (url) keep.add(new URL(url, location.href).href);
+    }
+    for (const req of await cache.keys()) if (!keep.has(req.url)) await cache.delete(req);
+  } catch {
+    // Nothing to gain from failing here: an old copy only takes up space.
+  }
+}
+
+/** One decade's file, as named in the index: from the device if kept there, else downloaded. */
 export async function loadEphemerisChunk(eph: Ephemeris, i: number): Promise<ArrayBuffer> {
-  const file = eph.meta.chunks ? eph.meta.chunks[i]?.file : i === 0 ? 'ephemeris.bin' : undefined;
-  if (!file) throw new Error(`ephemeris: no chunk ${i}`);
-  const res = await fetch(dataUrl(file));
-  if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`);
-  return res.arrayBuffer();
+  const url = chunkUrl(eph, i);
+  if (!url) throw new Error(`ephemeris: no chunk ${i}`);
+  const cache = await openCache();
+  if (cache) {
+    try {
+      const kept = await cache.match(url);
+      if (kept) return await kept.arrayBuffer();
+    } catch {
+      // A broken entry: download it again below.
+    }
+  }
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+  const buffer = await res.arrayBuffer();
+  if (cache) {
+    // Not awaited: the page needn't wait for the disk. A Response copies the bytes it is given.
+    cache.put(url, new Response(buffer)).catch(() => {
+      // Storage full or not allowed: the page still works, it just downloads again next time.
+    });
+  }
+  return buffer;
 }
 
 /**
@@ -200,13 +255,15 @@ export async function loadEphemerisChunk(eph: Ephemeris, i: number): Promise<Arr
  * either is missing or malformed. Other decades come later through loadEphemerisChunk.
  */
 export async function loadEphemeris(): Promise<Ephemeris> {
-  const metaRes = await fetch(dataUrl('ephemeris.json'));
+  // The index is small and says which decade files are current, so it is always asked for.
+  const metaRes = await fetch(dataUrl('ephemeris.json'), { cache: 'no-cache' });
   if (!metaRes.ok) throw new Error(`ephemeris.json: HTTP ${metaRes.status}`);
   // A dev server answers a missing file with the page itself, which is not JSON.
   const meta = (await metaRes.json().catch(() => {
     throw new Error('ephemeris.json: missing, or not JSON');
   })) as EphemerisMeta;
   const index = indexEphemeris(meta);
+  void pruneCache(index);
   const home = meta.home ?? 0;
   return index.withChunk(home, await loadEphemerisChunk(index, home));
 }
