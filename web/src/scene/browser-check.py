@@ -468,8 +468,12 @@ with sync_playwright() as p:
       HTMLCanvasElement.prototype.getContext=function(type,...args) {
         return type.startsWith('webgl') ? null : original.call(this,type,...args);
       };""")
-    fallback.goto(BASE)
+    # A link with a scenario in it: a plain link stops on the main page ("Start exploring"),
+    # which covers the map until it is dismissed. With a scenario in the link the loading
+    # screen closes itself once the data files are in.
+    fallback.goto(BASE + '/#live=-89.5,0,2026-01-01T00:00:00Z')
     fallback.wait_for_function("document.querySelector('.scene-help')?.textContent.includes('needs WebGL')")
+    fallback.wait_for_selector('.intro', state='detached', timeout=120000)
     assert fallback.get_by_role('button', name='3D orbit', exact=True).is_disabled()
     # The flat map needs no WebGL: it still draws and still picks.
     fallback.wait_for_timeout(500)
