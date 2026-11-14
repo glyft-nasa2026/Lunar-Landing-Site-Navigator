@@ -181,15 +181,15 @@
   },
   {
     "id": "shackleton-rim",
-    "name": "Shackleton rim (Point A)",
-    "lat": -89.68,
-    "lon": -166.0,
-    "agency": "JHU APL (Bussey et al. 2010)",
-    "year": 2010,
+    "name": "Shackleton rim (Gläser et al. 2018, cluster S0)",
+    "lat": -89.6866,
+    "lon": -162.81,
+    "agency": "TU Berlin (Gläser et al. 2018)",
+    "year": 2018,
     "status": "reference",
     "group": "south-pole",
-    "note": "One of the most sunlit points at the pole: lit 81% of 2020 in Bussey et al., Icarus 208.",
-    "source": "https://doi.org/10.1016/j.icarus.2010.03.028"
+    "note": "Highly illuminated Shackleton rim site, cluster S0, identified by Gläser et al. (2018).",
+    "source": "https://ntrs.nasa.gov/api/citations/20170007365/downloads/20170007365.pdf"
   },
   {
     "id": "connecting-ridge",
