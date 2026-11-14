@@ -1,6 +1,6 @@
 # T24: Real-data checks
 
-Status: not started
+Status: done, ready for review: all four checks pass on the real files, the test skips on mock files, npm test (340) and npm run build pass. Pull request not opened yet.
 
 | | |
 |---|---|
