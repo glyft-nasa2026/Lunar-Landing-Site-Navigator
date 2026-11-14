@@ -144,6 +144,9 @@ from the same LOLA gridded data record as `dem.bin`.
 }
 ```
 
+Read by the 3D globe and by the whole-Moon 2D map (one download, `sharedGlobe()` in
+`web/src/scene/globeHeights.ts`); both only illustrate.
+
 `globe.bin`: little-endian int16, `width * height` values, row by row. Height in metres =
 `value * height_scale`, above the `R` sphere. A latitude-longitude grid laid out like
 `shadeGlobal`'s: cell (row `j`, column `i`) is centred on latitude `90 - (j + 0.5) * 180 / height`

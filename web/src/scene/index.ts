@@ -16,7 +16,7 @@ import { gridSite, moonCentre, moonDirection, sitePosition, siteUp, sphereSite }
 import {
   detailBounds, edgeHeight, globeGeometry, northGeometry, recolorTerrain, setTerrainHole, terrainGeometry, type GridBounds,
 } from './terrain';
-import { colorTexture, GLOBE_RELIEF, globeNormalNear, loadGlobe, loadNorth, normalTexture, type GlobeHeights } from './globe';
+import { colorTexture, GLOBE_RELIEF, globeNormalNear, loadNorth, normalTexture, sharedGlobe, type GlobeHeights } from './globe';
 import { loadTileIndex, loadWindow, patchGeometry, patchWindow, type TileIndex } from './patch';
 import './scene.css';
 
@@ -524,7 +524,7 @@ export function mount(el: HTMLElement): void {
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] });
   const unsubscribe = subscribe(update);
   // Not needed for any number, so it loads beside the rest and the plain sphere shows meanwhile.
-  Promise.all([loadGlobe(), loadNorth().catch(() => null), loadTileIndex().catch(() => null)]).then(([loaded, cap, tiles]) => {
+  Promise.all([sharedGlobe(), loadNorth().catch(() => null), loadTileIndex().catch(() => null)]).then(([loaded, cap, tiles]) => {
     if (disposed) return;
     globeHeights = loaded; north = cap; tileIndex = tiles; buildNorth(); update(getState());
   }).catch(() => { /* No whole-Moon heights (mock data set): the globe stays a plain sphere. */ });

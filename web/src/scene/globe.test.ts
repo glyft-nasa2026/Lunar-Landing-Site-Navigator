@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Color, Vector3 } from 'three';
 import type { DemMeta } from '../core/dem';
 import { moonCentre, sitePosition, sphereSite } from './coordinates';
-import { globeColors, globeNormals, mapGlobeUv, parseGlobe, parseNorth, uvSite, type GlobeMeta } from './globe';
+import { globeColors, globeNormals, globeSlopes, mapGlobeUv, parseGlobe, parseNorth, uvSite, type GlobeMeta } from './globe';
 import { globeGeometry, northGeometry } from './terrain';
 
 const meta: GlobeMeta = { width: 72, height: 36, height_scale: 0.5, source: 'test' };
@@ -234,5 +234,32 @@ describe('north cap', () => {
     expect(north).toBeGreaterThan(80);       // the globe runs on under the cap's edge: no gap
     expect(north).toBeLessThan(81);          // and stops soon after: the cap is not buried
     expect(south).toBeCloseTo(-90, 3);       // the other pole is closed without a south height map
+  });
+});
+
+describe('slopes for the flat map', () => {
+  it('flat ground points straight up, in the Moon frame core/ uses', () => {
+    const slopes = globeSlopes(grid(() => 100));
+    const at = (lat: number, lon: number) => {
+      const o = (Math.floor((90 - lat) * meta.height / 180) * meta.width + Math.floor((lon + 180) * meta.width / 360)) * 3;
+      return [slopes[o] / 127, slopes[o + 1] / 127, slopes[o + 2] / 127];
+    };
+    const RAD = Math.PI / 180;
+    for (const [lat, lon] of [[2.5, 2.5], [2.5, 92.5], [-47.5, -137.5], [87.5, 177.5]]) {
+      const [x, y, z] = at(lat, lon);
+      // +X toward longitude 0, +Y toward 90 E, +Z north.
+      expect(x).toBeCloseTo(Math.cos(lat * RAD) * Math.cos(lon * RAD), 1);
+      expect(y).toBeCloseTo(Math.cos(lat * RAD) * Math.sin(lon * RAD), 1);
+      expect(z).toBeCloseTo(Math.sin(lat * RAD), 1);
+    }
+  });
+
+  it('ground rising to the east leans west, and rising to the north leans south', () => {
+    const flat = globeSlopes(grid(() => 0));
+    const o = ((meta.height / 2) * meta.width + meta.width / 2) * 3;   // the cell at 2.5 S, 2.5 E
+    const east = globeSlopes(grid((_lat, lon) => lon * 2000));
+    expect(east[o + 1]).toBeLessThan(flat[o + 1] - 20);                 // +Y is east there
+    const north = globeSlopes(grid((lat) => lat * 2000));
+    expect(north[o + 2]).toBeLessThan(flat[o + 2] - 20);
   });
 });
