@@ -181,7 +181,7 @@
   },
   {
     "id": "shackleton-rim",
-    "name": "Shackleton rim (Gläser et al. 2018, cluster S0)",
+    "name": "Shackleton rim",
     "lat": -89.6866,
     "lon": -162.81,
     "agency": "TU Berlin (Gläser et al. 2018)",
@@ -193,50 +193,50 @@
   },
   {
     "id": "connecting-ridge",
-    "name": "Connecting ridge (Point B)",
-    "lat": -89.44,
-    "lon": -141.8,
-    "agency": "JHU APL (Bussey et al. 2010)",
-    "year": 2010,
+    "name": "Connecting ridge",
+    "lat": -89.4398,
+    "lon": -137.17,
+    "agency": "TU Berlin (Gläser et al. 2018)",
+    "year": 2018,
     "status": "candidate",
     "group": "south-pole",
-    "note": "Ridge near Shackleton, lit 82% of 2020; often lit when the rim is dark.",
-    "source": "https://doi.org/10.1016/j.icarus.2010.03.028"
+    "note": "Ridge between Shackleton and de Gerlache; highly illuminated site C1 of Gläser et al. (2018).",
+    "source": "https://ntrs.nasa.gov/api/citations/20170007365/downloads/20170007365.pdf"
   },
   {
     "id": "shackleton-ridge-120e",
-    "name": "Shackleton ridge at 120 E (Point D)",
-    "lat": -88.79,
-    "lon": 124.5,
-    "agency": "JHU APL (Bussey et al. 2010)",
-    "year": 2010,
+    "name": "Shackleton ridge at 120 E",
+    "lat": -88.8089,
+    "lon": 123.76,
+    "agency": "NASA GSFC (LOLA sunlight map)",
+    "year": 2016,
     "status": "candidate",
     "group": "south-pole",
-    "note": "Most sunlit point in the study, lit 86% of 2020; ridge running out from Shackleton's rim.",
-    "source": "https://doi.org/10.1016/j.icarus.2010.03.028"
+    "note": "Ridge running out from Shackleton's rim. Brightest spot on NASA's sunlight map by Bussey's Point D.",
+    "source": "https://pgda.gsfc.nasa.gov/products/69"
   },
   {
     "id": "de-gerlache-rim",
-    "name": "de Gerlache rim (Point C)",
-    "lat": -88.71,
-    "lon": -68.7,
-    "agency": "JHU APL (Bussey et al. 2010)",
-    "year": 2010,
+    "name": "de Gerlache rim",
+    "lat": -88.7061,
+    "lon": -68.52,
+    "agency": "NASA GSFC (LOLA sunlight map)",
+    "year": 2016,
     "status": "candidate",
     "group": "south-pole",
-    "note": "Rim of de Gerlache crater, lit 85% of 2020 with the shortest eclipses in the study.",
-    "source": "https://doi.org/10.1016/j.icarus.2010.03.028"
+    "note": "Rim of de Gerlache crater. Brightest spot on NASA's sunlight map by Bussey's Point C.",
+    "source": "https://pgda.gsfc.nasa.gov/products/69"
   },
   {
     "id": "malapert-massif",
-    "name": "Malapert massif (Point M1)",
-    "lat": -86.04,
-    "lon": 2.7,
-    "agency": "JHU APL (Bussey et al. 2010)",
-    "year": 2010,
+    "name": "Malapert massif",
+    "lat": -86.0412,
+    "lon": 3.16,
+    "agency": "NASA GSFC (LOLA sunlight map)",
+    "year": 2016,
     "status": "candidate",
     "group": "south-pole",
-    "note": "Summit area of Malapert Mountain, lit 74% of 2020; an Artemis III candidate region.",
-    "source": "https://doi.org/10.1016/j.icarus.2010.03.028"
+    "note": "Summit area; the massif is an Artemis III candidate region. Brightest spot on NASA's map by Bussey's Point M1.",
+    "source": "https://pgda.gsfc.nasa.gov/products/69"
   }
 ]
