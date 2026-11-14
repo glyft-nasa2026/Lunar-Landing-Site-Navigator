@@ -1,0 +1,38 @@
+[
+  {
+    "id": "mock-floor",
+    "name": "Mock crater floor",
+    "lat": -88.0,
+    "lon": 45.0,
+    "agency": "Darksight mock",
+    "year": 2026,
+    "status": "reference",
+    "group": "south-pole",
+    "note": "Centre of the mock bowl crater, 3,000 m below the plain.",
+    "source": "data-prep/make_mock.py"
+  },
+  {
+    "id": "mock-rim",
+    "name": "Mock crater rim",
+    "lat": -87.67,
+    "lon": 45.0,
+    "agency": "Darksight mock",
+    "year": 2026,
+    "status": "reference",
+    "group": "south-pole",
+    "note": "Rim of the mock crater, 500 m above the plain, 10 km from its centre.",
+    "source": "data-prep/make_mock.py"
+  },
+  {
+    "id": "mock-equator",
+    "name": "Mock equator point",
+    "lat": 1.0,
+    "lon": 23.0,
+    "agency": "Darksight mock",
+    "year": 2026,
+    "status": "reference",
+    "group": "apollo",
+    "note": "A point outside the height map, near the Apollo 11 site.",
+    "source": "data-prep/make_mock.py"
+  }
+]

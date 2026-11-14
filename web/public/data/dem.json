@@ -1,0 +1,10 @@
+{
+  "size": 634,
+  "pixel_m": 960,
+  "x_min_m": -304320,
+  "y_max_m": 304320,
+  "height_scale": 0.5,
+  "nodata": -32768,
+  "min_lat": -80,
+  "source": "mock"
+}
