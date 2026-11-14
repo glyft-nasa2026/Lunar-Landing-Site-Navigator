@@ -1,4 +1,4 @@
-// App state, as docs/data-contract.md section 4. Only P1 edits this file.
+// App state, as docs/data-contract.md section 4.
 // UI modules read state and call actions. They never call each other.
 
 import type { Dem } from './core/dem';
@@ -34,9 +34,15 @@ const DAY_MS = 86_400_000;
 const RANGE_DAYS: Record<Range, number> = { '30d': 30, '90d': 90, '365d': 365 };
 const rangeMs = (r: Range): number => RANGE_DAYS[r] * DAY_MS;
 
-// Where the page opens when the address names no site: near the south pole, where the
-// terrain skyline applies. The time is the current hour.
+// Where the live scenario sits when the address names none, until the first-open example
+// replaces it: near the south pole, where the terrain skyline applies. The time is the current hour.
 const DEFAULT_SITE: Site = { lat: -89.5, lon: 0 };
+
+// The first-open example (F19): live at the rim, the floor pinned as A. Real ids first, then mock.
+const EXAMPLE_PAIRS: readonly { rim: string; floor: string }[] = [
+  { rim: 'shackleton-rim', floor: 'shackleton-floor' },
+  { rim: 'mock-rim', floor: 'mock-floor' },
+];
 
 // ---------------------------------------------------------------------------------------------
 // The page address (F17). Everything a shared link must reopen is kept after the '#':
@@ -83,7 +89,8 @@ function textToSiteTime(text: string | null): { site: Site; tMs: number } | null
   return { site: cleanSite(site), tMs };
 }
 
-function stateFromAddress(hash: string, nowMs: number): AppState {
+/** The state an address describes, and whether it names any scenario (live or pinned). */
+function stateFromAddress(hash: string, nowMs: number): { next: AppState; named: boolean } {
   const q = new URLSearchParams(hash.replace(/^#/, ''));
 
   const liveAt = textToSiteTime(q.get('live'));
@@ -101,7 +108,7 @@ function stateFromAddress(hash: string, nowMs: number): AppState {
 
   const sel = q.get('sel');
   const range = q.get('range');
-  return {
+  const next: AppState = {
     live, pinned, ghost: null,
     selectedId: pinned.some((p) => p.id === sel) ? (sel as string) : LIVE_ID,
     range: range === '90d' || range === '365d' ? range : '30d',
@@ -109,6 +116,7 @@ function stateFromAddress(hash: string, nowMs: number): AppState {
     windowStartMs: live.tMs,
     eph: null, dem: null, sites: [],
   };
+  return { next, named: liveAt !== null || pinned.length > 0 };
 }
 
 /**
@@ -130,7 +138,8 @@ export function stateToAddress(): string {
  * tests, and when someone pastes a link into a tab that is already open.
  */
 export function restoreFromAddress(hash: string, nowMs: number = Date.now()): void {
-  const next = stateFromAddress(hash, nowMs);
+  const { next, named } = stateFromAddress(hash, nowMs);
+  exampleWanted = !named;
   if (state) {
     next.eph = state.eph;
     next.dem = state.dem;
@@ -146,7 +155,11 @@ export function restoreFromAddress(hash: string, nowMs: number = Date.now()): vo
 
 const hasPage = typeof window !== 'undefined' && typeof history !== 'undefined';
 
-let state: AppState = stateFromAddress(hasPage ? window.location.hash : '', Date.now());
+const opened = stateFromAddress(hasPage ? window.location.hash : '', Date.now());
+let state: AppState = opened.next;
+// First open (F19): true while the address named no scenario and nothing has been edited or
+// pinned since. The example is built when the site list arrives, at most once.
+let exampleWanted = !opened.named;
 const listeners = new Set<(s: AppState) => void>();
 
 let addressTimer: ReturnType<typeof setTimeout> | undefined;
@@ -201,8 +214,36 @@ export function setData(patch: { eph?: Ephemeris | null; dem?: Dem | null; sites
   }
   const { eph: _ignored, ...rest } = patch;
   state = { ...state, ...rest };
+  const example = 'sites' in patch && exampleWanted && addExample();
   clearCaches();
-  notify(false);
+  notify(example);   // the example goes into the address, like any other change
+}
+
+/**
+ * Live at the crater rim, the crater floor pinned as A, both at the live scenario's time (the
+ * current hour), live selected. False, and nothing changed, when the list has neither pair of ids.
+ */
+function addExample(): boolean {
+  const find = (id: string): Site | null => {
+    const s = state.sites.find((c) => c?.id === id);
+    if (!s) return null;
+    const site: Site = { lat: s.lat, lon: s.lon };
+    return validSite(site) ? cleanSite(site) : null;
+  };
+  for (const pair of EXAMPLE_PAIRS) {
+    const rim = find(pair.rim);
+    const floor = find(pair.floor);
+    if (!rim || !floor) continue;
+    exampleWanted = false;
+    state = {
+      ...state,
+      live: { ...state.live, site: rim },
+      pinned: [{ ...PIN_SLOTS[0], site: floor, tMs: state.live.tMs }],
+      selectedId: LIVE_ID,
+    };
+    return true;
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -285,6 +326,7 @@ function refreshEph(): void {
 /** Moves the live scenario and selects it. Ignores a latitude outside -90..90 or a non-number. */
 export function setLiveSite(site: Site): void {
   if (!validSite(site)) return;
+  exampleWanted = false;
   state = { ...state, live: { ...state.live, site: cleanSite(site) }, selectedId: LIVE_ID };
   notify();
 }
@@ -295,6 +337,7 @@ export function setLiveSite(site: Site): void {
  */
 export function setLiveTime(tMs: number): void {
   if (!Number.isFinite(tMs)) return;
+  exampleWanted = false;
   const inside = tMs >= state.windowStartMs && tMs <= state.windowStartMs + rangeMs(state.range);
   state = {
     ...state,
@@ -309,6 +352,7 @@ export function setLiveTime(tMs: number): void {
 export function pin(): void {
   const slot = PIN_SLOTS.find((s) => !state.pinned.some((p) => p.id === s.id));
   if (!slot) return;
+  exampleWanted = false;
   const copy: Scenario = { ...slot, site: { ...state.live.site }, tMs: state.live.tMs };
   const order = (sc: Scenario): number => PIN_SLOTS.findIndex((s) => s.id === sc.id);
   const pinned = [...state.pinned, copy].sort((x, y) => order(x) - order(y));
