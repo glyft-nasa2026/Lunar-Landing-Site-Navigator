@@ -1,4 +1,4 @@
-/* Loading screen and main page (docs/design/loading.png, hero.png). Theme variables only.
+/* Main page, then loading screen (docs/design/hero.png, loading.png). Theme variables only.
    Sizes the contract doesn't name (hero type, logo) are multiples of its variables. */
 
 body.intro-open {
@@ -101,9 +101,8 @@ body.intro-open {
   color: var(--muted);
 }
 
-.intro-skip {
-  font-size: var(--fs-sm);
-  padding: var(--space-1) var(--space-3);
+.intro-bar:focus {
+  outline: none;
 }
 
 /* Main page */

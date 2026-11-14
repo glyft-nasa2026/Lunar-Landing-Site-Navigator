@@ -44,7 +44,7 @@ for (const [id, mount] of slots) {
   }
 }
 
-// Loading screen, then the main page for a plain link (docs/design/loading.png, hero.png).
+// Main page first; after "Start exploring", the loading screen until the data is in (T22 hero.png, loading.png).
 const intro = startIntro();
 
 // --- Data loading ---------------------------------------------------------------------------
