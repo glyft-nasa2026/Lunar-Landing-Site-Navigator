@@ -3,6 +3,56 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: dates 1900-2100, one file per decade, DE440
+
+From pull request #31 (MarsRon). The team asked to pick any date over a much wider span. One
+hourly file for 1900-2100 would be over 40 MB to download up front, so the table is split by
+decade (the page loads the 2020s, 0.7 MB, and other decades when a scenario needs them) and
+thinned to one row every 3 hours, which still agrees with Skyfield's surface alt/az to 0.001
+degrees (T02 allows 0.02). DE421's Moon orientation file stops in 2050; DE440's covers
+1550-2650. "Permanently shadowed" now covers the future from the chosen time instead of one
+fixed decade. The risks accepted at merge are tracked in issue #32.
+
+### SPEC.md
+
+- **4. Features, F2:** the range was "2026 to 2035". Now 1900 to 2100.
+- **4. Features, F4:** the special wording was "Permanently shadowed (2026-2035)". Now
+  "(until 2100)".
+- **5. How it works:** the Sun and Earth row was "hourly, 2026-2035", from "NASA JPL DE421
+  files", output "`ephemeris.bin` (about 2 MB)". Now every 3 hours, 1900-2100, DE440, one file
+  per decade.
+- **7. Accuracy:** the Shackleton floor row was "Never lit, 2026-2035". Now "Never lit, to 2100".
+- **8. Known limits:** was "Table covers 2026-2035, hourly, with straight-line steps between
+  hours." Now 1900-2100 every 3 hours, plus what "Permanently shadowed" means.
+
+### docs/data-contract.md
+
+- **1. Moon-fixed frame:** the frame was `MOON_ME_DE421`. Now `MOON_ME_DE440_ME421`.
+- **2. Files, `ephemeris.json` + `ephemeris/<decade>.bin`:** the heading was "`ephemeris.bin` +
+  `ephemeris.json`": one file, `start` 2026-01-01T00:00:00Z, `step_s` 3600, `rows` 87649,
+  `source` "JPL DE421 via Skyfield". Now `ephemeris.json` is an index with `home` and `chunks`
+  (file, start, rows, hash), `step_s` is 10800, and the browser keeps decade files in Cache
+  Storage. A table without `chunks` (T20's mock) is still one `ephemeris.bin`.
+- **3. TypeScript, the `ephemeris.ts` row:** listed only `loadEphemeris`, `parseEphemeris`,
+  `startMs`, `endMs`, `meta` and `vectorsAt`. Added `loadEphemerisChunk`, `indexEphemeris`,
+  `homeStartMs`, `homeEndMs`, `missing` and `withChunk`.
+- **3. TypeScript, Visibility (T06), wording table:** was `Permanently shadowed (2026-2035)`.
+- **4. State:** `neverLitFor` was "no sunlight there in the whole table". The "Decades" and
+  "Never lit" notes are new.
+
+### docs/decisions.md
+
+- Pull request #31 added two rows: one from its first version and one from its final version,
+  which said it "replaces the 1950-2050 hourly line below". They are now one row. The removed
+  row said: "Time range widened from 2026-2035 to 1950-2050. The table is split into one file
+  per decade; the page loads the 2020s first and other decades the first time a scenario needs
+  them. Kernels move from DE421 to DE440 (frame `MOON_ME_DE440_ME421`). 'Permanently shadowed'
+  is judged on 2020-2029." Why: "Users asked to pick any date 1950-2050. One hourly file would
+  be about 21 MB to download up front; per decade it stays at about 2 MB. DE421's Moon
+  orientation file stops in 2050. A shadow verdict over 'whatever has loaded' would change as
+  decades arrive." The range then grew to 1900-2100 at 3-hour rows, and the shadow verdict
+  moved from 2020-2029 to the chosen time through 2100.
+
 ## 14 Nov 2026: pull request previews get their own address
 
 ### docs/decisions.md
