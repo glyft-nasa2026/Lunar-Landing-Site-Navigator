@@ -333,6 +333,12 @@ with sync_playwright() as p:
     target = {'lat': 20.19, 'lon': 30.77}   # Apollo 17, from the Apollo 11 centre
     dx = 1737.4 * math.radians(target['lon'] - 23.473) * scale
     dy = 1737.4 * math.radians(target['lat'] - 0.674) * scale
+    # Zooming out stops at the whole Moon (issue #65), so after a wheel-out the starting scale still holds.
+    page.mouse.move(box['x']+box['width']/2, box['y']+box['height']/2)
+    for _ in range(20):
+        page.mouse.wheel(0, 400)
+        page.wait_for_timeout(20)
+    page.wait_for_timeout(300)
     page.mouse.click(box['x'] + box['width']/2 + dx, box['y'] + box['height']/2 - dy)
     picked = page.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
     # At the whole-Moon zoom one pixel is about 0.25 degrees.
@@ -372,11 +378,48 @@ with sync_playwright() as p:
     page.wait_for_timeout(350)
     assert 'South-pole terrain' in page.locator('.scene-caption').inner_text()
     passed('resolution independence', '634 × 634 at 960 m and 2534 × 2534 at 240 m render through the same code')
+    # Issue #65: zoomed right out, the polar map stops where the whole height map just fits the
+    # canvas. The view stays centred on the site, so a click a quarter of the canvas to the right
+    # of it lands where that scale says; any further zoom-out would put it much further away.
+    def zoom_out_limit(wheel):
+        page.wait_for_timeout(500)   # after a viewport change, the charts above the map settle first
+        map_canvas.scroll_into_view_if_needed()
+        b = map_canvas.bounding_box()
+        if wheel:
+            page.mouse.move(b['x']+b['width']/2, b['y']+b['height']/2)
+            for _ in range(40):
+                page.mouse.wheel(0, 400)
+                page.wait_for_timeout(20)
+            page.wait_for_timeout(300)
+            assert map_canvas.bounding_box() == b, 'the wheel scrolled the page instead of zooming the map'
+        before = page.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
+        scale = min(b['width'], b['height']) / (fine_meta['size'] * fine_meta['pixel_m'])   # px per metre
+        offset_px = min(b['width'], b['height']) / 4
+        page.mouse.click(b['x']+b['width']/2+offset_px, b['y']+b['height']/2)
+        got = page.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
+        cx, cy = projected(before['lat'], before['lon'])
+        ex, ey = cx + offset_px / scale, cy
+        gx, gy = projected(got['lat'], got['lon'])
+        error_px = math.hypot(gx-ex, gy-ey) * scale
+        assert error_px < 2, (before, got, error_px)
+        page.evaluate(f"async () => (await import('/src/state.ts')).setLiveSite({json.dumps(before)})")
+        page.wait_for_timeout(200)
+        return {'canvas': [round(b['width']), round(b['height'])], 'km_per_px': round(1 / scale / 1000, 3), 'click_error_px': round(error_px, 2)}
+    desktop_limit = zoom_out_limit(True)
     page.set_viewport_size({'width':390, 'height':844})
     page.wait_for_timeout(250)
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), 'horizontal overflow'
     map_canvas.screenshot(path='/tmp/t12-phone.png')
     passed('phone layout', '390 px viewport, no horizontal overflow')
+    # The nudge panel opened at desktop size stays open; on a phone it covers the map's middle.
+    if page.locator('.nudge-fold[aria-expanded="true"]').count():
+        page.locator('.nudge-fold').click()
+    phone_limit = zoom_out_limit(True)
+    # Back to a bigger canvas: the limit rises with it and the view is held to it, with no wheel.
+    page.set_viewport_size({'width':1280, 'height':900})
+    page.wait_for_timeout(300)
+    regrown_limit = zoom_out_limit(False)
+    passed('2D zoom-out limit', {'desktop': desktop_limit, 'phone': phone_limit, 'desktop_again_after_resize': regrown_limit})
     # Loading and remount lifecycle checks exercise the actual mount entry point.
     page.evaluate("""async () => {
       const state=await import('/src/state.ts'); state.setData({eph:null,dem:null});

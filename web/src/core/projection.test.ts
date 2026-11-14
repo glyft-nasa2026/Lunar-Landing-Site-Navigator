@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { projectToGrid, type DemMeta } from './dem';
 import {
-  cylForward, cylInverse, panView, polarForward, polarInverse, screenToView, viewToScreen, wrapLon,
-  zoomView, type MapView,
+  cylForward, cylInverse, fitScale, panView, polarForward, polarInverse, screenToView, viewToScreen,
+  wrapLon, zoomView, type MapView,
 } from './projection';
 import { MOON_RADIUS_KM } from './types';
 
@@ -107,6 +107,21 @@ describe('map view', () => {
     const still = screenToView(zoomed, 100, 50);
     expect(still.x).toBeCloseTo(before.x, 6); expect(still.y).toBeCloseTo(before.y, 6);
     expect(zoomView(view, 0, 0, 1000, 0, 0.5).scale).toBe(0.5);
+  });
+
+  it('zooms out no further than the whole map fitting the canvas (issue #65)', () => {
+    // The whole Moon is 2:1. The canvas side that is tighter for it decides.
+    const W = 2 * Math.PI * MOON_RADIUS_KM, H = Math.PI * MOON_RADIUS_KM;
+    expect(fitScale(1000, 400, W, H)).toBeCloseTo(400 / H, 12);
+    expect(fitScale(390, 288, W, H)).toBeCloseTo(390 / W, 12);
+    // The height map's square at that scale fills the canvas's shorter side exactly.
+    const whole = 2534 * 240, s = fitScale(800, 500, whole, whole);
+    expect(whole * s).toBeCloseTo(500, 9);
+    // Held at it, zooming out further about any point leaves the view where it was.
+    const fitted: MapView = { cx: 3000, cy: -4000, scale: s, width: 800, height: 500 };
+    const out = zoomView(fitted, 100, 50, 0.1, s);
+    expect(out.scale).toBe(s);
+    expect(out.cx).toBeCloseTo(fitted.cx, 6); expect(out.cy).toBeCloseTo(fitted.cy, 6);
   });
 });
 

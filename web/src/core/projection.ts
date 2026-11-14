@@ -74,6 +74,14 @@ export function panView(view: MapView, dx: number, dy: number): MapView {
 }
 
 /**
+ * Screen pixels per map unit at which a map `mapWidth` by `mapHeight` units just fits a canvas
+ * `width` by `height` pixels. The flat map zooms out no further than this (issue #65).
+ */
+export function fitScale(width: number, height: number, mapWidth: number, mapHeight: number): number {
+  return Math.min(width / mapWidth, height / mapHeight);
+}
+
+/**
  * The view zoomed by `factor` about a screen point, which stays over the same map point.
  * The scale is held between `min` and `max`.
  */

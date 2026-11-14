@@ -7,8 +7,8 @@
 import type { Dem } from '../core/dem';
 import type { Ephemeris, Vec3 } from '../core/ephemeris';
 import {
-  cylForward, cylInverse, panView, polarForward, polarInverse, screenToView, viewToScreen, zoomView,
-  type LatLon, type MapView,
+  cylForward, cylInverse, fitScale, panView, polarForward, polarInverse, screenToView, viewToScreen,
+  zoomView, type LatLon, type MapView,
 } from '../core/projection';
 import { shadeGlobal, shadePolar, subPoint, type PolarShade } from '../core/shade';
 import { MOON_RADIUS_KM, type Site } from '../core/types';
@@ -190,19 +190,29 @@ export function mount(el: HTMLElement): void {
     return kind === 'polar' ? polarInverse(p.x, p.y) : cylInverse(p.x, p.y);
   }
 
-  /** Starting view of the selected site: about 150 km across at the pole, the whole Moon elsewhere. */
-  function centre(): void {
+  /**
+   * How far the view zooms for the current canvas size: out until the whole map just fits (the
+   * height map's square, or the whole Moon), and no further (issue #65); in to a few pixels a cell.
+   */
+  function setLimits(): void {
     const { width, height } = view;
     if (kind === 'polar' && dem) {
-      const spanKm = Math.max(8, Math.min(80, dem.meta.size * dem.meta.pixel_m / 8000));
       const whole = dem.meta.size * dem.meta.pixel_m;
-      view = { ...view, scale: height / (2 * spanKm * 1000) };
-      minScale = Math.min(width, height) / whole / 2;
+      minScale = fitScale(width, height, whole, whole);
       maxScale = 8 / dem.meta.pixel_m;
     } else {
-      view = { ...view, scale: Math.min(width / (2 * HALF_WORLD_KM), height / HALF_WORLD_KM) };
-      minScale = view.scale / 2;
+      minScale = fitScale(width, height, 2 * HALF_WORLD_KM, HALF_WORLD_KM);
       maxScale = 4;   // 4 pixels per km: a click lands within a few hundred metres
+    }
+  }
+  /** Starting view of the selected site: about 150 km across at the pole, the whole Moon elsewhere. */
+  function centre(): void {
+    setLimits();
+    if (kind === 'polar' && dem) {
+      const spanKm = Math.max(8, Math.min(80, dem.meta.size * dem.meta.pixel_m / 8000));
+      view = { ...view, scale: Math.min(maxScale, Math.max(minScale, view.height / (2 * spanKm * 1000))) };
+    } else {
+      view = { ...view, scale: minScale };
     }
     follow();
   }
@@ -220,7 +230,11 @@ export function mount(el: HTMLElement): void {
     canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
     const first = view.width <= 1;
     view = { ...view, width, height };
-    if (first) { framed = false; update(getState()); }
+    if (first) { framed = false; update(getState()); } else {
+      // A bigger canvas raises the zoom-out limit: hold the view to it, keeping its centre.
+      setLimits();
+      view = zoomView(view, width / 2, height / 2, 1, minScale, maxScale);
+    }
     invalidate();
   }
 
