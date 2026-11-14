@@ -1,6 +1,6 @@
 # T19: Theme, layout, chart style
 
-Status: in review (draft PR). DARKSIGHT palette and PDF/SVG arrangement done on mock data; deployed-site screenshots after merge
+Status: in review. Palette from docs/design.md (main's slate and soft blue), --dark #0e1116, chart transitions; deployed-site screenshots after merge
 
 | | |
 |---|---|

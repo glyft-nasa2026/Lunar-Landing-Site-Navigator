@@ -2,7 +2,29 @@
 // T00 made both functions; T19 owns this file. Every value is read from theme.css, so there is
 // no second copy of a colour.
 
-import type { Layout } from 'plotly.js-dist-min';
+import type { Layout, Transition } from 'plotly.js-dist-min';
+
+/** How long a chart takes to move to new data, in milliseconds. */
+export const CHART_TRANSITION_MS = 400;
+
+/** True when the visitor asked the system for less motion. False where there is no window (tests). */
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * The animation Plotly.react plays when a chart gets new data: lines and bars glide from the old
+ * values to the new ones instead of jumping. Plotly falls back to an instant redraw when it
+ * can't animate a change (for example a different number of traces). Off with reduced motion.
+ */
+export function chartTransition(): Transition {
+  return {
+    duration: prefersReducedMotion() ? 0 : CHART_TRANSITION_MS,
+    easing: 'cubic-in-out',
+    ordering: 'traces first',
+  };
+}
 
 /**
  * The current value of a theme variable: themeColor('--sun'), themeColor(sc.color).
@@ -61,5 +83,6 @@ export function plotLayout(): Partial<Layout> {
       bordercolor: grid,
       font: { family: num, size: small, color: themeColor('--text') },
     },
+    transition: chartTransition(),
   };
 }

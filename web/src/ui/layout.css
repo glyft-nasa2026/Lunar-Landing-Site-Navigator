@@ -1,8 +1,7 @@
 /* Places the slots of web/index.html (docs/data-contract.md section 5).
    T19 owns this file. Modules style only their own insides.
 
-   Arrangement from the design wireframe (tasks/Quarterly Company News.pdf, "01 Explore") and
-   the design frames (tasks/Untitled.svg):
+   Arrangement from docs/design.md (T22), pictures docs/design/desktop.png and phone.png:
 
      about     about       top bar: logo, tabs, UTC date and time, pointer coordinates
      scene     readout     the map or 3D Moon, with the data column beside it
