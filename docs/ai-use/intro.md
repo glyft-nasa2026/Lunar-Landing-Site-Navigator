@@ -1,0 +1,5 @@
+# AI use: loading screen and main page (from T22's loading.png and hero.png)
+
+| When | Who | Tool | What the AI did | What a person checked |
+|---|---|---|---|---|
+| 2026-11-14 | P5 | Claude Code (Opus 5.5) | Built `web/src/ui/intro/` (index.ts, intro.css, model.ts with tests) after the T22 proposals in `docs/design/loading.png` and `hero.png`, and two calls in `web/src/main.ts`. Loading screen with the real load progress from main.ts (height map weighted 80 %), Skip and Escape; then, for a plain link only and once per tab, the main page with "Start exploring". Theme variables only; the hero sizes are multiples of `--fs-xl`, and the serif subtitle of the design uses the system sans (no serif variable). Checked on the built site with headless Edge over DevTools, slowed network, at 1280 and 390: loading caption and bar move, main page appears after the data, Start and Escape close it and unlock the page, a reload in the same tab skips it, a shared link (`#lat=…`) never shows it, no sideways scroll. `npm test` 343 passed, `npm run build` passed. | P5 asked for it; P5 to look at the screens; P1 to agree to the `main.ts` change |
