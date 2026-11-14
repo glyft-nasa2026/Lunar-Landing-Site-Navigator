@@ -1,4 +1,4 @@
-// Compare (T09): F6 table, one column per pinned scenario, and F7 strips, Sun and Earth bars
+// Compare (T09): F6 table, a Live column then one column per pinned scenario, and F7 strips, Sun and Earth bars
 // over days 0-30 since each scenario's own time. Every number comes from state.ts accessors,
 // which call core/; model.ts only groups, ranks and formats them.
 import './compare.css';
@@ -96,7 +96,7 @@ function buildRows(cols: Column[]): Row[] {
 
 function drawTable(cols: Column[]): HTMLTableElement {
   const table = make('table', 'table cmp-table');
-  const cap = make('caption', 'cmp-hidden', 'Pinned scenarios side by side. The best value in each row is marked.');
+  const cap = make('caption', 'cmp-hidden', 'The live scenario and the pinned ones side by side. The best value in each row is marked.');
   const head = make('thead');
   const hr = make('tr');
   hr.append(make('th', '', ''));
@@ -205,10 +205,15 @@ export function mount(el: HTMLElement): void {
   strips.setAttribute('role', 'img');
   const note = make('p', 'cmp-note muted',
     'Filled where the Sun or Earth is up. Solid bar: Sun. Lighter bar: Earth.');
-  el.replaceChildren(title, message, tableWrap, stripsTitle, strips, note);
+  const hint = make('p', 'muted', 'Pin a scenario to compare');
+  el.replaceChildren(title, message, tableWrap, hint, stripsTitle, strips, note);
 
-  let shown: { pinned: Scenario[]; eph: AppState['eph']; dem: AppState['dem']; sites: AppState['sites'] } | null = null;
+  type Shown = {
+    live: Scenario; pinned: Scenario[]; eph: AppState['eph']; dem: AppState['dem']; sites: AppState['sites'];
+  };
+  let shown: Shown | null = null;
   let drawId = 0;
+  let frame = 0;
 
   const showParts = (on: boolean): void => {
     tableWrap.hidden = !on;
@@ -217,29 +222,33 @@ export function mount(el: HTMLElement): void {
     note.hidden = !on;
   };
 
-  const render = (): void => {
+  const draw = (): void => {
+    frame = 0;
     const s = getState();
-    // Pinned scenarios never change, so only a pin, an unpin or new data needs a redraw.
-    if (shown && shown.pinned === s.pinned && shown.eph === s.eph && shown.dem === s.dem && shown.sites === s.sites) return;
-    shown = { pinned: s.pinned, eph: s.eph, dem: s.dem, sites: s.sites };
+    // Pinned scenarios never change, but live does on every map click, time entry and drag.
+    if (shown && shown.live === s.live && shown.pinned === s.pinned && shown.eph === s.eph
+      && shown.dem === s.dem && shown.sites === s.sites) return;
+    shown = { live: s.live, pinned: s.pinned, eph: s.eph, dem: s.dem, sites: s.sites };
     const id = ++drawId;
 
-    if (!s.eph || s.pinned.length === 0) {
-      message.textContent = s.eph ? 'Pin a scenario to compare' : 'Loading';
+    if (!s.eph) {
+      message.textContent = 'Loading';
       message.hidden = false;
+      hint.hidden = true;
       showParts(false);
       tableWrap.replaceChildren();
       void loadPlotly().then((P) => { if (id === drawId) P.purge(strips); });
       return;
     }
 
-    const cols: Column[] = s.pinned.map((sc) => {
+    const cols: Column[] = [s.live, ...s.pinned].map((sc) => {
       const first = samplesFor(sc, '30d')[0];
       const now = first && first.tMs === sc.tMs ? first : null;
       return { sc, now, sunUp: !!now && now.sunFrac > 0, earthUp: !!now && now.earthUp };
     });
 
     message.hidden = true;
+    hint.hidden = s.pinned.length > 0;
     showParts(true);
     tableWrap.replaceChildren(drawTable(cols));
     strips.setAttribute('aria-label',
@@ -250,6 +259,11 @@ export function mount(el: HTMLElement): void {
       if (id !== drawId) return;
       void P.react(strips, data, stripLayout(rows), { displayModeBar: false, responsive: true });
     });
+  };
+
+  // A timeline drag changes live many times a frame: draw at most once per animation frame.
+  const render = (): void => {
+    if (!frame) frame = requestAnimationFrame(draw);
   };
 
   subscribe(render);
