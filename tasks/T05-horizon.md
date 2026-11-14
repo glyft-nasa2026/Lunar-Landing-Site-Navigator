@@ -41,7 +41,7 @@ The check on the real Shackleton floor is T24's, once T04 has merged.
 - 14 Nov 2026, pull request #53 (`t05-horizon-b`), from the audit of merged tickets. Tests only:
   - The walk test checks that the look-out distance is 150 km. Before, it passed with any distance.
   - The timing test reads the fastest of five runs. The median failed on a busy machine with the code unchanged.
-- Pull request #40 (T02, open on 14 Nov 2026) makes `destination()` work from exactly latitude -90, with the rule `horizon.ts` already uses (bearing b runs down longitude lon + b). Once #40 is in, the special case for the pole in `horizon.ts` is no longer needed. It is harmless and stays until P2 removes it.
+- 14 Nov 2026, pull request #40 (T02): `destination()` works from exactly latitude -90, with the rule `horizon.ts` already used (bearing b runs down longitude lon + b). The special case for the pole in `horizon.ts` is no longer needed. It is harmless and stays until P2 removes it; #53 only corrects its comment, which said `destination()` can't compute there.
 
 ## Prompt to paste into Claude Code
 
