@@ -1,10 +1,10 @@
 # MCP servers and skills
 
-Checked 14 Nov 2026. Only P1 edits this file.
+Checked 14 Nov 2026. Anyone can update this guide; coordinate overlapping edits.
 
-**Short answer:** nobody needs an MCP server or a custom skill to finish a task, except the UI
-designer (P5: T22, T19, T16, T23), who needs Figma's. One browser server is optional for people on UI
-tasks. Everything else is ordinary command-line tools.
+**Short answer:** choose tools for the task you take. Figma MCP is useful when reading a Figma
+file; exported design pictures are the fallback. One browser server is optional for UI tasks.
+Everything else is ordinary command-line tools. These tool choices don't assign tasks to people.
 
 An MCP server is a plug-in that gives a Claude session extra tools (read a Figma file, drive a
 browser). A skill is a saved set of instructions a session loads with `/name`.
@@ -14,9 +14,9 @@ browser). A skill is a saved set of instructions a session loads with `/name`.
 | Who | Needs | Optional | Doesn't need |
 |---|---|---|---|
 | Everyone | Claude Code, git, `gh` (signed in), Node 22 or newer | `/code-review` when reviewing a pull request | A Figma account |
-| P1, P2, P4 (data-prep) | Python 3.11 or newer | | |
-| UI designer (T22, T19, T16, T23) | Figma MCP (section 3) | Chrome DevTools MCP (section 4) | |
-| Module owners (T08-T13) | Nothing extra | Chrome DevTools MCP | Figma MCP: the designer hands over pictures (section 3) |
+| Anyone taking data-prep work | Python 3.11 or newer | | |
+| Anyone reading a Figma design (T22, T19, T16, T23) | Figma MCP or exported pictures (section 3) | Chrome DevTools MCP (section 4) | |
+| Anyone building modules (T08-T13) | Nothing extra | Chrome DevTools MCP | Figma MCP when exported pictures are available (section 3) |
 
 ## 2. Rules
 
@@ -24,11 +24,11 @@ browser). A skill is a saved set of instructions a session loads with `/name`.
 |---|---|
 | Add a server for yourself only. Never create `.mcp.json` in the repo, never use `--scope project` | `.mcp.json` loads the server into all five sessions. Each one pays for its tool list and gets a sign-in prompt |
 | On a Pro plan, add no server you don't use in that task | Every server's tool list and every screenshot comes out of your usage allowance |
-| A server never changes who owns a file | Figma or a browser can show that another module looks wrong. The fix still goes through that module's owner |
+| Tool access follows the same task coordination rules | Declare needed files and coordinate with anyone already editing them |
 | Numbers still come from `web/src/core/` | A design mock-up may show made-up angles. Never copy them into code |
 | Every tool you used goes in `docs/ai-use/<task id>.md` and `docs/sources/<task id>.md` | The submission must say how AI was used |
 
-## 3. Figma MCP (UI designer only)
+## 3. Figma MCP (when using Figma)
 
 ### Before the event: the Figma plan
 
@@ -73,20 +73,20 @@ Then `/mcp`, choose `figma`, Authenticate.
 
 ### How the Figma file lines up with the repo
 
-| In Figma | Becomes | Owner |
+| In Figma | Becomes | Task |
 |---|---|---|
-| Variables named exactly as contract section 6 (`bg`, `panel`, `text`, `scn-a`, `space-3`, `fs-md`, ...) | Values in `docs/design.md` (T22), then in `web/src/ui/theme.css` (T19) | P5 |
-| One frame 1280 wide and one 390 wide, with one layer per slot, named by slot id (`about`, `scene`, `scenarios`, `readout`, `nudge`, `compare`, `timeline`, `sky`) | The grid in `web/src/ui/layout.css` (T19) | P5 |
-| Chart styling (background, grid lines, type) | `web/src/ui/plotTheme.ts` (T19) | P5 |
-| The inside of each slot | One picture per slot, exported to `docs/design/<slot id>.png` (T22) | P5 exports; the module's owner builds it; P5 then polishes its CSS (T23) |
+| Variables named exactly as contract section 6 (`bg`, `panel`, `text`, `scn-a`, `space-3`, `fs-md`, ...) | Values in `docs/design.md` (T22), then in `web/src/ui/theme.css` (T19) | T22, then T19 |
+| One frame 1280 wide and one 390 wide, with one layer per slot, named by slot id (`about`, `scene`, `scenarios`, `readout`, `nudge`, `compare`, `timeline`, `sky`) | The grid in `web/src/ui/layout.css` (T19) | T19 |
+| Chart styling (background, grid lines, type) | `web/src/ui/plotTheme.ts` (T19) | T19 |
+| The inside of each slot | One picture per slot, exported to `docs/design/<slot id>.png` (T22) | T22 exports; the module's task builds it; T23 polishes its CSS |
 
 - Enter the fixed colours first and don't change them: scenarios `#E69F00`, `#0072B2`,
   `#009E73`; Sun `#F0E442`; Earth `#56B4E9`.
-- A module owner gives their session the picture: "Read `docs/design/compare.png` and match it
+- Whoever takes a module task gives their session the picture: "Read `docs/design/compare.png` and match it
   using only the classes and variables in contract section 6." Claude reads images. No Figma
   account or Figma call is needed.
-- A design that needs a variable the contract doesn't have: collect them all and ask P1 once,
-  early. Don't invent names.
+- A design that needs variables the contract doesn't have: collect them together, agree the
+  names with the team, and include the contract and theme updates in coordinated task scope.
 
 ### Rules for the session that reads Figma
 

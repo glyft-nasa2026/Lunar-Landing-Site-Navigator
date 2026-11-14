@@ -4,7 +4,6 @@ Status: done (pull request #16; the table was replaced by the 1900-2100 one in #
 
 | | |
 |---|---|
-| Owner | P4 |
 | Tier | must |
 | Waits for | T20 |
 | Branch | `t01-ephemeris` |
@@ -13,7 +12,7 @@ Status: done (pull request #16; the table was replaced by the 1900-2100 one in #
 
 The real table (contract section 2) and the fixtures that prove the browser maths.
 
-## Files you own
+## Files in scope
 
 - `data-prep/make_ephemeris.py`
 - `web/public/data/ephemeris.bin`, `ephemeris.json` (taken over from T20's mock)
@@ -44,7 +43,7 @@ Skyfield downloads its own data files (about 20 MB) on first run. Keep them in `
 
 The packages are already in `data-prep/requirements.txt` (T20). While T20 is still open, set up Python, read the Skyfield page and start that download; make the branch once T20 has merged.
 
-P1's T02 waits for the fixtures. Merge this as soon as its checks pass.
+T02 waits for the fixtures. Merge this as soon as its checks pass.
 
 ## After the merge
 
@@ -54,5 +53,5 @@ P1's T02 waits for the fixtures. Merge this as soon as its checks pass.
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T01-ephemeris.md. Do only that task, on branch t01-ephemeris. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T01-ephemeris.md. Do only that task, on branch t01-ephemeris. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

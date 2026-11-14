@@ -1,7 +1,8 @@
 # Data contract
 
-The one file both halves follow. **Only P1 edits it.** If it's wrong or missing something, tell
-P1; don't work around it.
+The one file both halves follow. Anyone can propose a contract change as part of a task.
+Coordinate overlapping edits and tell contributors using the interface before changing it;
+update the contract and affected code together.
 
 Conventions (also in `CLAUDE.md`): degrees; latitude north-positive; longitude east-positive,
 -180 to 180; azimuth clockwise from north; UTC; Moon radius `R = 1737.4 km`; heights in metres
@@ -227,8 +228,9 @@ export type CuratedSite = { id: string; name: string; lat: number; lon: number; 
 | `windows.ts` | T00 first pass, then T06 | `series(eph, site, groundM, skyline, startMs, endMs, stepMs): Sample[]` · `nextFlip(eph, site, groundM, skyline, tMs, body: Body, maxDays = 60): Flip` · `summary(samples: Sample[]): Summary` · `countdownText(body: Body, upNow: boolean, flip: Flip, tMs: number, neverLit = false): string` |
 
 **First pass** means T00 writes the function straight from the formulas below, with a few sanity
-tests, so the site shows live numbers from the first hour. The task named after it then owns the
-file: it adds the real tests and fixes what they find. Names and signatures never change.
+tests, so the site shows live numbers from the first hour. The follow-up task adds the real
+tests and fixes what they find. These are task dependencies, not person assignments. Keep the
+documented names and signatures unless a coordinated contract change updates their callers.
 
 `countdownText` wording (F4). Durations read `3 d 4 h`, or `5 h 20 min` under one day.
 
@@ -286,7 +288,7 @@ earthUp    = earthAbove > 0
 
 `nextFlip` walks forward hourly, then halves the last interval until it is under one minute.
 
-## 4. State: `web/src/state.ts` (T00, P1 only)
+## 4. State: `web/src/state.ts` (created by T00)
 
 UI modules read state and call actions. They never call each other.
 
@@ -352,7 +354,7 @@ is what lets a drag move the marker without the chart sliding under the cursor.
 **While data is loading** (`eph` is null), the accessors return empty arrays, `null` flips, a
 flat skyline and zeros. Modules show "Loading" and must not crash.
 
-## 5. Page slots: `web/index.html` (T00, P1 only)
+## 5. Page slots: `web/index.html` (created by T00)
 
 | Element id | Module folder | Task |
 |---|---|---|
@@ -367,13 +369,14 @@ flat skyline and zeros. Modules show "Loading" and must not crash.
 | `#panel` | `web/src/ui/panel/` | T15 |
 
 Each folder has `index.ts` exporting `mount(el)`, and its own CSS file. `main.ts` mounts each
-one. T00 wired the first eight with placeholders; a slot for an "if time" task (`#panel`) is
-added by P1, so a module's own task still never touches `main.ts` or `index.html`.
+one. T00 wired the first eight with placeholders; T15 added `#panel`. A task that adds a slot
+includes `main.ts`, `index.html` and this contract in its scope, and coordinates with active
+layout work.
 
 `#about` is a thin bar across the top: the product name, the Horizons badge and an About button
 that opens the About panel. `#nudge` sits under `#readout`, and `#panel` under `#nudge`.
 
-## 6. Look: `web/src/ui/theme.css` (T00 creates, then T19 owns)
+## 6. Look: `web/src/ui/theme.css` (T00 creates, T19 designs)
 
 Modules use these names and never write a colour code, font or pixel size of their own. T19
 changes the values; the names stay.
@@ -410,6 +413,6 @@ styles, write `var(--sun)` or `var(${sc.color})`.
 **The one pixel value a module may write** is the phone breakpoint:
 `@media (max-width: 800px)`. Everything else comes from the variables.
 
-**Who styles what.** A module's own task writes its first CSS using the shared classes. Once that
-task has merged, the module's CSS file belongs to T23 (the UI designer); its `index.ts` stays
-with the module's owner.
+**CSS order.** A module's task writes its first CSS using the shared classes. T23 polishes it
+after that task merges. Anyone can take either task; coordinate further code and CSS changes
+with active work on the same files.

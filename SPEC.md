@@ -138,11 +138,10 @@ Fill in the clock times once the submission deadline is known.
 
 | Decision | Who | Importance |
 |---|---|---|
-| Submission deadline and Saturday start time, Malaysia time | P1 | blocks the schedule |
+| Submission deadline and Saturday start time, Malaysia time | Team | blocks the schedule |
 | Team agrees the cut line (refraction and GPS removed) | All | blocks T08 onward |
-| Project name | P5 | cosmetic |
-| Names against P2-P5 on the board | P1 | blocks delegation |
-| Repo made public (GitHub refuses the branch rule and Pages on a private repo in a free organisation) | P1 | blocks T21 |
-| Figma seat for the designer: Full or Dev on Professional or Education | P5 | costs time (a fallback is in `docs/mcp-and-skills.md`) |
-| Demo format and length, read from the submission form | P4 | blocks T17 |
-| Load-time budgets in T27 (numbers in 3 s, height map in 20 s, no freeze over 0.5 s, on "Fast 4G"): proposed, not yet agreed | P1 | costs time |
+| Project name | Team | cosmetic |
+| Repo made public (GitHub refuses the branch rule and Pages on a private repo in a free organisation) | Whoever takes T21, with repository settings access | blocks T21 |
+| Figma seat when using Figma: Full or Dev on Professional or Education | Whoever takes the design task | costs time (a fallback is in `docs/mcp-and-skills.md`) |
+| Demo format and length, read from the submission form | Whoever takes T17 | blocks T17 |
+| Load-time budgets in T27 (numbers in 3 s, height map in 20 s, no freeze over 0.5 s, on "Fast 4G"): proposed, not yet agreed | Team, informed by T27's measurements | costs time |

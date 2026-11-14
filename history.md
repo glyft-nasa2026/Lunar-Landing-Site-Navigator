@@ -1,7 +1,62 @@
 # History
 
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
-files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
+files say what is true now; decisions are in `docs/decisions.md`. Anyone can record a change;
+coordinate overlapping edits.
+
+## 14 Nov 2026: anyone can take any task
+
+Yi Hung asked: "change the ownership thing, no need to arrange tasks to specific person anymore,
+anyone can take any tasks, we just have to arrange better".
+
+### CLAUDE.md: File ownership; docs/team-workflow.md
+
+- Was "Edit only the files listed under 'Files you own' in your task", with a protected-file
+  list, "Need a change in a file you don't own? Stop", and "ask P1" for packages. File lists
+  now describe starting scope; necessary extra files can be declared in the pull request.
+  Anyone can change shared files after coordinating overlaps. Dependency files still change
+  together, and task dependencies and milestones still apply.
+- The workflow said "Take the next task in your row", assigned reviewers in a P1-to-P5 ring,
+  and made P1 the fallback for handoffs and large tasks. Now anyone can claim available work,
+  review it or accept a handoff. Claims name the task, branch and planned files; active work
+  changes hands explicitly. Concurrent sessions use separate worktrees or clones, and
+  contributors agree an order before editing the same file.
+
+### tasks/README.md; tasks/T00-T30: metadata, scope and prompts
+
+- Removed the fixed person-to-task sequences, the board's Owner column, and each task's
+  Owner row (P1-P5 or "unassigned"). The People table keeps names and tool plans, without
+  reserved roles. The replacement queue prioritises ready must work, dependencies, milestone
+  checks and then optional work. Existing statuses, branch names and prerequisites stay.
+- "Files you own" is now "Files in scope". Prompts point to the common coordination rules;
+  shared-file fixes no longer have to wait for a named person. T14 includes its slot and scene
+  integration; T23 can include necessary coordinated markup. Tests, measurement-only T27 and
+  freeze follow-ups retain focused deliveries. Failed checks remain evidence, not a reason to
+  weaken a test. Anyone can prepare T28; server steps still require access arranged with
+  Yi Hung, whose server hosts the mirror.
+- Historic "After the merge" notes and confirmations remain records. Person names there do
+  not restrict who can claim follow-up work; the board makes this explicit.
+
+### docs/data-contract.md; docs/mcp-and-skills.md; docs/design.md
+
+- The contract and tool guide said "Only P1 edits". State, page slots, package changes and new
+  theme variables were routed to P1; Figma and UI tasks to P5. These now use the common
+  coordination process. The data formats, geometry formulas and theme conventions are unchanged.
+- Design's unresolved section "Needs P1 (asked once, all together)" is "Needs team decision";
+  its six open items are retained. Figma access and exported pictures are selected by task,
+  without a person assignment.
+
+### docs/decisions.md; SPEC.md: Open decisions; README.md
+
+- Retired decisions "T01 goes to P4, T13 to P3, T17 to P4", "The UI designer (P5) ... does UI
+  only", and "every file has one owner task". Their current replacements record open task
+  claims, shared design conventions and coordination of overlaps. T27's "every fix goes to
+  the owner" now means anyone can claim a separate fix.
+- SPEC's decision contacts were P1, P4 or P5; they are now the team or whoever takes the
+  relevant task. Removed "Names against P2-P5 on the board ... blocks delegation" because
+  numbered person assignments are no longer used; team names remain on the board.
+- README pointers describe the shared queue and contributors. Decisions and history no longer
+  reserve editing for P1. Reason for these changes: Yi Hung's instruction above.
 
 ## 14 Nov 2026: audit of the merged tickets
 

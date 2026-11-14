@@ -4,7 +4,6 @@ Status: not started
 
 | | |
 |---|---|
-| Owner | P1 |
 | Tier | if time |
 | Waits for | T21, M1 |
 | Branch | `t28-mirror` |
@@ -12,10 +11,11 @@ Status: not started
 ## Goal
 
 A second copy of the site on rickphobia.com, in case darksight.space is slow or down while the
-judges look. The submitted link stays `https://darksight.space` (`docs/decisions.md`). Only P1
-can do this task: the mirror is P1's own server.
+judges look. The submitted link stays `https://darksight.space` (`docs/decisions.md`). Anyone
+can prepare this task; arrange server access or the copy step with Yi Hung, who controls the
+mirror's server.
 
-## Files you own
+## Files in scope
 
 - `docs/ai-use/T28.md`, `docs/sources/T28.md`, this file's `Status:` line
 
@@ -39,5 +39,5 @@ Nothing in `web/` changes. The build already works from any folder, because Vite
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md and tasks/T28-mirror.md. Do only that task, on branch t28-mirror. Build the site and tell me the copy commands to run on the server; don't copy anything over a folder you haven't shown me first. Edit only the files it lists under "Files you own". When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md and tasks/T28-mirror.md. Do only that task, on branch t28-mirror. Build the site and tell me the copy commands to run on the server; don't copy anything over a folder you haven't shown me first. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

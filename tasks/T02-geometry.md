@@ -4,7 +4,6 @@ Status: done (pull request #26; `destination` from a pole fixed in #40)
 
 | | |
 |---|---|
-| Owner | P1 |
 | Tier | must |
 | Waits for | T00, T01 |
 | Branch | `t02-geometry` |
@@ -13,7 +12,7 @@ Status: done (pull request #26; `destination` from a pole fixed in #40)
 
 `sunAltAz`, `earthAltAz` and `destination` proven against Skyfield. T00 wrote a first pass from the contract's formulas; this task adds the real tests and fixes whatever they find.
 
-## Files you own
+## Files in scope
 
 - `web/src/core/geometry.ts` (taken over from T00's first pass), `web/src/core/geometry.test.ts`
 - `docs/ai-use/T02.md`, `docs/sources/T02.md`, this file's `Status:` line
@@ -40,5 +39,5 @@ Status: done (pull request #26; `destination` from a pole fixed in #40)
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T02-geometry.md. Do only that task, on branch t02-geometry. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T02-geometry.md. Do only that task, on branch t02-geometry. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

@@ -1,69 +1,76 @@
 # Task board
 
-Only P1 edits this file. Progress lives in each task's pull request (opened as a draft at the
-first push) and on its `Status:` line, so this file never causes a merge conflict.
+Anyone can take any available task. Progress and current contributors live in each task's
+pull request and `Status:` line. Use the team chat to claim work before the first push, then
+open a draft pull request. This board lists scope and dependencies, not fixed assignments.
 
 ## People
 
-| | Name | Plan | Role |
-|---|---|---|---|
-| P1 | Yi Hung | Claude Max | Site skeleton, engine tests, 3D scene, the contract |
-| P2 | Leon | Claude Pro | Mock data, terrain, skyline, sky panorama |
-| P3 | Yu An | Deepseek | CI and deploy, interface: scenarios, compare, timeline, nudge |
-| P4 | Fabian | Claude Pro | Sun and Earth table, Horizons check, site list, testing, pitch |
-| P5 | Hao Zhe | Claude Pro | UI designer, in Figma: design, theme, About, polish. UI only |
+| Name | Plan |
+|---|---|
+| Yi Hung | Claude Max |
+| Leon | Claude Pro |
+| Yu An | Deepseek |
+| Fabian | Claude Pro |
+| Hao Zhe | Claude Pro |
 
-## Who does what, in order
+## Picking the next task
 
-Nobody waits at the start: five tasks begin at kickoff. Read your row left to right.
+1. Check the task's `Status:`, open pull requests and the team chat. A historical status can
+   lag behind a merge; check the pull request before treating a task as available.
+2. Pick unfinished **must** work whose prerequisites have merged. Prefer work that unblocks
+   another task or is needed for the next milestone. Bug fixes and reviews count as work.
+3. Claim it in the chat with the task id, branch and files you plan to change. Keep the
+   `Status:` and draft pull request current; don't start a second implementation of active work.
+4. Check for overlapping files. Agree an order or a handoff with the other contributor before
+   editing the same file. Include necessary extra files in the declared scope.
+5. At M3, switch to the freeze checklist, bugs and submission. Optional features wait for M2;
+   T30 keeps its documented exception because it is a check, not a feature.
 
-| | From kickoff | Then, in this order |
-|---|---|---|
-| P1 | T00 | T02 (once T01 is in; if it isn't, skip ahead), T06, T12, T25, then T15 after M2, T26 at M3 |
-| P2 | T20, with the LOLA download running beside it | T05 (while the download finishes), T04, T11, T27 |
-| P3 | T21; while its pull request waits for T00, go through the design with P5 | T08, T09, T10, T13 |
-| P4 | Set up Python and start the lookup for T07; T01 as soon as T20 merges | T03, T07, T18 at M1, T17, T24 and T18 again at M2 |
-| P5 | T22 | T19, T16, T23 |
+The detailed branch, overlap, review and handoff process is in `docs/team-workflow.md`.
+Anyone can update this board when the task list or dependencies change; coordinate that edit
+with other documentation work. Names in past audit notes record earlier contributions and
+assignments, not restrictions on who can take the work now.
 
 ## Tasks
 
-"Waits for" lists every task that must be merged before you make your branch. Nothing else is
-needed to start or to finish. One exception: T00, T20 and T21 start together and merge in the
+"Waits for" lists the prerequisite tasks or milestones. Check active claims and file overlaps
+as well before starting. One exception: T00, T20 and T21 start together and merge in the
 order given in `docs/team-workflow.md`, "The first three merges".
 
-| Task | What | Owner | Tier | Waits for |
-|---|---|---|---|---|
-| [T00](T00-setup.md) | Site skeleton, with first-pass engine | P1 | must | - |
-| [T20](T20-mock-data.md) | Mock data | P2 | must | - |
-| [T21](T21-ci-deploy.md) | CI, deploy and repo settings | P3 | must | - |
-| [T22](T22-design.md) | Design in Figma, pictures for every slot | P5 | must | - |
-| [T01](T01-ephemeris.md) | Sun and Earth table from Skyfield | P4 | must | T20 |
-| [T02](T02-geometry.md) | Prove the angles: geometry.ts | P1 | must | T00, T01 |
-| [T03](T03-horizons-check.md) | Check our numbers against JPL Horizons | P4 | must | T00, T01 |
-| [T04](T04-dem.md) | South-pole height map from LOLA | P2 | must | T00, T20 |
-| [T05](T05-horizon.md) | Terrain skyline: horizon.ts | P2 | must | T00 |
-| [T06](T06-windows.md) | Prove countdowns and percentages: windows.ts | P1 | must | T00 |
-| [T07](T07-sites.md) | Curated site list | P4 | must | T00, T20 |
-| [T08](T08-ui-scenarios.md) | Scenario panel, readout, share link | P3 | must | T00 |
-| [T09](T09-ui-compare.md) | Compare table and strips | P3 | must | T00 |
-| [T10](T10-ui-timeline.md) | Timeline chart with scrubber | P3 | must | T00 |
-| [T11](T11-ui-sky.md) | Sky panorama | P2 | must | T05 |
-| [T12](T12-scene.md) | 3D scene and map | P1 | must | T00 |
-| [T13](T13-nudge.md) | Nudge: small move, big change | P3 | must | T00, T05 |
-| [T16](T16-about.md) | About bar, About panel, Horizons badge | P5 | must | T00 |
-| [T19](T19-ui-design.md) | Theme, layout, chart style | P5 | must | T00, T22 |
-| [T23](T23-ui-polish.md) | UI polish: every module matches the design | P5 | must | T19, and each module's own task |
-| [T24](T24-real-data-checks.md) | Terrain checks on the real data | P4 | must | T01, T04, T05, T06, T07 |
-| [T25](T25-first-open.md) | Example on first open: rim against floor | P1 | must | T00 |
-| [T27](T27-load-time.md) | Load time on the real data, measured | P2 | must | T04, T21 |
-| [T17](T17-pitch.md) | Slides, demo video, submission text | P4 | must | M1 for screenshots, M2 for the video |
-| [T18](T18-qa.md) | Testing with a real person, bug list | P4 | must | M1, repeated at M2 |
-| [T26](T26-freeze.md) | Freeze checklist: README, notes, open decisions, tag | P1 | must | M3 |
-| [T14](T14-layers.md) | Map layers | unassigned | if time | M2 |
-| [T15](T15-panel.md) | Solar panel choice | P1 | if time | M2 |
-| [T29](T29-transition.md) | Camera glide between 2D and 3D | unassigned | if time | T12, M2 |
-| [T28](T28-mirror.md) | Mirror on rickphobia.com | P1 | if time | T21, M1 |
-| [T30](T30-smoke-test.md) | Page smoke test in CI | P3 | if time | T00, T20, T21 |
+| Task | What | Tier | Waits for |
+|---|---|---|---|
+| [T00](T00-setup.md) | Site skeleton, with first-pass engine | must | - |
+| [T20](T20-mock-data.md) | Mock data | must | - |
+| [T21](T21-ci-deploy.md) | CI, deploy and repo settings | must | - |
+| [T22](T22-design.md) | Design in Figma, pictures for every slot | must | - |
+| [T01](T01-ephemeris.md) | Sun and Earth table from Skyfield | must | T20 |
+| [T02](T02-geometry.md) | Prove the angles: geometry.ts | must | T00, T01 |
+| [T03](T03-horizons-check.md) | Check our numbers against JPL Horizons | must | T00, T01 |
+| [T04](T04-dem.md) | South-pole height map from LOLA | must | T00, T20 |
+| [T05](T05-horizon.md) | Terrain skyline: horizon.ts | must | T00 |
+| [T06](T06-windows.md) | Prove countdowns and percentages: windows.ts | must | T00 |
+| [T07](T07-sites.md) | Curated site list | must | T00, T20 |
+| [T08](T08-ui-scenarios.md) | Scenario panel, readout, share link | must | T00 |
+| [T09](T09-ui-compare.md) | Compare table and strips | must | T00 |
+| [T10](T10-ui-timeline.md) | Timeline chart with scrubber | must | T00 |
+| [T11](T11-ui-sky.md) | Sky panorama | must | T05 |
+| [T12](T12-scene.md) | 3D scene and map | must | T00 |
+| [T13](T13-nudge.md) | Nudge: small move, big change | must | T00, T05 |
+| [T16](T16-about.md) | About bar, About panel, Horizons badge | must | T00 |
+| [T19](T19-ui-design.md) | Theme, layout, chart style | must | T00, T22 |
+| [T23](T23-ui-polish.md) | UI polish: every module matches the design | must | T19, and each module's own task |
+| [T24](T24-real-data-checks.md) | Terrain checks on the real data | must | T01, T04, T05, T06, T07 |
+| [T25](T25-first-open.md) | Example on first open: rim against floor | must | T00 |
+| [T27](T27-load-time.md) | Load time on the real data, measured | must | T04, T21 |
+| [T17](T17-pitch.md) | Slides, demo video, submission text | must | M1 for screenshots, M2 for the video |
+| [T18](T18-qa.md) | Testing with a real person, bug list | must | M1, repeated at M2 |
+| [T26](T26-freeze.md) | Freeze checklist: README, notes, open decisions, tag | must | M3 |
+| [T14](T14-layers.md) | Map layers | if time | M2 |
+| [T15](T15-panel.md) | Solar panel choice | if time | M2 |
+| [T29](T29-transition.md) | Camera glide between 2D and 3D | if time | T12, M2 |
+| [T28](T28-mirror.md) | Mirror on rickphobia.com | if time | T21, M1 |
+| [T30](T30-smoke-test.md) | Page smoke test in CI | if time | T00, T20, T21 |
 
 ## Order
 
@@ -87,5 +94,5 @@ T24 needs T01, T04, T05, T06 and T07. T17 and T18 run alongside from M1.
 T27 needs T04 and T21. T26 runs at M3.
 ```
 
-After T00 and T20, every person has a task that nothing blocks: the page already shows live
+After T00 and T20, several tasks can run in parallel: the page already shows live
 numbers on mock data, because T00 writes a first pass of the engine and T20 supplies the files.
