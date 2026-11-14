@@ -9,7 +9,7 @@ import {
   flipFor, getState, neverLitFor, samplesFor, subscribe, summaryFor, type AppState, type Scenario,
 } from '../../state';
 import { plotLayout, themeColor } from '../plotTheme';
-import { best, countdownScore, hoursText, pctText, runs } from './model';
+import { best, countdownScore, daysCovered, discPctText, hoursText, pctText, runs } from './model';
 
 const SPAN_DAYS = 30;
 
@@ -35,12 +35,16 @@ function utcText(tMs: number): string {
   return new Date(tMs).toISOString().slice(0, 16).replace('T', ' ');
 }
 
-/** What one column shows. `now` is null when the scenario's time has no sample. */
+/**
+ * What one column shows. `now` is null when the scenario's time has no sample. `days` is how
+ * much of the 30 days after it the table covers: less than 30 near the table's end.
+ */
 type Column = {
   sc: Scenario;
   now: Sample | null;
   sunUp: boolean;
   earthUp: boolean;
+  days: number;
 };
 
 /** One table row: the text in each column and, if it has one, the number to rank by. */
@@ -60,7 +64,9 @@ function countdownRow(name: string, body: Body, cols: Column[]): Row {
 }
 
 function buildRows(cols: Column[]): Row[] {
-  const sums = cols.map((c) => (c.now ? summaryFor(c.sc) : null));
+  // The five 30-day rows need all 30 days. On a shorter series the figures would be ranked as
+  // if they were whole: a site with 7 days of table left read "Longest dark 7 d 0 h (best)".
+  const sums = cols.map((c) => (c.now && c.days >= SPAN_DAYS ? summaryFor(c.sc) : null));
   const sumRow = (
     name: string, pick: (s: NonNullable<(typeof sums)[number]>) => number,
     text: (v: number) => string, higherIsBetter: boolean,
@@ -74,7 +80,7 @@ function buildRows(cols: Column[]): Row[] {
   return [
     {
       name: 'Sun now',
-      cells: cols.map((c) => (!c.now ? '–' : c.sunUp ? `Lit, ${Math.round(c.now.sunFrac * 100)} % of disc` : 'Dark')),
+      cells: cols.map((c) => (!c.now ? '–' : c.sunUp ? `Lit, ${discPctText(c.now.sunFrac)} of disc` : 'Dark')),
       values: cols.map((c) => c.now?.sunFrac ?? null),
       higherIsBetter: true,
     },
@@ -140,7 +146,11 @@ function drawTable(cols: Column[]): HTMLTableElement {
   return table;
 }
 
-/** Plotly traces: a dark background bar for every row, then the filled runs on top. */
+/**
+ * Plotly traces: a dark background bar for every row, then the filled runs on top. The dark
+ * bar is as long as the days the table covers, so days with no data are left empty, not shown
+ * as hidden.
+ */
 function stripData(cols: Column[]): { data: Data[]; rows: string[] } {
   const rows: string[] = [];
   const data: Data[] = [];
@@ -149,7 +159,7 @@ function stripData(cols: Column[]): { data: Data[]; rows: string[] } {
 
   data.push({
     type: 'bar', orientation: 'h', name: 'Hidden',
-    y: rows, x: rows.map(() => SPAN_DAYS), base: rows.map(() => 0),
+    y: rows, x: cols.flatMap((c) => [c.days, c.days]), base: rows.map(() => 0),
     marker: { color: dark }, hoverinfo: 'skip', showlegend: false,
   });
 
@@ -205,8 +215,9 @@ export function mount(el: HTMLElement): void {
   const stripsTitle = make('h3', 'cmp-sub', 'Sun and Earth, next 30 days');
   const strips = make('div', 'cmp-strips');
   strips.setAttribute('role', 'img');
-  const note = make('p', 'cmp-note muted',
-    'Filled where the Sun or Earth is up. Solid bar: Sun. Lighter bar: Earth.');
+  const NOTE = 'Filled where the Sun or Earth is up. Solid bar: Sun. Lighter bar: Earth.';
+  const NOTE_SHORT = ' A dash, or a strip that stops early: the Sun and Earth table has fewer than 30 days after that time.';
+  const note = make('p', 'cmp-note muted', NOTE);
   const hint = make('p', 'muted', 'Pin a scenario to compare');
   el.replaceChildren(title, message, tableWrap, hint, stripsTitle, strips, note);
 
@@ -259,10 +270,15 @@ export function mount(el: HTMLElement): void {
     }
 
     const cols: Column[] = [s.live, ...s.pinned].map((sc) => {
-      const first = samplesFor(sc, '30d')[0];
+      const samples = samplesFor(sc, '30d');
+      const first = samples[0];
       const now = first && first.tMs === sc.tMs ? first : null;
-      return { sc, now, sunUp: !!now && now.sunFrac > 0, earthUp: !!now && now.earthUp };
+      return {
+        sc, now, sunUp: !!now && now.sunFrac > 0, earthUp: !!now && now.earthUp,
+        days: Math.min(SPAN_DAYS, daysCovered(samples)),
+      };
     });
+    note.textContent = NOTE + (cols.some((c) => c.days < SPAN_DAYS) ? NOTE_SHORT : '');
 
     message.hidden = true;
     hint.hidden = s.pinned.length > 0;

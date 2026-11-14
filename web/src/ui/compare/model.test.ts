@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Sample } from '../../core/types';
-import { best, countdownScore, hoursText, pctText, runs } from './model';
+import { best, countdownScore, daysCovered, discPctText, hoursText, pctText, runs } from './model';
 
 const H = 3_600_000;
 const D = 86_400_000;
@@ -48,9 +48,14 @@ describe('runs', () => {
   });
 
   it('keeps every run inside 0 to 30 days', () => {
-    const start = T0 + 30 * D - H;
+    // The sample's hour starts half an hour before day 30 and would end half an hour after it.
+    // (Starting a whole hour before, it ended exactly on day 30 and never met the limit.)
+    const start = T0 + 30 * D - H / 2;
     const s = samples([true]).map((x) => ({ ...x, tMs: start }));
-    expect(runs(s, sunUp, T0, null)).toEqual([{ from: 30 - 1 / 24, to: 30 }]);
+    expect(runs(s, sunUp, T0, null)).toEqual([{ from: 30 - 0.5 / 24, to: 30 }]);
+    // And at the other end: an hour that began before the strip starts.
+    const early = samples([true]).map((x) => ({ ...x, tMs: T0 - H / 2 }));
+    expect(runs(early, sunUp, T0, null)).toEqual([{ from: 0, to: 0.5 / 24 }]);
   });
 });
 
@@ -69,6 +74,8 @@ describe('best', () => {
   it('skips columns with no value', () => {
     expect([...best([null, 4, 2], true)]).toEqual([1]);
     expect(best([null, null], true).size).toBe(0);
+    // One value beside a dash is not "best": there is nothing to compare it with.
+    expect(best([null, 5], true).size).toBe(0);
   });
   it('handles never-sets and never-rises', () => {
     expect([...best([Infinity, 5, -Infinity], true)]).toEqual([0]);
@@ -94,5 +101,20 @@ describe('text', () => {
     expect(hoursText(5.4)).toBe('5 h');
     expect(hoursText(76)).toBe('3 d 4 h');
     expect(pctText(73.44)).toBe('73.4 %');
+  });
+
+  it('the Sun\'s disc: a sliver is never 0 % and a nicked disc never 100 %, as in the readout', () => {
+    expect(discPctText(0)).toBe('0 %');
+    expect(discPctText(0.002)).toBe('1 %');
+    expect(discPctText(0.734)).toBe('73 %');
+    expect(discPctText(0.998)).toBe('99 %');
+    expect(discPctText(1)).toBe('100 %');
+  });
+
+  it('days covered: 720 hourly samples are 30 days, 168 are 7', () => {
+    expect(daysCovered([])).toBe(0);
+    expect(daysCovered(samples(new Array<boolean>(720).fill(true)))).toBe(30);
+    expect(daysCovered(samples(new Array<boolean>(168).fill(false)))).toBe(7);
+    expect(daysCovered(samples([true]))).toBeCloseTo(1 / 24, 12);
   });
 });
