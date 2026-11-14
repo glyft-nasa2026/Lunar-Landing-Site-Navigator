@@ -1,6 +1,6 @@
 # T00: Site skeleton
 
-Status: done, in review (pull request #2)
+Status: done (pull request #2; decade-download fixes in #50)
 
 | | |
 |---|---|
@@ -65,6 +65,19 @@ Not yours: `web/public/data/` and `data-prep/` (T20), `.github/` (T21), `docs/de
 This pull request has no `test-and-build` check: CI is T21's, and T21 merges after this. The
 reviewer runs `npm ci`, `npm test` and `npm run build` on the branch instead
 (`docs/team-workflow.md`, "The first three merges").
+
+## After the merge
+
+- 14 Nov 2026, pull request #6: the product was renamed Darksight.
+- 14 Nov 2026, pull request #31: the Sun and Earth table became 1900-2100 on DE440, one row every 3 hours, split by decade (`ephemeris.json` plus `ephemeris/<decade>.bin`). `ephemeris.ts` gained `indexEphemeris`, `withChunk`, `missing` and `loadEphemerisChunk`; `state.ts` fetches a decade the first time a scenario needs it and keeps it on the device. Step 6's "the two loaders" and the "Done when" lines still hold; the one-file form is still read, for T20's mock and the tests.
+- 14 Nov 2026, pull request #36 (T15): the `#panel` slot was added to `index.html` and `main.ts`, so there are nine slots, not eight.
+- 14 Nov 2026, pull request #50 (`t00-setup-b`), from the audit of merged tickets:
+  - A decade file that arrives too short (a host's web page sent with "200 OK") is refused and never kept on the device. Before, it was kept and read again on every visit.
+  - That file now counts as a failed download. Before, the page sat on "Loading" for good.
+  - With a failed decade, countdowns and the hourly series read up to where that decade starts, as they do at the end of the table. Before, a scenario in the 60 days before it lost both.
+  - A summary worked out while its decade was downloading is not remembered as zeros.
+  - The never-lit scan looks up the site once, not once per hour.
+  - `realTable.testutil.ts` throws when the index lists a decade file that is not there. Before, the Skyfield and Horizons tests skipped.
 
 ## Prompt to paste into Claude Code
 
