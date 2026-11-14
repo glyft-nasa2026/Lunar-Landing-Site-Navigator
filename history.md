@@ -3,6 +3,20 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: homelab hosting and latest-ticket previews
+
+### docs/decisions.md
+
+- The product row said `darksight.space` was served by GitHub Pages, and an older hosting row
+  named GitHub Pages as the submission link with a `rickphobia.com` mirror. Yi Hung explicitly
+  specified homelab nginx, Cloudflare Tunnel and `darksight.space`. The chosen architecture
+  now records that setup and the existing main-to-`deploy`-branch workflow for the homelab.
+- Yi Hung also requested the latest passing ticket preview before merge. The authorised
+  preview workflow currently deploys same-repository PR builds to Cloudflare Pages, and the
+  apex domain points there. The decision distinguishes that live preview route from the
+  chosen Tunnel architecture: the main-only homelab workflow does not yet publish PR previews.
+  This documentation update does not change nginx, Tunnel configuration, workflows or DNS.
+
 ## 14 Nov 2026: product named Darksight
 
 ### README.md, SPEC.md, the page title and `package.json`

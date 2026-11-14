@@ -4,7 +4,7 @@ import { getState, subscribe, summaryFor } from '../../state';
 
 export function mount(el: HTMLElement): void {
   const title = document.createElement('h2');
-  title.textContent = '#compare';
+  title.textContent = 'Compare scenarios';
   const value = document.createElement('p');
   value.className = 'muted';
   el.replaceChildren(title, value);
