@@ -4,7 +4,6 @@ Status: done (pull request #30; re-run on DE440 in #41)
 
 | | |
 |---|---|
-| Owner | P4 |
 | Tier | must |
 | Waits for | T00, T01 |
 | Branch | `t03-horizons-check` |
@@ -13,7 +12,7 @@ Status: done (pull request #30; re-run on DE440 in #41)
 
 Independent proof that our Sun and Earth angles are right: the Python numbers in the contract's `validation.json` format, and a test that holds the browser's own maths to the same Horizons numbers.
 
-## Files you own
+## Files in scope
 
 - `data-prep/check_horizons.py`
 - `web/public/data/validation.json` (taken over from T20's mock)
@@ -67,5 +66,5 @@ own replies to confirm.
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T03-horizons-check.md. Do only that task, on branch t03-horizons-check. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T03-horizons-check.md. Do only that task, on branch t03-horizons-check. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

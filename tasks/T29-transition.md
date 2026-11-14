@@ -4,7 +4,6 @@ Status: not started
 
 | | |
 |---|---|
-| Owner | unassigned |
 | Tier | if time |
 | Waits for | T12, T31, M2 |
 | Branch | `t29-transition` |
@@ -16,12 +15,13 @@ the other instead of jumping. Since T31 the map is a flat 2D canvas, not a camer
 camera path between them: the map fades out while the 3D camera eases down onto the site, and
 the reverse.
 
-## Files you own
+## Files in scope
 
-- `web/src/scene/index.ts`, `web/src/map/index.ts` and any file you add in either folder, shared with T12's and T31's owners: agree with P1 before starting, and only one of you has a branch open on this folder at a time
+- `web/src/scene/index.ts`, `web/src/map/index.ts` and any file you add in either folder; coordinate overlapping files with active T12, T14, T31 or other scene and map work before starting
 - `docs/ai-use/T29.md`, `docs/sources/T29.md`, this file's `Status:` line
 
-Not yours: the scene's CSS file (T23).
+T23 covers the scene's CSS polish; include CSS here only if the transition needs it, and
+coordinate with any active T23 delivery.
 
 ## Steps
 
@@ -41,5 +41,5 @@ Not yours: the scene's CSS file (T23).
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T29-transition.md. Do only that task, on branch t29-transition. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T29-transition.md. Do only that task, on branch t29-transition. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

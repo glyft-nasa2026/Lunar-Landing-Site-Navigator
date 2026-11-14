@@ -4,7 +4,6 @@ Status: done (pull request #34; time zone, pinned press and "Loading" fixes in #
 
 | | |
 |---|---|
-| Owner | P3 |
 | Tier | must |
 | Waits for | T00 |
 | Branch | `t10-ui-timeline` |
@@ -13,7 +12,7 @@ Status: done (pull request #34; time zone, pinned press and "Loading" fixes in #
 
 Spec feature F8.
 
-## Files you own
+## Files in scope
 
 - `web/src/ui/timeline/`
 - `docs/ai-use/T10.md`, `docs/sources/T10.md`, this file's `Status:` line
@@ -43,5 +42,5 @@ Spec feature F8.
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T10-ui-timeline.md. Do only that task, on branch t10-ui-timeline. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T10-ui-timeline.md. Do only that task, on branch t10-ui-timeline. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

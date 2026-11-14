@@ -4,7 +4,6 @@ Status: done (pull request #17)
 
 | | |
 |---|---|
-| Owner | P2 |
 | Tier | must |
 | Waits for | T05 |
 | Branch | `t11-ui-sky` |
@@ -13,7 +12,7 @@ Status: done (pull request #17)
 
 Spec feature F9.
 
-## Files you own
+## Files in scope
 
 - `web/src/ui/sky/`
 - `docs/ai-use/T11.md`, `docs/sources/T11.md`, this file's `Status:` line
@@ -43,5 +42,5 @@ Spec feature F9.
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T11-ui-sky.md. Do only that task, on branch t11-ui-sky. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T11-ui-sky.md. Do only that task, on branch t11-ui-sky. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```

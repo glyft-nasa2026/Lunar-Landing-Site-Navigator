@@ -4,7 +4,6 @@ Status: done
 
 | | |
 |---|---|
-| Owner | P3 |
 | Tier | must |
 | Waits for | T00, T05 |
 | Branch | `t13-nudge` |
@@ -13,7 +12,7 @@ Status: done
 
 Spec feature F11.
 
-## Files you own
+## Files in scope
 
 - `web/src/ui/nudge/`
 - `docs/ai-use/T13.md`, `docs/sources/T13.md`, this file's `Status:` line
@@ -36,5 +35,5 @@ Spec feature F11.
 ## Prompt to paste into Claude Code
 
 ```text
-Read CLAUDE.md, docs/data-contract.md and tasks/T13-nudge.md. Do only that task, on branch t13-nudge. Edit only the files it lists under "Files you own". If the task needs a change anywhere else, or a new package, stop and tell me. When you think you're finished, run every line of "Done when" and show me the output for each.
+Read CLAUDE.md, docs/data-contract.md and tasks/T13-nudge.md. Do only that task, on branch t13-nudge. Use "Files in scope" as the starting scope; follow CLAUDE.md's coordination rules for any additional files or dependencies. When you think you're finished, run every line of "Done when" and show me the output for each.
 ```
