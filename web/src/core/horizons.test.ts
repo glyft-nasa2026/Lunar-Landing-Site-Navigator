@@ -1,25 +1,22 @@
 // T03: holds the browser's own maths to JPL Horizons. Builds the real table from
-// web/public/data/ephemeris.*, runs sunAltAz and earthAltAz (ground 0, eye 0) on every case in
+// web/public/data/ephemeris.json and its decade files, runs sunAltAz and earthAltAz (ground 0, eye 0) on every case in
 // __fixtures__/horizons.json, and fails above 0.1 degrees. Skips while the table is mock or a
 // file is missing. The difference is the angle on the sky between the two directions, so a
 // body near the zenith (where azimuth alone means little) is judged fairly.
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { parseEphemeris, type EphemerisMeta } from './ephemeris';
 import { earthAltAz, sunAltAz } from './geometry';
+import { readRealTable } from './realTable.testutil';
 import type { AltAz, Body } from './types';
 
 type HorizonsCase = { lat: number; lon: number; t: string; body: Body; alt: number; az: number };
 
-const path = (rel: string): string => fileURLToPath(new URL(rel, import.meta.url));
-const metaFile = path('../../public/data/ephemeris.json');
-const binFile = path('../../public/data/ephemeris.bin');
-const fixtureFile = path('./__fixtures__/horizons.json');
+const fixtureFile = fileURLToPath(new URL('./__fixtures__/horizons.json', import.meta.url));
 
-const present = existsSync(metaFile) && existsSync(binFile) && existsSync(fixtureFile);
-const meta: EphemerisMeta | null = present ? JSON.parse(readFileSync(metaFile, 'utf8')) : null;
-const real = meta !== null && meta.source !== 'mock';
+// Every decade of the real table (realTable.testutil.ts); null while it is mock or missing.
+const realEph = existsSync(fixtureFile) ? readRealTable() : null;
+const real = realEph !== null;
 
 const TOLERANCE_DEG = 0.1;
 const RAD = Math.PI / 180;
@@ -32,9 +29,7 @@ function separationDeg(a: AltAz, b: AltAz): number {
 
 describe.skipIf(!real)('browser maths vs JPL Horizons', () => {
   const cases: HorizonsCase[] = real ? JSON.parse(readFileSync(fixtureFile, 'utf8')) : [];
-  const bin = real ? readFileSync(binFile) : Buffer.alloc(0);
-  const buffer = bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength) as ArrayBuffer;
-  const eph = real && meta ? parseEphemeris(meta, buffer) : null;
+  const eph = realEph;
 
   it('has 18 cases: 3 sites x 3 times x 2 bodies', () => {
     expect(cases.length).toBe(18);
