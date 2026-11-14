@@ -13,7 +13,7 @@
   Views (query string):
     ?view=desktop    whole screen, 1280 wide            -> desktop.png
     ?view=phone      whole screen, 390 wide             -> phone.png
-    ?slot=<id>       one slot alone, at its desktop width -> <id>.png
+    ?slot=<id>       one slot alone, at its desktop width -> <id>.png (nine slots, panel included)
     ?view=components buttons, tabs, toggles, chips, pills, toast, tooltip
     ?view=loading    brief frame 1 (proposal)
     ?view=hero       brief frame 2 (proposal)
@@ -46,7 +46,7 @@
   --sun: #F0E442;         /* fixed */
   --earth: #56B4E9;       /* fixed */
   --lit: #e6e9ee;
-  --dark: #262c36;
+  --dark: #0e1116;       /* T19 (#23): on #262c36 scenario B's strip was 2.71:1, here 3.65:1 */
   --terrain-lo: #3a3f47;
   --terrain-hi: #d9dce1;
   --space-1: 4px;
@@ -121,7 +121,7 @@ h3 {
   grid-template-columns: minmax(0, 1fr) 24rem;
   grid-template-areas:
     'about about' 'scene readout' 'scene nudge'
-    'scenarios scenarios' 'compare compare' 'timeline timeline' 'sky sky';
+    'scenarios scenarios' 'panel panel' 'compare compare' 'timeline timeline' 'sky sky';
   grid-template-rows: auto auto 1fr;
   gap: var(--space-4);
   padding: 0 var(--space-5) var(--space-5);
@@ -129,12 +129,13 @@ h3 {
 }
 #about { grid-area: about; } #scene { grid-area: scene; } #readout { grid-area: readout; }
 #nudge { grid-area: nudge; align-self: start; } #scenarios { grid-area: scenarios; }
+#panel { grid-area: panel; }
 #compare { grid-area: compare; } #timeline { grid-area: timeline; } #sky { grid-area: sky; }
 #app > * { min-width: 0; }
 
 body.phone #app {
   width: 390px; grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: 'about' 'scene' 'scenarios' 'readout' 'nudge' 'compare' 'timeline' 'sky';
+  grid-template-areas: 'about' 'scene' 'scenarios' 'readout' 'nudge' 'panel' 'compare' 'timeline' 'sky';
   grid-template-rows: none; gap: var(--space-3); padding: 0 var(--space-3) var(--space-3);
 }
 body.phone .card { padding: var(--space-3); }
@@ -277,6 +278,43 @@ body.phone .site-inputs > :last-child { grid-column: 1 / -1; }
 .nudge-out { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); display: grid; gap: var(--space-1); }
 .ok { color: var(--ok); } .bad { color: var(--bad); }
 
+/* ---------- panel: solar panel power (F15) and battery (proposal) ---------- */
+#panel { display: grid; grid-template-columns: 24rem minmax(0, 1fr); gap: var(--space-5); }
+body.phone #panel { grid-template-columns: minmax(0, 1fr); }
+.pn-side { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.pn-side + .pn-side { border-left: 1px solid var(--border); padding-left: var(--space-5); }
+body.phone .pn-side + .pn-side { border-left: 0; padding-left: 0; border-top: 1px solid var(--border); padding-top: var(--space-4); }
+#panel .chart-head { margin: 0; }
+.pn-grid { display: grid; grid-template-columns: minmax(0, 1fr) 4.5rem 4.5rem; gap: var(--space-2) var(--space-3); align-items: center; }
+.pn-col { font-family: var(--font-num); font-size: var(--fs-sm); color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; text-align: right; }
+.pn-type { display: flex; align-items: center; gap: var(--space-2); line-height: 1.25; }
+.pn-type svg { width: 2rem; height: 2rem; flex: none; }
+.pn-val { display: grid; gap: var(--space-1); }
+.pn-val b { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-weight: 400; text-align: right; }
+.pn-val b.hi { font-size: var(--fs-lg); }
+.meter { height: var(--space-1); border-radius: var(--space-1); background: var(--dark); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--sun); }
+.pn-grid .rule { grid-column: 1 / -1; border-top: 1px solid var(--border); }
+.pn-why { font-size: var(--fs-sm); }
+.bt-inputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.bt-unit { position: relative; display: block; }
+.bt-unit .field { padding-right: 3rem; text-align: right; }
+.bt-unit span { position: absolute; right: var(--space-3); top: 50%; transform: translateY(-50%); color: var(--muted); font-family: var(--font-num); font-size: var(--fs-sm); }
+.bt-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+body.phone .bt-unit .field { padding-right: 2.25rem; }
+body.phone .bt-unit span { right: var(--space-2); }
+body.phone .stat { padding: var(--space-2); }
+body.phone .stat .v { font-size: var(--fs-md); }
+.stat { background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-2) var(--space-3); display: grid; gap: var(--space-1); }
+.stat .k { font-size: var(--fs-sm); color: var(--muted); }
+.stat .v { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: var(--fs-lg); }
+.stat.warn { border-color: var(--bad); }
+.stat.warn .v { color: var(--bad); }
+svg.chart .charge { stroke: var(--accent); fill: none; stroke-width: 2; }
+svg.chart .charge-fill { fill: var(--accent); opacity: 0.12; }
+svg.chart .night { fill: var(--dark); }
+svg.chart .flat { stroke: var(--bad); stroke-width: 4; }
+
 /* ---------- compare ---------- */
 .compare-wrap { overflow-x: auto; }
 .table td.best { color: var(--ok); }
@@ -316,6 +354,7 @@ body.slot #app > .show { display: block; margin: 0; }
 body.slot #app > #scene.show { display: block; }
 body.slot #app > #scenarios.show { display: grid; }
 body.slot #app > #about.show { display: flex; }
+body.slot #app > #panel.show { display: grid; }
 
 /* ---------- extra sheets ---------- */
 .sheet { padding: var(--space-5); display: grid; gap: var(--space-5); width: 1280px; }
@@ -441,6 +480,38 @@ body.slot #app > #about.show { display: flex; }
     </div>
   </section>
 
+  <!-- panel (F15, T15) plus the battery proposal. Made-up numbers that agree with the readout
+       (Sun 1.42 deg up, lit 86 % of 30 days); the battery curve is simulated in the script below on
+       scenario A's Sun strip, so its stats agree with its chart. -->
+  <section id="panel" class="card" aria-label="Solar panel and battery">
+    <div class="pn-side">
+      <div class="chart-head"><h3>Solar panel · A</h3><span class="badge">% of full sunlight</span></div>
+      <div class="pn-grid">
+        <span></span><span class="pn-col">Now</span><span class="pn-col">30 d avg</span>
+        <span class="rule"></span>
+        <span class="pn-type"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="4" cy="21" r="2.5" fill="var(--sun)"/><path d="M8 21.5 L28 23" stroke="var(--sun)" stroke-width="1" stroke-dasharray="2 2"/><rect x="10" y="24" width="18" height="2.5" fill="var(--muted)"/><path d="M2 28 H30" stroke="var(--border)" stroke-width="1"/></svg>Flat on the ground</span>
+        <span class="pn-val"><b class="hi">2 %</b><span class="meter"><i style="width:2%"></i></span></span>
+        <span class="pn-val"><b>2 %</b><span class="meter"><i style="width:2%"></i></span></span>
+        <span class="rule"></span>
+        <span class="pn-type"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="4" cy="21" r="2.5" fill="var(--sun)"/><path d="M8 21 H21" stroke="var(--sun)" stroke-width="1" stroke-dasharray="2 2"/><rect x="22" y="10" width="2.5" height="16" fill="var(--text)"/><path d="M23.25 26 V28" stroke="var(--muted)" stroke-width="1"/><path d="M2 28 H30" stroke="var(--border)" stroke-width="1"/></svg>Upright, turned to the Sun</span>
+        <span class="pn-val"><b class="hi">100 %</b><span class="meter"><i style="width:100%"></i></span></span>
+        <span class="pn-val"><b>84 %</b><span class="meter"><i style="width:84%"></i></span></span>
+      </div>
+      <p class="pn-why muted">Near the pole the Sun stays low, so its light skims a flat panel edge-on. An upright panel that turns with the Sun catches it face-on.</p>
+    </div>
+    <div class="pn-side">
+      <div class="chart-head"><h3>Battery · A · next 30 days</h3><span class="badge">Upright panel · starts full</span></div>
+      <div class="bt-inputs">
+        <label class="lab">Battery capacity<span class="bt-unit"><input class="field" value="10"><span>kWh</span></span></label>
+        <label class="lab">Power use<span class="bt-unit"><input class="field" value="400"><span>W</span></span></label>
+        <label class="lab">Panel size<span class="bt-unit"><input class="field" value="2.0"><span>kW</span></span></label>
+      </div>
+      <div class="bt-stats" id="bt-stats"></div>
+      <svg class="chart" id="btc" viewBox="0 0 760 200"></svg>
+      <div class="legend"><span><i style="background:var(--accent)"></i>Charge</span><span><i style="background:var(--dark);height:var(--space-2)"></i>Sun hidden</span><span><i style="background:var(--bad);height:var(--space-1)"></i>Battery empty</span></div>
+    </div>
+  </section>
+
   <!-- scenarios -->
   <section id="scenarios" class="card" aria-label="Scenarios">
     <h3 style="margin:0">Chosen sites (max 4)</h3>
@@ -530,6 +601,48 @@ sc.forEach(([n, c, sunF, earthF], i) => {
 });
 s += '<span></span><div class="strip-axis"><span>0 d</span><span>5</span><span>10</span><span>15</span><span>20</span><span>25</span><span>30 d</span></div>';
 document.getElementById('strips').innerHTML = s;
+
+// battery: a real run of the mock on scenario A's Sun strip (same runs() as above), upright panel.
+// Inputs as shown in the fields: 10 kWh, 400 W use, 2.0 kW panel; starts full.
+(function () {
+  const cap = 10000, load = 400, peak = 2000, dt = 0.01; // Wh, W, W, days
+  const sun = runs(0, 0.86);
+  const lit = (d) => { let t = 0; for (const [u, l] of sun) { if (d < t + l) return u; t += l; } return false; };
+  let e = cap, empty = 0, emptyRuns = 0, wasEmpty = false, sunrise = null;
+  const refill = [], pts = [];
+  for (let d = 0; d <= 30 + 1e-9; d += dt) {
+    const up = lit(d);
+    e = Math.max(0, Math.min(cap, e + ((up ? peak : 0) - load) * dt * 24));
+    if (e === 0) { empty += dt; if (!wasEmpty) emptyRuns++; wasEmpty = true; } else wasEmpty = false;
+    if (!up) sunrise = null;
+    else if (sunrise === null && e < cap) sunrise = d;
+    if (sunrise !== null && e >= cap) { refill.push(d - sunrise); sunrise = null; }
+    pts.push([d, e / cap, up]);
+  }
+  const lastsH = cap / load;
+  const refillH = refill.length ? Math.max(...refill) * 24 : 0;
+  const W = 760, H = 200, L = 40, R = 8, T = 8, B = 24;
+  const x = (d) => L + (d / 30) * (W - L - R), y = (f) => T + (1 - f) * (H - T - B);
+  let g = '', n0 = null, f0 = null;
+  pts.forEach(([d, , up], i) => {
+    if (!up && n0 === null) n0 = d;
+    if ((up || i === pts.length - 1) && n0 !== null) { g += `<rect class="night" x="${x(n0)}" y="${T}" width="${x(d) - x(n0)}" height="${H - T - B}"/>`; n0 = null; }
+  });
+  for (const f of [0, 0.5, 1]) g += `<line class="gridl" x1="${L}" x2="${W - R}" y1="${y(f)}" y2="${y(f)}"/><text class="tick" x="${L - 6}" y="${y(f) + 4}" text-anchor="end">${f * 100}%</text>`;
+  for (let d = 0; d <= 30; d += 5) g += `<text class="tick" x="${x(d)}" y="${H - 6}" text-anchor="${d === 30 ? 'end' : d === 0 ? 'start' : 'middle'}">${d} d</text>`;
+  const line = pts.map(([d, f], i) => (i ? 'L' : 'M') + x(d).toFixed(1) + ' ' + y(f).toFixed(1)).join('');
+  g += `<path class="charge-fill" d="${line}L${x(30)} ${y(0)}L${x(0)} ${y(0)}Z"/><path class="charge" d="${line}"/>`;
+  pts.forEach(([d, f], i) => {
+    if (f === 0 && f0 === null) f0 = d;
+    if ((f > 0 || i === pts.length - 1) && f0 !== null) { g += `<line class="flat" x1="${x(f0)}" x2="${x(d)}" y1="${y(0)}" y2="${y(0)}"/>`; f0 = null; }
+  });
+  document.getElementById('btc').innerHTML = g;
+  const h = (v) => v >= 48 ? (v / 24).toFixed(1) + ' d' : Math.round(v) + ' h';
+  document.getElementById('bt-stats').innerHTML =
+    `<div class="stat"><span class="k">Lasts in the dark</span><span class="v">${h(lastsH)}</span></div>` +
+    `<div class="stat${empty ? ' warn' : ''}"><span class="k">${empty ? 'Runs flat ' + emptyRuns + '×' : 'Never runs flat'}</span><span class="v">${empty ? h(empty * 24) : '0 h'}</span></div>` +
+    `<div class="stat"><span class="k">Full again after sunrise</span><span class="v">${h(refillH)}</span></div>`;
+})();
 
 // timeline chart
 (function () {

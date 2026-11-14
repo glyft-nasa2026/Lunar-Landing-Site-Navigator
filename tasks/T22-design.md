@@ -1,6 +1,6 @@
 # T22: Design in Figma
 
-Status: done (pull request #22). The team said yes, confirmed by P1 on 14 Nov 2026. No Figma link: the pictures were made from the brief
+Status: done (pull request #22). The team said yes, confirmed by P1 on 14 Nov 2026. No Figma link: the pictures were made from the brief. T22-b in review: solar panel slot and battery proposal
 
 | | |
 |---|---|
