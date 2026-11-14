@@ -23,14 +23,24 @@ function themePx(name: string): number {
   return value;
 }
 
-/** Every Plotly chart spreads this into its layout: { ...plotLayout(), title: ... }. */
+/**
+ * Every Plotly chart spreads this into its layout: { ...plotLayout(), title: ... }.
+ * The look follows the design's diagrams: the chart sits on its card, slate grid lines,
+ * small fixed-width tick labels in the secondary text colour.
+ */
 export function plotLayout(): Partial<Layout> {
   const grid = themeColor('--border');
+  const muted = themeColor('--muted');
+  const num = themeColor('--font-num');
+  const small = themePx('--fs-sm');
   const axis = {
     gridcolor: grid,
     linecolor: grid,
-    zerolinecolor: themeColor('--muted'),
-    tickfont: { family: themeColor('--font-num') },
+    zerolinecolor: grid,
+    tickcolor: grid,
+    tickfont: { family: num, size: small, color: muted },
+    title: { font: { size: small, color: muted } },
+    automargin: true,
   };
   const gap = themePx('--space-5');
   return {
@@ -38,18 +48,18 @@ export function plotLayout(): Partial<Layout> {
     plot_bgcolor: themeColor('--panel'),
     font: {
       family: themeColor('--font'),
-      size: themePx('--fs-sm'),
+      size: small,
       color: themeColor('--text'),
     },
     margin: { l: gap * 2, r: gap, t: gap, b: gap * 2 },
     xaxis: { ...axis },
     yaxis: { ...axis },
     showlegend: true,
-    legend: { orientation: 'h', font: { color: themeColor('--muted') } },
+    legend: { orientation: 'h', font: { family: num, size: small, color: muted } },
     hoverlabel: {
       bgcolor: themeColor('--panel-2'),
       bordercolor: grid,
-      font: { color: themeColor('--text') },
+      font: { family: num, size: small, color: themeColor('--text') },
     },
   };
 }

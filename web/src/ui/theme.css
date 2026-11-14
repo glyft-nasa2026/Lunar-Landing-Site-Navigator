@@ -1,45 +1,48 @@
 /* The shared look (docs/data-contract.md section 6).
-   T00 made every name with plain placeholder values; T19 owns this file and sets the real ones.
-   Don't rename or remove a name: every module depends on them. */
+   T19 set the values from the design file (tasks/Untitled.svg, the "lune" frames): a near-black
+   navy page, navy cards, slate lines, and one signal red for the primary action.
+   Don't rename or remove a name: every module depends on them.
+   Contrast (WCAG 2.1, relative luminance) is listed beside each text colour. */
 
 :root {
   color-scheme: dark;
 
   /* Page, cards, raised cards, lines */
-  --bg: #0e1116;
-  --panel: #171b22;
-  --panel-2: #1f2530;
-  --border: #303846;
+  --bg: #060B14;          /* design: page */
+  --panel: #101A2B;       /* design: card */
+  --panel-2: #18253B;     /* not in the design: one step lighter than --panel, for raised cards */
+  --border: #324157;      /* design: lines and card outlines */
 
   /* Main text, secondary text */
-  --text: #e6e9ee;
-  --muted: #a3acb9;
+  --text: #FFFFFF;        /* 19.6:1 on --bg, 17.3:1 on --panel */
+  --muted: #A7B3C5;       /* 9.3:1 on --bg, 8.2:1 on --panel, 7.3:1 on --panel-2 */
 
   /* Primary button, selection */
-  --accent: #8ab4f8;
+  --accent: #FC3D21;      /* design: signal red. 5.3:1 on --bg; use --bg for text on it (5.3:1),
+                             never white (3.7:1 fails) */
 
   /* Best value in a row, caution, error message */
-  --ok: #7bd88f;
-  --warn: #f2c94c;
-  --bad: #ff8a80;
+  --ok: #7BD88F;          /* 11.6:1 on --bg */
+  --warn: #F2C94C;        /* 12.9:1 on --bg */
+  --bad: #FF8A80;         /* 9.0:1 on --bg. Lighter than --accent so an error isn't read as a button */
 
   /* Scenario colours. Fixed: chosen to stay distinct for colour-blind users. */
   --scn-a: #E69F00;
   --scn-b: #0072B2;
   --scn-c: #009E73;
-  --scn-ghost: #8a8f98;
+  --scn-ghost: #7D8899;
 
   /* Sun and Earth in charts. Fixed. */
   --sun: #F0E442;
   --earth: #56B4E9;
 
   /* Filled and empty parts of the strips */
-  --lit: #e6e9ee;
-  --dark: #262c36;
+  --lit: #E6EAF0;
+  --dark: #22304A;
 
-  /* The two ends of the height colour ramp in the 3D scene */
-  --terrain-lo: #3a3f47;
-  --terrain-hi: #d9dce1;
+  /* The two ends of the height colour ramp in the 3D scene: lunar greys from the design's maps */
+  --terrain-lo: #2B2E33;
+  --terrain-hi: #D9D8D2;
 
   /* Gaps */
   --space-1: 4px;
@@ -51,15 +54,15 @@
   /* Corner rounding */
   --radius: 6px;
 
-  /* Text; fixed-width digits for numbers */
-  --font: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* Text; fixed-width digits for numbers. System fonts only: no download. */
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-num: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 
-  /* Type sizes */
-  --fs-sm: 0.8125rem;
-  --fs-md: 0.9375rem;
-  --fs-lg: 1.125rem;
-  --fs-xl: 1.5rem;
+  /* Type sizes: 12, 14, 22, 32 px at the default root size */
+  --fs-sm: 0.75rem;
+  --fs-md: 0.875rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 2rem;
 }
 
 *,
@@ -75,19 +78,47 @@ body {
   color: var(--text);
   font-family: var(--font);
   font-size: var(--fs-md);
-  line-height: 1.4;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, p {
   margin: 0;
 }
 
+h1 {
+  font-size: var(--fs-xl);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
 h2 {
   font-size: var(--fs-lg);
+  font-weight: 500;
+}
+
+/* Small upper-case section label, as above every card in the design ("FINAL LANDING SITE"). */
+h3 {
+  font-family: var(--font-num);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 a {
   color: var(--accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--bg);
 }
 
 /* Shared classes */
@@ -96,17 +127,23 @@ a {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-5);
 }
 
 .btn {
   font: inherit;
   color: var(--text);
-  background: var(--panel-2);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-4);
   cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--muted);
+  background: var(--panel-2);
 }
 
 .btn:disabled {
@@ -114,19 +151,38 @@ a {
   cursor: not-allowed;
 }
 
+/* Selected state for a toggle or segmented button: the design marks it with a red outline. */
+.btn[aria-pressed='true'],
+.btn[aria-selected='true'] {
+  border-color: var(--accent);
+}
+
 .btn-primary {
   color: var(--bg);
   background: var(--accent);
   border-color: var(--accent);
+  font-weight: 600;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--text);
 }
 
 .field {
   font: inherit;
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-3);
+}
+
+.field:focus {
+  border-color: var(--accent);
+  outline: none;
 }
 
 .table {
@@ -139,19 +195,34 @@ a {
 .table th,
 .table td {
   text-align: left;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  font-weight: 400;
+  font-size: var(--fs-sm);
+  color: var(--muted);
 }
 
 .badge {
   display: inline-block;
+  font-family: var(--font-num);
   font-size: var(--fs-sm);
+  letter-spacing: 0.04em;
   color: var(--muted);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 0 var(--space-2);
+  padding: var(--space-1) var(--space-2);
 }
 
 .muted {
   color: var(--muted);
+}
+
+/* Phone: tighter card padding so content keeps its width at 390 px. */
+@media (max-width: 800px) {
+  .card {
+    padding: var(--space-3);
+  }
 }

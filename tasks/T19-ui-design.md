@@ -1,6 +1,6 @@
 # T19: Theme, layout, chart style
 
-Status: not started
+Status: in review (draft PR). Theme, layout, chart style done on mock data; deployed-site screenshots after merge
 
 | | |
 |---|---|
