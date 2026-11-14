@@ -4,7 +4,7 @@ import { getState, samplesFor, selected, skylineFor, subscribe } from '../../sta
 
 export function mount(el: HTMLElement): void {
   const title = document.createElement('h2');
-  title.textContent = '#sky';
+  title.textContent = 'Sky panorama';
   const value = document.createElement('p');
   value.className = 'muted';
   el.replaceChildren(title, value);

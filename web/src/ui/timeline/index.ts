@@ -4,7 +4,7 @@ import { getState, selected, subscribe, timelineFor } from '../../state';
 
 export function mount(el: HTMLElement): void {
   const title = document.createElement('h2');
-  title.textContent = '#timeline';
+  title.textContent = 'Visibility timeline';
   const value = document.createElement('p');
   value.className = 'muted';
   el.replaceChildren(title, value);

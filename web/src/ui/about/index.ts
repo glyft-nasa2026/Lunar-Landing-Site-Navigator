@@ -7,7 +7,7 @@ export function mount(el: HTMLElement): void {
   title.textContent = 'Darksight';
   const slot = document.createElement('span');
   slot.className = 'badge';
-  slot.textContent = '#about';
+  slot.textContent = 'About';
   const value = document.createElement('span');
   value.className = 'muted';
   el.replaceChildren(title, slot, value);
