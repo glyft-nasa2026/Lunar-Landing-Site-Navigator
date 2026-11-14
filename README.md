@@ -1,7 +1,7 @@
 # Darksight
 
 Team GLYFT's submission for [NASA Space Apps Challenge 2026: Lunar Landing Site Navigator](https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/),
-Kuala Lumpur. The repo is `glyft-nasa2026/Lunar-Landing-Site-Navigator`.
+Kuala Lumpur. The repo is `glyft-nasa2026/Darksight`.
 
 **What it is:** pick lunar landing sites and dates, and see side by side when each has sunlight
 (power) and a line to Earth (radio), measured against the real terrain skyline.

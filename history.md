@@ -11,6 +11,8 @@ files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits 
   the name was still open. Now: Darksight, at darksight.space. SPEC's hosting row was "GitHub
   Pages; mirror on rickphobia.com"; now Pages serves darksight.space. Links to the challenge
   keep its title.
+- The README said the repo was `glyft-nasa2026/Lunar-Landing-Site-Navigator`. The repo was renamed
+  to `glyft-nasa2026/Darksight` on GitHub.
 
 ## 14 Nov 2026: workflow audit, follow-up
 
