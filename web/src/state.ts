@@ -354,14 +354,15 @@ const skylineCache = new Map<string, Skyline>();
 const seriesCache = new Map<string, Sample[]>();
 const summaryCache = new Map<string, Summary>();
 const flipCache = new Map<string, Flip>();
-const neverLitCache = new Map<string, boolean>();
+// Per site: the latest sunlit hour found scanning back from 2100, and how far back it got.
+const litScans = new Map<string, { litMs: number; fromMs: number }>();
 
 function clearCaches(): void {
   skylineCache.clear();
   seriesCache.clear();
   summaryCache.clear();
   flipCache.clear();
-  neverLitCache.clear();
+  litScans.clear();
 }
 
 function cached<T>(cache: Map<string, T>, key: string, make: () => T): T {
@@ -416,20 +417,43 @@ export function flipFor(sc: Scenario, body: Body): Flip {
 }
 
 /**
- * No sunlight there in the home decade (2020-2029, always loaded): no part of the Sun's disc
- * clears the skyline. Judged on one fixed decade so the answer doesn't change as more load.
+ * No sunlight there from sc.tMs to the end of the table (2100): no part of the Sun's disc
+ * clears the skyline at any hour. False within 60 days of the end, where that proves nothing. Answers false at once when the Sun is up or rises within 60
+ * days, which needs no extra download. Otherwise it needs every decade from sc.tMs to 2100;
+ * until they arrive it answers false (the countdown then reads "No sunrise in the next 60
+ * days", which is also true) and the readout updates when they are in.
  */
 export function neverLitFor(sc: Scenario): boolean {
   const eph = state.eph;
-  if (!eph) return false;
-  return cached(neverLitCache, siteKey(sc.site), () => {
-    const skyline = skylineFor(sc);
-    const ground = groundFor(sc.site);
-    const stepMs = eph.meta.step_s * 1000;
-    for (let t = eph.homeStartMs; t <= eph.homeEndMs; t += stepMs) {
-      const sun = sunAltAz(eph, sc.site, ground, t);
-      if (sun.alt - skylineElev(skyline, sun.az) + SUN_RADIUS > 0) return false;
-    }
-    return true;
-  });
+  // Near the end of the table a few dark hours would prove nothing: ask for 60 days at least.
+  if (!eph || sc.tMs < eph.startMs || eph.endMs - sc.tMs < FLIP_DAYS * DAY_MS) return false;
+  if (sunlit(eph, sc, sc.tMs) || flipFor(sc, 'sun') !== null) return false;
+  if (!covered(sc.tMs, eph.endMs)) return false;
+  return lastLitMs(eph, sc, sc.tMs) < sc.tMs;
+}
+
+function sunlit(eph: Ephemeris, sc: Scenario, tMs: number): boolean {
+  const sun = sunAltAz(eph, sc.site, groundFor(sc.site), tMs);
+  return sun.alt - skylineElev(skylineFor(sc), sun.az) + SUN_RADIUS > 0;
+}
+
+/**
+ * The latest hour with sunlight there, at or after downToMs, or -Infinity if none. Scans back
+ * hour by hour from the end of the table and remembers how far it got, so dragging the time
+ * earlier only scans the new hours, and a site that sees the Sun again before 2100 stops at once.
+ */
+function lastLitMs(eph: Ephemeris, sc: Scenario, downToMs: number): number {
+  const key = siteKey(sc.site);
+  let scan = litScans.get(key);
+  if (!scan) {
+    if (litScans.size >= CACHE_LIMIT) litScans.clear();
+    scan = { litMs: -Infinity, fromMs: eph.endMs + HOUR_MS };
+    litScans.set(key, scan);
+  }
+  while (scan.litMs === -Infinity && scan.fromMs > downToMs) {
+    const t = scan.fromMs - HOUR_MS;
+    scan.fromMs = t;
+    if (sunlit(eph, sc, t)) scan.litMs = t;
+  }
+  return scan.litMs;
 }

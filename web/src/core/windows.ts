@@ -121,7 +121,7 @@ export function countdownText(
   body: Body, upNow: boolean, flip: Flip, tMs: number, neverLit = false,
 ): string {
   if (body === 'sun') {
-    if (!upNow && neverLit) return 'Permanently shadowed (2020-2029)';
+    if (!upNow && neverLit) return 'Permanently shadowed (until 2100)';
     if (flip) return `${flip.type === 'set' ? 'Sunset' : 'Sunrise'} in ${durationText(flip.tMs - tMs)}`;
     return upNow ? 'No sunset in the next 60 days' : 'No sunrise in the next 60 days';
   }
