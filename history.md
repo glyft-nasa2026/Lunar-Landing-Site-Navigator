@@ -3,6 +3,18 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: `#panel` beside Scenarios in T19's layout step
+
+### tasks/T19-ui-design.md
+
+- Step 3 said `#panel` goes "in the column beside the scene, under `#nudge`", as "a `panel` area
+  under `nudge` on desktop (one more row in `grid-template-rows`)", and that without an area the
+  card lands "in a stray cell at the bottom". Checked in headless Chrome on T19's branch merged
+  with `main`: without an area the card lands at the top of the page, above the map. A row
+  beside the scene stretches the map card, whose viewport has a fixed height, and leaves an empty
+  band under the map. Now: the Scenarios row becomes `'scenarios panel'`, so the card sits under
+  `#nudge` beside `#scenarios` and the map keeps its size. The Done-when line says the same.
+
 ## 14 Nov 2026: T25 to T30 reach `main`
 
 Pull request #4 added six tasks on 13 Nov. It was stacked on #3 (`workflow-fixes`) and was
