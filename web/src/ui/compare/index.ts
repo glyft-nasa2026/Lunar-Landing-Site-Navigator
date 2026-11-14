@@ -214,6 +214,17 @@ export function mount(el: HTMLElement): void {
   let shown: Shown | null = null;
   let drawId = 0;
   let frame = 0;
+  // The strips last drawn, so a resize can draw them again at the new width.
+  let plotted: { data: Data[]; rows: string[] } | null = null;
+
+  // A fresh layout every time: Plotly's own resize stops once it has written a width into the
+  // layout next to our height, so the strips stuck at one width after the first resize (#49).
+  const plot = (id: number): void => {
+    void loadPlotly().then((P) => {
+      if (id !== drawId || !plotted) return;
+      void P.react(strips, plotted.data, stripLayout(plotted.rows), { displayModeBar: false });
+    });
+  };
 
   const showParts = (on: boolean): void => {
     tableWrap.hidden = !on;
@@ -237,6 +248,7 @@ export function mount(el: HTMLElement): void {
       hint.hidden = true;
       showParts(false);
       tableWrap.replaceChildren();
+      plotted = null;
       void loadPlotly().then((P) => { if (id === drawId) P.purge(strips); });
       return;
     }
@@ -254,11 +266,8 @@ export function mount(el: HTMLElement): void {
     strips.setAttribute('aria-label',
       `Strips for ${cols.map((c) => c.sc.label).join(', ')}: when the Sun and Earth are up over the next 30 days`);
 
-    const { data, rows } = stripData(cols);
-    void loadPlotly().then((P) => {
-      if (id !== drawId) return;
-      void P.react(strips, data, stripLayout(rows), { displayModeBar: false, responsive: true });
-    });
+    plotted = stripData(cols);
+    plot(id);
   };
 
   // A timeline drag changes live many times a frame: draw at most once per animation frame.
@@ -267,5 +276,16 @@ export function mount(el: HTMLElement): void {
   };
 
   subscribe(render);
+  // Redraw the strips at the box's new width, at most once per animation frame.
+  let resizeFrame = 0;
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => {
+      if (resizeFrame || !plotted) return;
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = 0;
+        if (!strips.hidden) plot(drawId);
+      });
+    }).observe(strips);
+  }
   render();
 }
