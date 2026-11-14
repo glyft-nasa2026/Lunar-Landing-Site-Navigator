@@ -1,5 +1,5 @@
 // Written by T00 straight from the contract's Geometry block; proven by T02 against Skyfield
-// (geometry.test.ts: 25 cases in __fixtures__/altaz.json on the real table, worst 0.0007
+// (geometry.test.ts: every case in __fixtures__/altaz.json on the real table, worst 0.0007
 // degrees). Names and signatures never change.
 //
 // The Moon has no atmosphere: no refraction is applied anywhere.
@@ -53,20 +53,27 @@ export function earthAltAz(eph: Ephemeris, site: Site, groundM: number, tMs: num
 /**
  * The point reached from (lat, lon) after distM metres along the great circle that starts out
  * at bearingDeg (clockwise from north), on a sphere of radius R.
+ *
+ * It turns the site's "up" vector by the angle distM / R towards cos(b) north + sin(b) east,
+ * with the contract's north and east. Those are defined at the poles too, from the longitude
+ * the site was given, so a start at exactly -90 or 90 works: bearing b from the south pole
+ * lands on longitude lon + b. The latitude-and-longitude form of the same formula divides
+ * 0 by 0 there.
  */
 export function destination(
   lat: number, lon: number, bearingDeg: number, distM: number,
 ): { lat: number; lon: number } {
   const g = distM / (MOON_RADIUS_KM * 1000);
-  const b = bearingDeg * RAD;
-  const p1 = lat * RAD;
-  const sinP2 = Math.sin(p1) * Math.cos(g) + Math.cos(p1) * Math.sin(g) * Math.cos(b);
-  const p2 = Math.asin(Math.max(-1, Math.min(1, sinP2)));
-  const dLon = Math.atan2(
-    Math.sin(b) * Math.sin(g) * Math.cos(p1),
-    Math.cos(g) - Math.sin(p1) * sinP2,
-  );
-  let outLon = lon + dLon * DEG;
-  outLon = ((((outLon + 180) % 360) + 360) % 360) - 180;   // -180 to 180, never 0 to 360
-  return { lat: p2 * DEG, lon: outLon };
+  const cl = Math.cos(lat * RAD), sl = Math.sin(lat * RAD);
+  const co = Math.cos(lon * RAD), so = Math.sin(lon * RAD);
+  const cb = Math.cos(bearingDeg * RAD), sb = Math.sin(bearingDeg * RAD);
+  const cg = Math.cos(g), sg = Math.sin(g);
+  const x = cg * cl * co + sg * (-sl * co * cb - so * sb);
+  const y = cg * cl * so + sg * (-sl * so * cb + co * sb);
+  const z = cg * sl + sg * cl * cb;
+  const flat = Math.hypot(x, y);
+  // On a pole every longitude is the same point: keep the one it came with.
+  const rawLon = flat < 1e-12 ? lon : Math.atan2(y, x) * DEG;
+  const outLon = ((((rawLon + 180) % 360) + 360) % 360) - 180;   // -180 to 180, never 0 to 360
+  return { lat: Math.atan2(z, flat) * DEG, lon: outLon };
 }
