@@ -24,6 +24,12 @@ anyone can take any tasks, we just have to arrange better".
 
 ### tasks/README.md; tasks/T00-T30: metadata, scope and prompts
 
+- During integration with current `main`, T31 arrived with an Owner row naming P3 and a
+  "Files you own" list requiring P1 approval. Yi Hung authorised resolving the conflicts and
+  finishing the merge. T31 now follows the same open-task policy, making 32 tasks. Both the
+  coordination decision and the flat-map decision are retained; T29 keeps the new map scope,
+  cross-fade behaviour and T31 dependency. Incoming task statuses and prerequisites stay.
+
 - Removed the fixed person-to-task sequences, the board's Owner column, and each task's
   Owner row (P1-P5 or "unassigned"). The People table keeps names and tool plans, without
   reserved roles. The replacement queue prioritises ready must work, dependencies, milestone
@@ -57,6 +63,30 @@ anyone can take any tasks, we just have to arrange better".
   numbered person assignments are no longer used; team names remain on the board.
 - README pointers describe the shared queue and contributors. Decisions and history no longer
   reserve editing for P1. Reason for these changes: Yi Hung's instruction above.
+
+## 14 Nov 2026: the 2D map becomes a flat map (issue #39, T31)
+
+P1 approved issue #39. The "2D map" was the 3D scene through a second, orthographic camera.
+
+### SPEC.md, F10 and F16
+
+- F10 said "Two cameras: top-down (the "2D map") and orbit ("3D")". An orthographic camera over a
+  sphere is an orthographic azimuthal view: distorted toward the edge, no grid to read a
+  coordinate from, and it carried the shadow map and raycasting into the "flat" view. Now: two
+  views, a flat map (polar stereographic on the height map, equidistant cylindrical elsewhere,
+  with a latitude-longitude grid) and the orbit scene.
+- F16 said "The camera glides between top-down and orbit". With no 2D camera there is nothing to
+  glide. Now: the flat map and the 3D scene cross-fade, the 3D camera easing onto the site.
+
+### tasks/T29-transition.md
+
+- Was "Camera glide", moving one camera between the two views. Now a cross-fade, waiting for T31
+  as well, and sharing `web/src/map/index.ts`.
+
+### tasks/T12-scene.md
+
+- Step 2 ("One scene, two cameras") and step 6 (picking by raycast in both views) describe the
+  scene as T12 built it. Since T31 they hold for the 3D view only; the file is left as written.
 
 ## 14 Nov 2026: audit of the merged tickets
 

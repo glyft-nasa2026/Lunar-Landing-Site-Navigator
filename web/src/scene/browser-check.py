@@ -1,4 +1,4 @@
-"""T12 integration checks. Uses existing Python Playwright; installs nothing.
+"""T12 and T31 integration checks. The 2D map is the flat canvas `.map-canvas` (T31); the 3D view is `.scene-canvas`. Uses existing Python Playwright; installs nothing.
 Run against Vite: python3 src/scene/browser-check.py http://127.0.0.1:5173
 Only browser requests are supplied synthetic data; shared public/data files are untouched.
 Add --public to also check the app's own public/data files first, mock or real (--t20 is its old name).
@@ -55,6 +55,16 @@ assets = {'dem.json': json.dumps(meta), 'dem.bin': heights, 'ephemeris.json': js
 checks = []
 
 
+def map_point(box, dem_meta, centre_lat, centre_lon, lat, lon):
+    """Where (lat, lon) is on the flat polar map just after it centred on (centre_lat, centre_lon).
+    The map starts with a known extent: half its height is span km, span from the grid's size."""
+    span_km = min(80, max(8, dem_meta['size'] * dem_meta['pixel_m'] / 8000))
+    scale = box['height'] / (2 * span_km * 1000)   # px per metre
+    cx, cy = projected(centre_lat, centre_lon)
+    x, y = projected(lat, lon)
+    return box['x'] + box['width']/2 + (x - cx) * scale, box['y'] + box['height']/2 - (y - cy) * scale
+
+
 def wait_state(page, test, timeout_s=60):
     """Polls an async state test. wait_for_function treats an async function's promise as truthy."""
     for _ in range(int(timeout_s * 4)):
@@ -91,14 +101,10 @@ with sync_playwright() as p:
             assert actual['dem'][key] == actual['served'][key], (key, actual)
         mock_dem = actual['dem']['source'] == 'mock'
         page.wait_for_timeout(500)
-        actual_canvas = page.locator('.scene-canvas')
+        actual_canvas = page.locator('.map-canvas')
+        assert page.locator('.scene-canvas').is_hidden(), 'the 3D canvas must not show in 2D'
         box = actual_canvas.bounding_box()
-        def map_xz(lat, lon):
-            return (1737.4 * math.cos(math.radians(lat)) * math.sin(math.radians(lon)), -1737.4 * math.cos(math.radians(lat)) * math.cos(math.radians(lon)))
-        cx, cz = map_xz(-88, 45)
-        sx, sz = map_xz(-88.4, 45)
-        span = min(80, max(8, actual['dem']['size'] * actual['dem']['pixel_m'] / 8000))
-        page.mouse.click(box['x'] + box['width']/2 + (cx-sx) * box['height']/(2*span), box['y'] + box['height']/2 + (cz-sz) * box['height']/(2*span))
+        page.mouse.click(*map_point(box, actual['dem'], -88.4, 45, -88, 45))
         actual_site = page.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
         ax, ay = projected(actual_site['lat'], actual_site['lon'])
         bx, by = projected(-88, 45)
@@ -160,19 +166,16 @@ with sync_playwright() as p:
 
     page.route('**/data/*', route_data)
     page.goto(BASE + '/#live=-88.4,45,2026-01-01T00:00:00Z')
-    page.wait_for_selector('.scene-canvas')
+    page.wait_for_selector('.map-canvas')
     wait_state(page, 's.dem')
     page.wait_for_timeout(700)
-    canvas = page.locator('.scene-canvas')
-    box = canvas.bounding_box()
-    # The initial map has a known orthographic extent, measured from the dataset, not a fixture-specific camera.
-    # Start away from the crater so this tests mesh raycasting rather than clicking a live pin.
-    def xyz(lat, lon):
-        return (1737.4 * math.cos(math.radians(lat)) * math.sin(math.radians(lon)), -1737.4 * math.cos(math.radians(lat)) * math.cos(math.radians(lon)))
-    cx, cz = xyz(-88, 45)
-    sx, sz = xyz(-88.4, 45)
-    span = min(80, max(8, meta['size'] * meta['pixel_m'] / 8000))
-    page.mouse.click(box['x'] + box['width']/2 + (cx-sx) * box['height']/(2*span), box['y'] + box['height']/2 + (cz-sz) * box['height']/(2*span))
+    canvas = page.locator('.scene-canvas')       # the 3D view
+    map_canvas = page.locator('.map-canvas')     # the flat 2D map
+    assert canvas.is_hidden(), 'the 3D canvas must not show in 2D'
+    box = map_canvas.bounding_box()
+    # The flat map starts centred on the site with a known extent, measured from the dataset.
+    # Start away from the crater so this tests the inverse projection rather than clicking a live pin.
+    page.mouse.click(*map_point(box, meta, -88.4, 45, -88, 45))
     site = page.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
     ax, ay = projected(site['lat'], site['lon'])
     bx, by = projected(-88, 45)
@@ -181,7 +184,7 @@ with sync_playwright() as p:
     passed('crater click', {'site': site, 'error_cells': error_cells})
     page.wait_for_timeout(300)
     assert 'Sun hidden' in page.locator('.scene-caption').inner_text()
-    canvas.screenshot(path='/tmp/t12-map-hidden.png')
+    map_canvas.screenshot(path='/tmp/t12-map-hidden.png')
     # Read the rendered image. A small annulus avoids the selected-site pin at the exact centre.
     from PIL import Image
     image = Image.open('/tmp/t12-map-hidden.png').convert('RGB')
@@ -193,14 +196,14 @@ with sync_playwright() as p:
     page.evaluate("async () => (await import('/src/state.ts')).pin()")
     page.evaluate(f"async () => (await import('/src/state.ts')).setLiveTime({T0 + 12*3600000})")
     page.wait_for_timeout(300)
-    canvas.screenshot(path='/tmp/t12-map-scrubbed.png')
+    map_canvas.screenshot(path='/tmp/t12-map-scrubbed.png')
     second = Image.open('/tmp/t12-map-scrubbed.png').convert('RGB').tobytes()
     changed = sum(a != b for a, b in zip(first, second))
     assert changed > 1000, changed
     passed('Sun lighting and scrub', {'hidden_floor_mean_rgb': round(floor_luma, 2), 'changed_color_channels': changed})
     page.evaluate("async () => (await import('/src/state.ts')).select('a')")
     page.wait_for_timeout(250)
-    canvas.screenshot(path='/tmp/t12-pinned-time.png')
+    map_canvas.screenshot(path='/tmp/t12-pinned-time.png')
     pinned = Image.open('/tmp/t12-pinned-time.png').convert('RGB')
     # Apart from pin colours, selecting A must restore the frozen time's complete lighting.
     outside_pin = [(x, y) for x in range(0, w, 4) for y in range(0, h, 4) if (x-w/2)**2+(y-h/2)**2 > 15**2]
@@ -236,12 +239,13 @@ with sync_playwright() as p:
     passed('camera switch and drag', '2D → 3D → 2D preserves site; an out-and-back drag away from the pin does not select, a click there does')
     # A plain left-drag pans the 2D map, as the help line says, and does not pick a site.
     page.wait_for_timeout(300)
+    assert canvas.is_hidden() and map_canvas.is_visible()
     def canvas_bytes(path):
-        canvas.screenshot(path=path)
+        map_canvas.screenshot(path=path)
         return Image.open(path).convert('RGB').tobytes()
     def channels_changed(a, b):
         return sum(x != y for x, y in zip(a, b))
-    box = canvas.bounding_box()
+    box = map_canvas.bounding_box()
     off_x, off_y = box['x']+box['width']/2+150, box['y']+box['height']/2+80
     before_pan = canvas_bytes('/tmp/t12-map-before-pan.png')
     page.mouse.move(off_x, off_y); page.mouse.down(); page.mouse.move(off_x+120, off_y+60, steps=10); page.mouse.up()
@@ -253,6 +257,27 @@ with sync_playwright() as p:
     page.locator('.scene-reset').click()
     page.wait_for_timeout(300)
     passed('2D pan', {'changed_color_channels_after_left_drag': panned})
+    # 2D draws nothing with three.js: count WebGL draw calls while the map is panned, zoomed and scrubbed.
+    page.evaluate("""() => { window.__glDraws = 0;
+      for (const C of [WebGLRenderingContext, WebGL2RenderingContext]) for (const name of ['drawArrays', 'drawElements', 'drawArraysInstanced', 'drawElementsInstanced', 'drawRangeElements']) {
+        const original = C.prototype[name]; if (!original) continue;
+        C.prototype[name] = function (...args) { window.__glDraws++; return original.apply(this, args); };
+      } }""")
+    page.mouse.move(off_x, off_y); page.mouse.down(); page.mouse.move(off_x-60, off_y-30, steps=6); page.mouse.up()
+    page.mouse.wheel(0, -300)
+    for hour in (3, 9, 15):
+        page.evaluate(f"async () => (await import('/src/state.ts')).setLiveTime({T0 + hour*3600000})")
+        page.wait_for_timeout(150)
+    draws_2d = page.evaluate('window.__glDraws')
+    assert draws_2d == 0, draws_2d
+    page.get_by_role('button', name='3D orbit', exact=True).click()
+    page.wait_for_timeout(300)
+    draws_3d = page.evaluate('window.__glDraws')
+    assert draws_3d > 0, 'the counter must see the 3D view draw'
+    page.get_by_role('button', name='2D map', exact=True).click()
+    page.locator('.scene-reset').click()
+    page.wait_for_timeout(300)
+    passed('2D uses no WebGL', {'webgl_draw_calls_in_2d': draws_2d, 'webgl_draw_calls_after_switching_to_3d': draws_3d})
     # A time the table has no row for: the scene goes dark and says so, as the readout does.
     # Before, it was lit from the table's last row, which is the picture of another date.
     END = T0 + 72*3600000
@@ -288,21 +313,37 @@ with sync_playwright() as p:
     canvas.screenshot(path='/tmp/t12-globe-zoomed-out.png')
     globe_fraction, _ = drawn_fraction('/tmp/t12-globe-zoomed-out.png')
     assert globe_fraction > 0.03, globe_fraction
-    page.get_by_role('button', name='2D map', exact=True).click()
-    assert page.evaluate("async () => (await import('/src/state.ts')).getState().live.site") == old_site
-    passed('3D globe', {'drawn_fraction_zoomed_out': round(globe_fraction, 3)})
+    # Stretch is a 3D control; the flat map shows heights as colours, so it is off in 2D.
     page.get_by_label('Vertical stretch', exact=True).fill('5')
     assert page.locator('.scene-stretch output').inner_text() == '5×'
-    passed('vertical stretch', '5× works, selected site unchanged')
+    page.get_by_role('button', name='2D map', exact=True).click()
+    assert page.evaluate("async () => (await import('/src/state.ts')).getState().live.site") == old_site
+    assert page.get_by_label('Vertical stretch', exact=True).is_disabled()
+    passed('3D globe', {'drawn_fraction_zoomed_out': round(globe_fraction, 3)})
+    passed('vertical stretch', '5× works in 3D, selected site unchanged; off in 2D')
     page.evaluate("async () => (await import('/src/state.ts')).setLiveSite({lat:0.674,lon:23.473})")
     page.wait_for_timeout(200)
-    assert 'Moon globe' in page.locator('.scene-caption').inner_text()
+    assert 'Whole-Moon map · equidistant cylindrical' in page.locator('.scene-caption').inner_text()
     assert page.get_by_label('Vertical stretch', exact=True).is_disabled()
-    canvas.screenshot(path='/tmp/t12-globe.png')
-    passed('outside DEM', 'Apollo latitude uses the Moon globe in both views')
+    map_canvas.screenshot(path='/tmp/t12-globe.png')
+    # Equidistant cylindrical: a click returns latitude and longitude from the inverse projection.
+    box = map_canvas.bounding_box()
+    world = page.evaluate("async () => { const v=document.querySelector('.map-canvas'); return {w:v.clientWidth, h:v.clientHeight}; }")
+    scale = min(world['w'] / (2*math.pi*1737.4), world['h'] / (math.pi*1737.4))   # px per km at the start
+    target = {'lat': 20.19, 'lon': 30.77}   # Apollo 17, from the Apollo 11 centre
+    dx = 1737.4 * math.radians(target['lon'] - 23.473) * scale
+    dy = 1737.4 * math.radians(target['lat'] - 0.674) * scale
+    page.mouse.click(box['x'] + box['width']/2 + dx, box['y'] + box['height']/2 - dy)
+    picked = page.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
+    # At the whole-Moon zoom one pixel is about 0.25 degrees.
+    assert abs(picked['lat'] - target['lat']) < 0.5 and abs(picked['lon'] - target['lon']) < 0.5, picked
+    page.evaluate("async () => (await import('/src/state.ts')).setLiveSite({lat:0.674,lon:23.473})")
+    page.wait_for_timeout(200)
+    passed('outside DEM', {'caption': 'Whole-Moon map in 2D, Moon globe in 3D', 'global_click': picked})
     # In the globe view a drag turns the Moon about its centre, so it stays in the middle of the view.
     page.get_by_role('button', name='3D orbit', exact=True).click()
     page.wait_for_timeout(250)
+    assert 'Moon globe' in page.locator('.scene-caption').inner_text()
     box = canvas.bounding_box()
     page.mouse.move(box['x']+box['width']/2, box['y']+box['height']/2+60)
     page.mouse.down(); page.mouse.move(box['x']+box['width']/2+150, box['y']+box['height']/2+60, steps=10); page.mouse.up()
@@ -334,7 +375,7 @@ with sync_playwright() as p:
     page.set_viewport_size({'width':390, 'height':844})
     page.wait_for_timeout(250)
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), 'horizontal overflow'
-    canvas.screenshot(path='/tmp/t12-phone.png')
+    map_canvas.screenshot(path='/tmp/t12-phone.png')
     passed('phone layout', '390 px viewport, no horizontal overflow')
     # Loading and remount lifecycle checks exercise the actual mount entry point.
     page.evaluate("""async () => {
@@ -342,6 +383,7 @@ with sync_playwright() as p:
       const {mount}=await import('/src/scene/index.ts'); const el=document.querySelector('#scene'); mount(el); mount(el);
     }""")
     assert page.locator('.scene-canvas').count() == 1
+    assert page.locator('.map-canvas').count() == 1
     assert page.locator('.scene-message').inner_text().startswith('Loading')
     assert not errors, errors
     assert not graphics_warnings, graphics_warnings
@@ -352,9 +394,16 @@ with sync_playwright() as p:
         return type.startsWith('webgl') ? null : original.call(this,type,...args);
       };""")
     fallback.goto(BASE)
-    fallback.wait_for_function("document.querySelector('.scene-message')?.textContent.includes('needs WebGL')")
+    fallback.wait_for_function("document.querySelector('.scene-help')?.textContent.includes('needs WebGL')")
     assert fallback.get_by_role('button', name='3D orbit', exact=True).is_disabled()
-    passed('WebGL fallback', 'unavailable WebGL shows a readable fallback and disables scene controls')
+    # The flat map needs no WebGL: it still draws and still picks.
+    fallback.wait_for_timeout(500)
+    fbox = fallback.locator('.map-canvas').bounding_box()
+    before = fallback.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
+    fallback.mouse.click(fbox['x'] + fbox['width']/2 + 120, fbox['y'] + fbox['height']/2 + 40)
+    after = fallback.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
+    assert after != before, (before, after)
+    passed('WebGL fallback', 'without WebGL the 3D button is off and says why; the flat 2D map still draws and picks')
     browser.close()
 Path('/tmp/t12-browser-results.json').write_text(json.dumps(checks, indent=2))
 print('HUMAN CHECK: >30 FPS on a mid-range laptop; headless SwiftShader is not laptop GPU evidence.', flush=True)

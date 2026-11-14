@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { amountText, compare, NUDGES, WINDOW_H, type Facts } from './model';
+import {
+  amountText, asCorner, clampKm, compare, freeCorner, kmText, NUDGE_KM, NUDGES, stepLabel, stepText, WINDOW_H,
+  type Corner, type Facts,
+} from './model';
 
 const H = 3_600_000;
 const T = Date.UTC(2027, 2, 1);
@@ -16,7 +19,68 @@ const texts = (live: Facts, ghost: Facts): string[] => compare(live, ghost).map(
 
 describe('NUDGES', () => {
   it('has the six steps of F11', () => {
-    expect(NUDGES.map((n) => n.text)).toEqual(['1 km N', '1 km W', '1 km S', '1 km E', '−1 day', '+1 day']);
+    expect(NUDGES.map((n) => stepText(n, 1))).toEqual(['1.0 km N', '1.0 km W', '1.0 km S', '1.0 km E', '−1 day', '+1 day']);
+  });
+
+  it('uses the chosen distance for the four directions only', () => {
+    expect(NUDGES.map((n) => stepText(n, 2.5))).toEqual(['2.5 km N', '2.5 km W', '2.5 km S', '2.5 km E', '−1 day', '+1 day']);
+  });
+
+  it('spells every step out for a screen reader', () => {
+    expect(NUDGES.map((n) => stepLabel(n, 2.5))).toEqual([
+      'Move the live site 2.5 km north', 'Move the live site 2.5 km west',
+      'Move the live site 2.5 km south', 'Move the live site 2.5 km east',
+      'Move the live time back 1 day', 'Move the live time forward 1 day',
+    ]);
+  });
+});
+
+describe('distance', () => {
+  it('runs from 0.1 km to 10 km in 0.1 km steps and starts at 1 km', () => {
+    expect(NUDGE_KM).toEqual({ min: 0.1, max: 10, step: 0.1, start: 1 });
+  });
+
+  it('keeps a value inside the range and on a step', () => {
+    expect(clampKm(2.5)).toBe(2.5);
+    expect(clampKm(2.54)).toBe(2.5);
+    expect(clampKm(0.3)).toBe(0.3); // 0.1 * 3 in floating point is 0.30000000000000004
+    expect(clampKm(0)).toBe(0.1);
+    expect(clampKm(-4)).toBe(0.1);
+    expect(clampKm(25)).toBe(10);
+    expect(clampKm(Number.NaN)).toBe(1);
+  });
+
+  it('always shows one decimal, so the width stays the same', () => {
+    expect(kmText(1)).toBe('1.0 km');
+    expect(kmText(0.1)).toBe('0.1 km');
+    expect(kmText(10)).toBe('10.0 km');
+  });
+});
+
+describe('freeCorner', () => {
+  const none = new Set<Corner>();
+  it('gives the wanted corner when it is free', () => {
+    expect(freeCorner('bl', none)).toBe('bl');
+    expect(freeCorner('tr', none)).toBe('tr');
+  });
+
+  it('goes clockwise to the next free corner when the wanted one is taken', () => {
+    expect(freeCorner('bl', new Set<Corner>(['bl']))).toBe('tl');
+    expect(freeCorner('tl', new Set<Corner>(['tl', 'tr']))).toBe('br');
+    expect(freeCorner('br', new Set<Corner>(['br', 'bl', 'tl']))).toBe('tr');
+  });
+
+  it('gives null when every corner is taken', () => {
+    expect(freeCorner('bl', new Set<Corner>(['tl', 'tr', 'bl', 'br']))).toBeNull();
+  });
+});
+
+describe('asCorner', () => {
+  it('reads the four corner names and nothing else', () => {
+    expect(asCorner('tr')).toBe('tr');
+    expect(asCorner('top')).toBeNull();
+    expect(asCorner(null)).toBeNull();
+    expect(asCorner(undefined)).toBeNull();
   });
 });
 
