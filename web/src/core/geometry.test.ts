@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parseEphemeris, type Ephemeris, type EphemerisMeta } from './ephemeris';
 import { destination, earthAltAz, sunAltAz } from './geometry';
+import { readRealTable } from './realTable.testutil';
 import type { AltAz, Site } from './types';
 
 const START = Date.parse('2027-01-01T00:00:00Z');
@@ -150,23 +151,14 @@ describe('destination', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// T02: against Skyfield, with the real table built by parseEphemeris.
+// T02: against Skyfield, with the real table: every decade, built by indexEphemeris + withChunk.
 
-const DATA = '../../public/data/';
-const metaFile = fileURLToPath(new URL(DATA + 'ephemeris.json', import.meta.url));
-const binFile = fileURLToPath(new URL(DATA + 'ephemeris.bin', import.meta.url));
 const fixtureFile = fileURLToPath(new URL('./__fixtures__/altaz.json', import.meta.url));
 
-const realMeta: EphemerisMeta | null = existsSync(metaFile) && existsSync(binFile)
-  ? JSON.parse(readFileSync(metaFile, 'utf8')) : null;
-const real = realMeta !== null && realMeta.source !== 'mock' && existsSync(fixtureFile);
-
-function realTable(): Ephemeris {
-  const bytes = readFileSync(binFile);
-  // Copy into an ArrayBuffer of its own: Node's Buffer may sit inside a larger shared pool.
-  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-  return parseEphemeris(realMeta as EphemerisMeta, buffer as ArrayBuffer);
-}
+// Every decade of the real table (realTable.testutil.ts); null while it is mock or missing.
+const realEph = existsSync(fixtureFile) ? readRealTable() : null;
+const real = realEph !== null;
+const realTable = (): Ephemeris => realEph as Ephemeris;
 
 type Case = { lat: number; lon: number; t: string; sun: AltAz; earth: AltAz };
 

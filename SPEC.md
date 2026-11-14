@@ -55,9 +55,9 @@ can be pinned.
 | # | Feature | Behaviour | Done when |
 |---|---|---|---|
 | F1 | Pick a site | Click the map, choose from the curated list, or type latitude and longitude | All three set the same live site |
-| F2 | Pick a time | UTC date and time box, plus dragging on the timeline. Range 2026 to 2035 | A time outside the range shows a message, not a crash |
+| F2 | Pick a time | UTC date and time box, plus dragging on the timeline. Range 1900 to 2100 | A time outside the range shows a message, not a crash |
 | F3 | Readout | For the selected scenario. Sun: altitude, azimuth, degrees above the skyline, fraction of disc visible. Earth: altitude, azimuth, visible or hidden | Matches the fixtures to 0.02 degrees |
-| F4 | Countdowns | "Sunset in 3 d 4 h" or "Sunrise in ..."; same for Earth. Special wording: "No sunset in the next 60 days", "No sunrise in the next 60 days", "Earth always visible", "Earth never visible", "Permanently shadowed (2026-2035)". The exact table is in contract section 3 | The countdown ends where the strip ends |
+| F4 | Countdowns | "Sunset in 3 d 4 h" or "Sunrise in ..."; same for Earth. Special wording: "No sunset in the next 60 days", "No sunrise in the next 60 days", "Earth always visible", "Earth never visible", "Permanently shadowed (until 2100)". The exact table is in contract section 3 | The countdown ends where the strip ends |
 | F5 | Scenarios | Pin the live scenario (max 3). Colours: A `#E69F00`, B `#0072B2`, C `#009E73`. Click a card to select it; remove with x | Pin, select, remove work; the same colour appears on pin, card and strips |
 | F6 | Compare table | One column per pinned scenario, same rows in the same order: Sun now, sunset in, Earth now, Earthset in, lit % (next 30 days), longest unbroken light, longest dark, Earth contact %, longest gap in contact. Best value per row highlighted | Two pinned scenarios show two columns with every row filled |
 | F7 | Strips | Two bars per scenario (Sun, Earth) on one shared axis: days since each scenario's own time, 0 to 30. Filled where up, empty where hidden | Strips agree with the countdowns |
@@ -79,7 +79,7 @@ No server. Python prepares data once; the browser does the rest.
 
 | Stage | Tool | Output |
 |---|---|---|
-| Sun and Earth directions seen from the Moon, hourly, 2026-2035 | Python, Skyfield, NASA JPL DE421 files | `ephemeris.bin` (about 2 MB) |
+| Sun and Earth directions seen from the Moon, every 3 hours, 1900-2100 | Python, Skyfield, NASA JPL DE440 files | `ephemeris/<decade>.bin`, about 0.7 MB each (14.1 MB in all); the page loads the 2020s first and other decades when needed, and keeps them on the device |
 | South-pole height map from LOLA, 80 S to the pole | Python, NumPy, Rasterio | `dem.bin` (15 MB at most) |
 | Check against JPL Horizons | Python | `validation.json` |
 | Angles for any site and time | TypeScript, `core/geometry.ts` | In memory |
@@ -106,7 +106,7 @@ the same for every site. Only the site's own "up" differs. So one table serves e
 | Our angles against Skyfield's own surface-point calculation | 0.02 degrees |
 | Skyfield's surface-point calculation against JPL Horizons, 3 sites x 3 times | 0.1 degrees |
 | The browser's own maths against the same Horizons numbers (a test on every pull request) | 0.1 degrees |
-| Terrain: floor of Shackleton crater | Never lit, 2026-2035 |
+| Terrain: floor of Shackleton crater | Never lit, to 2100 |
 | Terrain: a point on Shackleton's rim | Lit more than half the time |
 
 The two terrain rows are tests owned by T24.
@@ -117,7 +117,7 @@ The two terrain rows are tests owned by T24.
 - Skyline looks out to 150 km. A very tall peak further away is missed.
 - The Sun's visible fraction is by height of the disc, not by area.
 - Earth is treated as a point for "visible or hidden".
-- Table covers 2026-2035, hourly, with straight-line steps between hours.
+- Table covers 1900-2100, one row every 3 hours, with straight-line steps between rows. "Permanently shadowed" means no sunlight from the chosen time to the end of 2100.
 
 ## 9. Milestones
 

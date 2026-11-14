@@ -456,7 +456,7 @@ describe('countdownText', () => {
     ['Sun down, a rise found', 'sun', false, rise, false, 'Sunrise in 3 d 4 h'],
     ['Sun up, no set found', 'sun', true, null, false, 'No sunset in the next 60 days'],
     ['Sun down, no rise found', 'sun', false, null, false, 'No sunrise in the next 60 days'],
-    ['Sun down, neverLit true', 'sun', false, null, true, 'Permanently shadowed (2026-2035)'],
+    ['Sun down, neverLit true', 'sun', false, null, true, 'Permanently shadowed (until 2100)'],
     ['Earth up, a flip found', 'earth', true, set, false, 'Earthset in 3 d 4 h'],
     ['Earth down, a flip found', 'earth', false, rise, false, 'Earthrise in 3 d 4 h'],
     ['Earth up, no flip found', 'earth', true, null, false, 'Earth always visible'],
@@ -482,7 +482,7 @@ describe('countdownText', () => {
 
   it('says permanently shadowed only while the Sun is down, and never for Earth', () => {
     expect(countdownText('sun', true, set, t, true)).toBe('Sunset in 3 d 4 h');
-    expect(countdownText('sun', false, rise, t, true)).toBe('Permanently shadowed (2026-2035)');
+    expect(countdownText('sun', false, rise, t, true)).toBe('Permanently shadowed (until 2100)');
     expect(countdownText('earth', false, null, t, true)).toBe('Earth never visible');
   });
 
@@ -491,7 +491,7 @@ describe('countdownText', () => {
     countdownText(body, isUp(one(e, site, sky, tMs, ground), body), nextFlip(e, site, ground, sky, tMs, body), tMs, neverLit);
 
   // Done when: a skyline of 30 degrees everywhere, and countdownText with neverLit true.
-  it('reads "Permanently shadowed (2026-2035)" on a floor that no sunlight reaches', () => {
+  it('reads "Permanently shadowed (until 2100)" on a floor that no sunlight reaches', () => {
     const wall = level(30);
     const whole = series(seasons, craterFloor, -3000, wall, seasons.startMs, seasons.endMs, HOUR);
     const neverLit = whole.every((s) => s.sunFrac === 0);
@@ -499,7 +499,7 @@ describe('countdownText', () => {
     expect(neverLit).toBe(true);
     expect(summary(whole).litPct).toBe(0);
     expect(nextFlip(seasons, craterFloor, -3000, wall, START, 'sun')).toBeNull();
-    expect(line(seasons, craterFloor, -3000, wall, START, 'sun', neverLit)).toBe('Permanently shadowed (2026-2035)');
+    expect(line(seasons, craterFloor, -3000, wall, START, 'sun', neverLit)).toBe('Permanently shadowed (until 2100)');
   });
 
   it('counts down to a sunset found by nextFlip', () => {

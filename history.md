@@ -3,6 +3,17 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: pull request previews get their own address
+
+### docs/decisions.md
+
+- The preview row said latest-ticket previews include passing same-repository PR builds, with
+  `darksight.space` showing the newest passing branch, so the newest completed ticket was
+  visible immediately. In practice a pull request built on an older `main` replaced the live
+  site and hid merged work: after T22's preview deployed at 06:34 the site lost T11's Sky chart
+  and the T08 date fix until `main` was redeployed. Yi Hung asked for pull request previews on
+  their own addresses, with only `main` on `darksight.space`.
+
 ## 14 Nov 2026: homelab hosting and latest-ticket previews
 
 ### docs/decisions.md
