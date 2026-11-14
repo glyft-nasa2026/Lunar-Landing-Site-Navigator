@@ -1,4 +1,4 @@
-// Shared types, exactly as docs/data-contract.md section 3. Only P1 edits this file.
+// Shared types, exactly as docs/data-contract.md section 3.
 
 export type Site = { lat: number; lon: number; eye_m?: number };   // eye_m default 2
 export type AltAz = { alt: number; az: number };
