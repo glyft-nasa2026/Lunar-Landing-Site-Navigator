@@ -330,14 +330,19 @@ with sync_playwright() as p:
     box = map_canvas.bounding_box()
     world = page.evaluate("async () => { const v=document.querySelector('.map-canvas'); return {w:v.clientWidth, h:v.clientHeight}; }")
     scale = min(world['w'] / (2*math.pi*1737.4), world['h'] / (math.pi*1737.4))   # px per km at the start
-    target = {'lat': 20.19, 'lon': 30.77}   # Apollo 17, from the Apollo 11 centre
+    # Apollo 17. Across, from Apollo 11's longitude in the middle. Up, from the equator: at the
+    # whole-Moon zoom the map shows pole to pole, so it sits in the middle of the canvas (issue #65).
+    target = {'lat': 20.19, 'lon': 30.77}
     dx = 1737.4 * math.radians(target['lon'] - 23.473) * scale
-    dy = 1737.4 * math.radians(target['lat'] - 0.674) * scale
+    dy = 1737.4 * math.radians(target['lat']) * scale
     # Zooming out stops at the whole Moon (issue #65), so after a wheel-out the starting scale still holds.
     page.mouse.move(box['x']+box['width']/2, box['y']+box['height']/2)
     for _ in range(20):
         page.mouse.wheel(0, 400)
         page.wait_for_timeout(20)
+    # And panning stops at the poles: a drag straight down moves nothing.
+    page.mouse.move(box['x']+box['width']/2+200, box['y']+box['height']/2-100); page.mouse.down()
+    page.mouse.move(box['x']+box['width']/2+200, box['y']+box['height']/2+100, steps=10); page.mouse.up()
     page.wait_for_timeout(300)
     page.mouse.click(box['x'] + box['width']/2 + dx, box['y'] + box['height']/2 - dy)
     picked = page.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
@@ -378,9 +383,37 @@ with sync_playwright() as p:
     page.wait_for_timeout(350)
     assert 'South-pole terrain' in page.locator('.scene-caption').inner_text()
     passed('resolution independence', '634 × 634 at 960 m and 2534 × 2534 at 240 m render through the same code')
-    # Issue #65: zoomed right out, the polar map stops where the whole height map just fits the
-    # canvas. The view stays centred on the site, so a click a quarter of the canvas to the right
-    # of it lands where that scale says; any further zoom-out would put it much further away.
+    # Issue #65: the height map's outer cells' edges, half a cell beyond its stored corners.
+    grid = {'top': fine_meta['y_max_m'] + fine_meta['pixel_m']/2,
+            'mid_x': fine_meta['x_min_m'] + (fine_meta['size'] - 1) * fine_meta['pixel_m'] / 2,
+            'mid_y': fine_meta['y_max_m'] - (fine_meta['size'] - 1) * fine_meta['pixel_m'] / 2}
+    # A drag stops at the map's edge. Dragged far down at the starting zoom, the view stops with the
+    # map's top edge at the canvas's top, so a click 60 px below the top lands 60 px inside the map,
+    # straight above the site; without the limit it would land beyond the map.
+    def pan_limit():
+        map_canvas.scroll_into_view_if_needed()
+        b = map_canvas.bounding_box()
+        before = page.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
+        x = b['x'] + b['width']/2 + 150
+        for _ in range(3):
+            page.mouse.move(x, b['y'] + 30); page.mouse.down()
+            page.mouse.move(x, b['y'] + 410, steps=10); page.mouse.up()
+        page.wait_for_timeout(300)
+        span_km = min(80, max(8, fine_meta['size'] * fine_meta['pixel_m'] / 8000))
+        scale = b['height'] / (2 * span_km * 1000)   # px per metre at the starting zoom
+        page.mouse.click(b['x'] + b['width']/2, b['y'] + 60)
+        got = page.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
+        ex, ey = projected(before['lat'], before['lon'])[0], grid['top'] - 60 / scale
+        gx, gy = projected(got['lat'], got['lon'])
+        error_px = math.hypot(gx-ex, gy-ey) * scale
+        assert error_px < 2, (before, got, error_px)
+        page.evaluate(f"async () => (await import('/src/state.ts')).setLiveSite({json.dumps(before)})")
+        page.wait_for_timeout(200)
+        return {'dragged_px': 3 * 380, 'clicked': got, 'click_error_px': round(error_px, 2)}
+    passed('2D pan limit', pan_limit())
+    # Zoomed right out, the polar map stops where the whole height map just fits the canvas, and
+    # so sits in its middle. A click a quarter of the canvas right of the middle lands where that
+    # scale says; any further zoom-out would put it much further away.
     def zoom_out_limit(wheel):
         page.wait_for_timeout(500)   # after a viewport change, the charts above the map settle first
         map_canvas.scroll_into_view_if_needed()
@@ -397,8 +430,7 @@ with sync_playwright() as p:
         offset_px = min(b['width'], b['height']) / 4
         page.mouse.click(b['x']+b['width']/2+offset_px, b['y']+b['height']/2)
         got = page.evaluate("async () => (await import('/src/state.ts')).getState().live.site")
-        cx, cy = projected(before['lat'], before['lon'])
-        ex, ey = cx + offset_px / scale, cy
+        ex, ey = grid['mid_x'] + offset_px / scale, grid['mid_y']
         gx, gy = projected(got['lat'], got['lon'])
         error_px = math.hypot(gx-ex, gy-ey) * scale
         assert error_px < 2, (before, got, error_px)

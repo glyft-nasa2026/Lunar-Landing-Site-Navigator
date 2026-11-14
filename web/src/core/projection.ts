@@ -81,6 +81,25 @@ export function fitScale(width: number, height: number, mapWidth: number, mapHei
   return Math.min(width / mapWidth, height / mapHeight);
 }
 
+/** The part of the map plane a map covers, in map units. An infinite range is one the map repeats along. */
+export type MapBounds = { xMin: number; xMax: number; yMin: number; yMax: number };
+
+/**
+ * The view moved as little as possible to keep the map in the canvas (issue #65). Along an axis
+ * where the map is bigger than the canvas, no edge of the map comes inside the canvas; where it
+ * is smaller, the map is centred on that axis. Infinite bounds leave the axis free, as for the
+ * whole-Moon map, which repeats east and west.
+ */
+export function clampView(view: MapView, bounds: MapBounds): MapView {
+  const axis = (c: number, lo: number, hi: number, half: number): number =>
+    hi - lo <= 2 * half ? (lo + hi) / 2 : Math.min(hi - half, Math.max(lo + half, c));
+  return {
+    ...view,
+    cx: axis(view.cx, bounds.xMin, bounds.xMax, view.width / 2 / view.scale),
+    cy: axis(view.cy, bounds.yMin, bounds.yMax, view.height / 2 / view.scale),
+  };
+}
+
 /**
  * The view zoomed by `factor` about a screen point, which stays over the same map point.
  * The scale is held between `min` and `max`.
