@@ -1,4 +1,6 @@
 /* Main page, then loading screen (docs/design/hero.png, loading.png). Theme variables only.
+   Every animation here changes only transform or opacity: the browser plays those on its own,
+   so they stay smooth while the page is busy loading (no blur, no animated shadow, no width).
    Sizes the contract doesn't name (hero type, logo) are multiples of its variables. */
 
 body.intro-open {
@@ -74,10 +76,12 @@ body.intro-open {
 
 .intro-bar > span {
   display: block;
-  width: 0;
+  width: 100%;
   height: 100%;
   background: linear-gradient(90deg, var(--border), var(--accent) 60%, var(--text));
-  transition: width 0.3s ease;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.3s ease;
 }
 
 .intro-caption {
@@ -163,7 +167,20 @@ body.intro-open {
   letter-spacing: 0.01em;
   white-space: nowrap;
   color: var(--accent);
-  animation: intro-title-glow 3s ease-in-out 1.7s infinite alternate;
+  position: relative;
+}
+
+/* The soft glow: the title's words again, as a blurred shadow only, fading in and out. */
+.intro-title::after {
+  content: attr(aria-label);
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  text-shadow: 0 0 0.35em color-mix(in srgb, var(--accent) 45%, transparent);
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+  animation: intro-glow 3s ease-in-out 1.7s infinite alternate;
 }
 
 .intro-sub {
@@ -187,12 +204,14 @@ body.intro-open {
    then the two subtitle lines, then the button. The title then glows softly. */
 .intro-ch {
   display: inline-block;
+  will-change: transform, opacity;
   animation: intro-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   animation-delay: calc(0.45s + var(--i) * 0.06s);
 }
 
 .intro-line {
   display: block;
+  will-change: transform, opacity;
   animation: intro-up 0.8s ease-out both;
 }
 
@@ -218,13 +237,11 @@ body.intro-open {
   from {
     opacity: 0;
     transform: translateY(0.5em) scale(0.9);
-    filter: blur(0.08em);
   }
 
   to {
     opacity: 1;
     transform: none;
-    filter: none;
   }
 }
 
@@ -240,13 +257,13 @@ body.intro-open {
   }
 }
 
-@keyframes intro-title-glow {
+@keyframes intro-glow {
   from {
-    text-shadow: 0 0 0 transparent;
+    opacity: 0;
   }
 
   to {
-    text-shadow: 0 0 0.35em color-mix(in srgb, var(--accent) 45%, transparent);
+    opacity: 1;
   }
 }
 
@@ -300,7 +317,7 @@ body.intro-open {
   }
 
   .intro-logo-pulse,
-  .intro-title,
+  .intro-title::after,
   .intro-ch,
   .intro-line,
   .intro-start,

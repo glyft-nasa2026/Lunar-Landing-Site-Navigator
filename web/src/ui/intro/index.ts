@@ -2,9 +2,15 @@
 // A full-screen layer over the site, in this order:
 //   1. The main page, as soon as the site opens. Its big logo starts where the loading screen's
 //      logo sits, in the middle, and glides out to the right. The data files load behind it.
-//   2. "Start exploring": if the data is still loading, the big logo glides back to the middle
-//      and the loading screen shows how far the data is.
-//   3. When every file has loaded (or failed: the page's status line says which), the site.
+//   2. "Start exploring": the big logo glides back to the middle and the loading screen shows
+//      how far the data is. The site's code starts downloading at the click (main.ts's
+//      loadSite); its modules are mounted once the loading screen is on screen. Both block the
+//      page for a moment, so they run while only the glide or the logo's pulse moves, never
+//      while the main page is animating or waiting for a click.
+//   3. When every file has loaded (or failed: the page's status line says which) and the site
+//      is mounted, the site.
+// Every animation here moves or fades only (transform, opacity), so the browser keeps playing it
+// even while the page is busy.
 // Not a slot of contract section 5: main.ts starts it and feeds it the loading progress.
 import './intro.css';
 import { logo } from './logo';
@@ -69,7 +75,17 @@ export interface Intro {
   update(progress: LoadProgress): void;
 }
 
-export function startIntro(): Intro {
+export interface IntroOptions {
+  /** Loads the site's code and resolves to the function that mounts its modules. Called once. */
+  loadSite: () => Promise<() => void>;
+}
+
+/** Runs `fn` after the browser has drawn the current page at least once more. */
+function afterPaint(fn: () => void): void {
+  requestAnimationFrame(() => requestAnimationFrame(fn));
+}
+
+export function startIntro(options: IntroOptions): Intro {
   const root = make('div', 'intro');
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-modal', 'true');
@@ -123,6 +139,15 @@ export function startIntro(): Intro {
   let latest: LoadProgress | null = null;
   let started = false;
   let closed = false;
+  let siteReady = false;
+  let siteFailed = false;
+  let siteCode: Promise<() => void> | null = null;
+
+  /** Starts downloading and running the site's code, once. */
+  function loadSiteCode(): Promise<() => void> {
+    siteCode ??= options.loadSite();
+    return siteCode;
+  }
 
   /** Where the loading screen's logo sits on this screen, measured without showing it. */
   function smallLogoBox(): DOMRect {
@@ -135,10 +160,18 @@ export function startIntro(): Intro {
   }
 
   function drawProgress(): void {
-    const pct = latest ? Math.round(loadFraction(latest) * 100) : 0;
-    fill.style.width = `${pct}%`;
+    const fraction = latest ? loadFraction(latest) : 0;
+    const pct = Math.round(fraction * 100);
+    fill.style.transform = `scaleX(${fraction})`;
     bar.setAttribute('aria-valuenow', String(pct));
-    caption.textContent = `INITIALISING LUNAR DATA… ${pct}%`;
+    if (siteFailed) caption.textContent = 'THE SITE DID NOT LOAD. PLEASE RELOAD THE PAGE.';
+    else if (latest && allSettled(latest)) caption.textContent = 'PREPARING THE SITE…';
+    else caption.textContent = `INITIALISING LUNAR DATA… ${pct}%`;
+  }
+
+  /** Leaves for the site once the data is in and the modules are mounted. */
+  function maybeClose(): void {
+    if (siteReady && latest && allSettled(latest)) close();
   }
 
   // 3. The site.
@@ -157,23 +190,34 @@ export function startIntro(): Intro {
   }
 
   function showLoading(): void {
-    if (latest && allSettled(latest)) {
-      close(); // the data finished while the logo was gliding back
-      return;
-    }
     drawProgress();
     page.replaceWith(loading);
     bar.focus();
+    // Once the loading screen is drawn and its pulse is running, mount the site.
+    afterPaint(() => {
+      loadSiteCode().then(
+        (mountSite) => {
+          mountSite();
+          siteReady = true;
+          drawProgress();
+          maybeClose();
+        },
+        (err: unknown) => {
+          console.error('The site did not load', err);
+          siteFailed = true;
+          drawProgress();
+        },
+      );
+    });
   }
 
   start.addEventListener('click', () => {
     if (started) return;
     started = true;
     settleAnimations(page);
-    if (latest && allSettled(latest)) {
-      close();
-      return;
-    }
+    // The code downloads during the glide; the glide only moves and fades, so it stays smooth
+    // even while the code starts up.
+    afterPaint(() => void loadSiteCode().catch(() => undefined));
     if (reducedMotion()) {
       showLoading();
       return;
@@ -212,7 +256,7 @@ export function startIntro(): Intro {
       latest = progress;
       if (closed || !started || !loading.isConnected) return;
       drawProgress();
-      if (allSettled(progress)) close();
+      maybeClose();
     },
   };
 }
