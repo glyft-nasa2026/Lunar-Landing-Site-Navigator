@@ -1,6 +1,6 @@
 import {
   AmbientLight, Box3, CanvasTexture, Color, DirectionalLight, Group, Mesh, MeshBasicMaterial,
-  MeshLambertMaterial, PCFShadowMap, PerspectiveCamera, Raycaster,
+  MeshLambertMaterial, ObjectSpaceNormalMap, PCFShadowMap, PerspectiveCamera, Raycaster,
   Scene, SphereGeometry, Sprite, SpriteMaterial, SRGBColorSpace, Vector2, Vector3, WebGLRenderer,
   type Material,
 } from 'three';
@@ -16,6 +16,7 @@ import { gridSite, moonCentre, moonDirection, sitePosition, siteUp, sphereSite }
 import {
   detailBounds, edgeHeight, globeGeometry, recolorTerrain, setTerrainHole, terrainGeometry, type GridBounds,
 } from './terrain';
+import { colorTexture, loadGlobe, normalTexture, type GlobeHeights } from './globe';
 import './scene.css';
 
 const mounts = new WeakMap<HTMLElement, () => void>();
@@ -119,7 +120,9 @@ export function mount(el: HTMLElement): void {
   let polar = false, stretch = 1, drawnStretch = 1, pinPx = 1, orbitGlobe = false;
   let dem: Dem | null = null, coarse: Mesh | null = null, detail: Mesh | null = null;
   let bounds: GridBounds | undefined;
-  let siteKey = '', coarseKey = '', detailKey = '', pinKey = '', themeKey = '';
+  let siteKey = '', coarseKey = '', detailKey = '', pinKey = '', themeKey = '', globeKey = '';
+  /** The whole-Moon heights the globe is painted from. Null until they load, or if they are missing. */
+  let globeHeights: GlobeHeights | null = null;
   let pinSites: AppState['sites'] | null = null, pinDem: Dem | null = null;
   /** Highest drawn terrain above the sphere, in km, so the near plane never cuts a peak. */
   let relief = 0;
@@ -308,6 +311,28 @@ export function mount(el: HTMLElement): void {
     detail.geometry.computeBoundingBox(); terrainBox.union(detail.geometry.boundingBox!);
     detail.castShadow = detail.receiveShadow = true; world.add(detail);
   }
+  /**
+   * Paints the globe with the whole Moon's heights (issue #66), on the terrain's colour ramp and
+   * range so no ring shows where the height map stops. Without them it stays a plain sphere.
+   */
+  function paintGlobe(): void {
+    if (!globeHeights) return;
+    // The texture carries the colour; the material's own would tint it.
+    globeMaterial.color.set(0xffffff);
+    const range = (coarse?.geometry.userData.heightRange as number[] | undefined) ?? globeHeights.range;
+    const key = `${themeKey}|${range.join(',')}`;
+    if (key === globeKey) return;
+    globeKey = key;
+    const old = globeMaterial.map;
+    globeMaterial.map = colorTexture(globeHeights,
+      new Color(themeColor('--terrain-lo')), new Color(themeColor('--terrain-hi')), range);
+    old?.dispose();
+    if (!globeMaterial.normalMap) {
+      globeMaterial.normalMap = normalTexture(globeHeights);
+      globeMaterial.normalMapType = ObjectSpaceNormalMap;
+    }
+    globeMaterial.needsUpdate = true;
+  }
   function clearPins(): void {
     for (const obj of [...pins.children]) { ((obj as Mesh).material as Material).dispose(); pins.remove(obj); }
   }
@@ -340,6 +365,7 @@ export function mount(el: HTMLElement): void {
     dem = s.dem; polar = nextPolar; mode = s.mode; siteKey = key; drawnStretch = stretch;
     target.copy(sitePosition(sc.site, polar && dem ? dem.heightAt(sc.site.lat, sc.site.lon) : 0, stretch));
     updateTerrain(changedDem);
+    paintGlobe();
     // Stretch is drawn only in 3D; the flat map shows heights as colours.
     slider.disabled = !polar || mode === '2d';
     // scene.css gives the canvas display: block, which the hidden attribute would not override.
@@ -439,6 +465,11 @@ export function mount(el: HTMLElement): void {
   const themeObserver = new MutationObserver(updateTheme);
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] });
   const unsubscribe = subscribe(update);
+  // Not needed for any number, so it loads beside the rest and the plain sphere shows meanwhile.
+  loadGlobe().then((loaded) => {
+    if (disposed) return;
+    globeHeights = loaded; paintGlobe(); invalidate();
+  }).catch(() => { /* No whole-Moon heights (mock data set): the globe stays a plain sphere. */ });
   updateTheme(); resize();
   function dispose(): void {
     if (disposed) return;
@@ -449,7 +480,7 @@ export function mount(el: HTMLElement): void {
     slider.removeEventListener('input', onStretch); reset.removeEventListener('click', centre);
     buttons.forEach((b) => b.removeEventListener('click', changeMode)); window.removeEventListener('pagehide', onPageHide);
     orbitControls.dispose(); clearTerrain(); clearPins(); unmountMap(mapHost);
-    pinGeometry.dispose(); globe.geometry.dispose(); globeMaterial.dispose(); terrainMaterial.dispose(); detailMaterial.dispose();
+    pinGeometry.dispose(); globe.geometry.dispose(); globeMaterial.map?.dispose(); globeMaterial.normalMap?.dispose(); globeMaterial.dispose(); terrainMaterial.dispose(); detailMaterial.dispose();
     earthMaterial.map?.dispose(); earthMaterial.dispose(); sun.dispose();
     // Free the WebGL context now: browsers allow only a few, and a remount would leak one.
     renderer.dispose(); renderer.forceContextLoss(); canvas.remove(); mounts.delete(el);

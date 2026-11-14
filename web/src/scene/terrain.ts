@@ -2,6 +2,7 @@ import { BufferAttribute, BufferGeometry, Color, Float32BufferAttribute, SphereG
 import { projectToGrid, type Dem, type DemMeta } from '../core/dem';
 import { MOON_RADIUS_KM, type Site } from '../core/types';
 import { gridSite, sitePosition, sphereSite } from './coordinates';
+import { mapGlobeUv } from './globe';
 
 export type GridBounds = { col0: number; col1: number; row0: number; row1: number };
 /** Which grid points a mesh's vertices sit on, kept so its triangles can be rebuilt. */
@@ -36,9 +37,10 @@ export function detailBounds(dem: Dem, site: Site): GridBounds {
  * open so the terrain isn't buried under the sphere. The opening is two coarse cells smaller
  * than the terrain, so the terrain's stepped edge never leaves a gap; where the two overlap the
  * globe's material is pushed back in depth so the terrain wins.
+ * Texture coordinates follow the whole-Moon grid (globe.ts), whatever part of the sphere is built.
  */
 export function globeGeometry(meta?: DemMeta | null): SphereGeometry {
-  if (!meta) return new SphereGeometry(MOON_RADIUS_KM, 128, 96);
+  if (!meta) return withGlobeUv(new SphereGeometry(MOON_RADIUS_KM, 128, 96));
   const rM = MOON_RADIUS_KM * 1000;
   const last = meta.size - 1;
   // Distance from the pole to the nearest grid edge, so a grid smaller than min_lat still has no gap.
@@ -48,7 +50,12 @@ export function globeGeometry(meta?: DemMeta | null): SphereGeometry {
   const overlap = 2 * coarseStride(meta) * meta.pixel_m / rM;
   const cap = Math.max(0, Math.min((90 + meta.min_lat) * RAD, gridColat) - overlap);
   // Render frame +Y is south, and SphereGeometry measures theta from +Y.
-  return new SphereGeometry(MOON_RADIUS_KM, 128, 96, 0, Math.PI * 2, cap, Math.PI - cap);
+  return withGlobeUv(new SphereGeometry(MOON_RADIUS_KM, 128, 96, 0, Math.PI * 2, cap, Math.PI - cap));
+}
+
+function withGlobeUv(geometry: SphereGeometry): SphereGeometry {
+  mapGlobeUv(geometry);
+  return geometry;
 }
 
 /** Writes the triangles whose three corners have data, leaving out the quads inside `hole`. */
