@@ -1,6 +1,6 @@
 # T22: Design in Figma
 
-Status: done (pull request #22). The team said yes, confirmed by P1 on 14 Nov 2026. No Figma link: the pictures were made from the brief. T22-b in review: solar panel slot and battery proposal
+Status: done (pull request #22). The team said yes, confirmed by P1 on 14 Nov 2026. No Figma link: the pictures were made from the brief. T22-b merged (pull request #62): solar panel slot and battery proposal
 
 | | |
 |---|---|
@@ -50,6 +50,12 @@ number on the real site comes from `web/src/core/`.
   - *costs time*: the six items under "Needs P1" in `docs/design.md` have no answer yet. T19 and T23 need them. The section is now titled "Needs team decision".
   - *cosmetic*: there is no picture for `#panel`, the ninth slot, added later by T15.
   - *cosmetic*: `docs/design.md`, under "Rules the pictures follow", calls the live colour "the accent green". `--accent` is blue, in the palette table and in the pictures.
+
+- 14 Nov 2026, audit of T22-b (#62). Checked and correct: the palette in `docs/design.md` equals `theme.css`; the contrast table, the solid strips and the colour-blindness figures all work out again; the mock-up has no colour code outside `:root`; the battery is marked a proposal and none of its numbers is presented as computed. Open, for P5 and the team:
+  - *costs time*: "Needs team decision" now has seven items and none is answered in `docs/decisions.md`. Item 1 (the pill shape) is in use anyway, as `999px` in `theme.css`. Items 2, 3 and 5 have nothing built. Items 4 and 7 are open.
+  - *cosmetic*: item 4's Earth-bar figures, 1.60 (B) and 2.02 (C), are worked out against the old `--dark` (`#262c36`). Against the palette's own `#0e1116` they are 1.77 and 2.23, and A, at 2.91, is under 3 to 1 as well.
+  - *cosmetic*: the pictures and the site differ in four places. The phone picture stacks the nudge panel as a slot, and #61 floats it over the map. The panel picture is full width with the battery; the site has it 336 px wide beside Scenarios (item 7 says so). "The best value … with a dot": the site shows bold `--ok` and no dot. "Pins … plus the letter": the site's pins carry no letters.
+  - *cosmetic*: `panel.png` is listed as an ordinary slot picture, and nothing inside `panel.png`, `desktop.png` or `phone.png` says the battery is a proposal.
 
 ## Prompt to paste into Claude Code
 
