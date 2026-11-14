@@ -1,6 +1,6 @@
 # T09: Compare table and strips
 
-Status: done (pull request #21)
+Status: second delivery in progress (#45, branch t09-ui-compare-b). First delivery done (pull request #21)
 
 | | |
 |---|---|
