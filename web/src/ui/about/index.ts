@@ -4,7 +4,7 @@ import { getState, subscribe } from '../../state';
 
 export function mount(el: HTMLElement): void {
   const title = document.createElement('strong');
-  title.textContent = 'Lunar Landing Site Navigator';
+  title.textContent = 'Darksight';
   const slot = document.createElement('span');
   slot.className = 'badge';
   slot.textContent = '#about';

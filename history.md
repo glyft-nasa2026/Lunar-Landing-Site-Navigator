@@ -3,6 +3,17 @@
 What a rule or fact in this repo's notes used to say, and why it changed. Newest first. The main
 files say what is true now; decisions are in `docs/decisions.md`. Only P1 edits this file.
 
+## 14 Nov 2026: product named Darksight
+
+### README.md, SPEC.md, the page title and `package.json`
+
+- The product was "Lunar Landing Site Navigator", the challenge's own title, and the README said
+  the name was still open. Now: Darksight, at darksight.space. SPEC's hosting row was "GitHub
+  Pages; mirror on rickphobia.com"; now Pages serves darksight.space. Links to the challenge
+  keep its title.
+- The README said the repo was `glyft-nasa2026/Lunar-Landing-Site-Navigator`. The repo was renamed
+  to `glyft-nasa2026/Darksight` on GitHub.
+
 ## 14 Nov 2026: workflow audit, follow-up
 
 A third pass, `workflow-audit-follow-up.md` (five findings, two wording notes), on the plan as

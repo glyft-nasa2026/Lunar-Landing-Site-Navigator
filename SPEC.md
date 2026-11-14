@@ -1,4 +1,4 @@
-# Spec: Lunar Landing Site Navigator
+# Spec: Darksight
 
 Written 14 Nov 2026. Changes go in `docs/decisions.md`.
 
@@ -87,7 +87,7 @@ No server. Python prepares data once; the browser does the rest.
 | Countdowns, percentages | TypeScript, `core/windows.ts` | In memory |
 | 3D view | three.js | |
 | Charts | Plotly.js | |
-| Hosting | GitHub Pages; mirror on rickphobia.com | |
+| Hosting | GitHub Pages at darksight.space; mirror on rickphobia.com | |
 
 **Why this works:** at one moment, the Sun's and Earth's directions measured from the Moon are
 the same for every site. Only the site's own "up" differs. So one table serves every site.
