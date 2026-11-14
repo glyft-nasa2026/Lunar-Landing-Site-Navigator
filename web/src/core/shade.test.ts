@@ -133,7 +133,9 @@ describe('shadePolar', () => {
       }
     }
     expect(compared).toBeGreaterThan(200);
-  });
+    // 54 shadings and 8 skylines: well inside vitest's default 5 s alone, but a full `npm test`
+    // runs the other test files at the same time and pushed it past 5 s (issue #67).
+  }, 30_000);
 
   it('is quick enough to redraw while the time is dragged on the real grid size', () => {
     const big: DemMeta = { ...META, size: 2534, pixel_m: 240, x_min_m: -304080, y_max_m: 304080 };
