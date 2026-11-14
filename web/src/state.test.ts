@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { parseEphemeris, type Ephemeris } from './core/ephemeris';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { indexEphemeris, parseEphemeris, type Ephemeris } from './core/ephemeris';
 import {
   flipFor, getState, LIVE_ID, neverLitFor, pin, restoreFromAddress, samplesFor, select, selected,
   setData, setGhost, setLiveSite, setLiveTime, setMode, setRange, shiftWindow, skylineFor,
@@ -316,16 +316,176 @@ describe('cached accessors', () => {
     expect(timelineFor(getState().pinned[0], '30d')[0].tMs).toBe(T0 + 10 * DAY);
   });
 
-  it('neverLitFor is true where the Sun never clears the skyline in the whole table', () => {
+  it('neverLitFor is true where the Sun never clears the skyline to the end of the table', () => {
     // At the south pole this Sun sits exactly on the horizon: half its disc shows.
     setData({ eph: circlingSun(60) });
     setLiveSite({ lat: -90, lon: 0 });
     expect(neverLitFor(getState().live)).toBe(false);
-    // With the Sun fixed over the north pole instead, the south pole never sees it.
+    // With the Sun fixed over the north pole instead, the south pole never sees it. Two rows a
+    // day apart: 61 days, past the 60 days needed before the end of the table.
     const buffer = new ArrayBuffer(48);
     const view = new DataView(buffer);
     [0, 0, 1, 384400, 0, 0, 0, 0, 1, 384400, 0, 0].forEach((v, i) => view.setFloat32(i * 4, v, true));
-    setData({ eph: parseEphemeris({ start: '2027-01-01T00:00:00Z', step_s: 3600, rows: 2, frame: 'MOON_ME_DE421', columns: [], source: 'made up for a test' }, buffer) });
+    setData({ eph: parseEphemeris({ start: '2027-01-01T00:00:00Z', step_s: 61 * 86400, rows: 2, frame: 'MOON_ME_DE421', columns: [], source: 'made up for a test' }, buffer) });
     expect(neverLitFor(getState().live)).toBe(true);
+  });
+});
+
+describe('decades of the table (loaded as needed)', () => {
+  // Two 200-day files, the first one home: the same circling Sun, split where the real
+  // table splits by decade.
+  const DAYS = 200;
+  function rows(fromRow: number, count: number): ArrayBuffer {
+    const buffer = new ArrayBuffer(count * 24);
+    const view = new DataView(buffer);
+    for (let k = 0; k < count; k++) {
+      const lon = (-2 * Math.PI * ((fromRow + k) / 24)) / 29.53;
+      [Math.cos(lon), Math.sin(lon), 0, 384400, 0, 0].forEach((v, c) => view.setFloat32((k * 6 + c) * 4, v, true));
+    }
+    return buffer;
+  }
+  const perFile = DAYS * 24 + 1;
+  const index = indexEphemeris({
+    start: '2027-01-01T00:00:00Z', step_s: 3600, rows: 2 * perFile - 1, frame: 'MOON_ME_DE440_ME421',
+    columns: [], source: 'made up for a test', home: 0,
+    chunks: [
+      { file: 'ephemeris/first.bin', start: '2027-01-01T00:00:00Z', rows: perFile },
+      { file: 'ephemeris/second.bin', start: new Date(T0 + DAYS * DAY).toISOString(), rows: perFile },
+    ],
+  });
+  const second = rows(perFile - 1, perFile);
+  const later = T0 + (DAYS + 50) * DAY;
+
+  let asked: string[] = [];
+  let answer: (url: string) => Promise<Response>;
+  beforeEach(() => {
+    asked = [];
+    answer = async () => new Response(second);
+    vi.stubGlobal('fetch', (url: string) => { asked.push(url); return answer(url); });
+    setData({ eph: index.withChunk(0, rows(0, perFile)) });
+  });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  const settle = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+
+  it('needs nothing more while every scenario sits in the home decade', () => {
+    expect(getState().eph).not.toBeNull();
+    expect(samplesFor(getState().live, '30d')).toHaveLength(30 * 24);
+    expect(asked).toEqual([]);
+  });
+
+  it('reads "Loading" (eph null) while a needed decade downloads, then fills it in', async () => {
+    setLiveTime(later);
+    expect(getState().eph).toBeNull();
+    await settle();
+    expect(asked).toEqual(['/data/ephemeris/second.bin']);
+    const s = getState();
+    expect(s.eph).not.toBeNull();
+    const now = samplesFor(s.live, '30d')[0];
+    expect(now.tMs).toBe(later);
+    expect(flipFor(s.live, 'sun')).not.toBeNull();
+    setLiveTime(later + DAY);          // already in memory: no second download
+    expect(getState().eph).not.toBeNull();
+    expect(asked).toHaveLength(1);
+  });
+
+  it('a pinned scenario in another decade holds the page on "Loading" too', async () => {
+    setLiveTime(later);
+    pin();
+    setLiveTime(T0);
+    expect(getState().eph).toBeNull();  // the pin still needs the second file
+    await settle();
+    expect(getState().eph).not.toBeNull();
+    expect(samplesFor(getState().pinned[0], '30d')[0].tMs).toBe(later);
+  });
+
+  it('a decade that fails to download reads as outside the table, and is not asked for again', async () => {
+    answer = async () => new Response('', { status: 404 });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    setLiveTime(later);
+    await settle();
+    expect(getState().eph).not.toBeNull();
+    expect(samplesFor(getState().live, '30d')).toEqual([]);
+    expect(flipFor(getState().live, 'sun')).toBeNull();
+    setLiveTime(later + DAY);
+    expect(asked).toHaveLength(1);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('"never lit" needs no download where the Sun rises within 60 days', () => {
+    expect(neverLitFor(getState().live)).toBe(false);
+    expect(asked).toEqual([]);
+  });
+});
+
+describe('"never lit" from the chosen time to the end of the table', () => {
+  // Three 100-day files. The Sun holds still: +z is below the south-pole horizon, -z overhead.
+  const DAYS = 100;
+  const perFile = DAYS * 24 + 1;
+  function steady(z: number): ArrayBuffer {
+    const buffer = new ArrayBuffer(perFile * 24);
+    const view = new DataView(buffer);
+    for (let k = 0; k < perFile; k++) {
+      [0, 0, z, 384400, 0, 0].forEach((v, c) => view.setFloat32((k * 6 + c) * 4, v, true));
+    }
+    return buffer;
+  }
+  const index = indexEphemeris({
+    start: '2027-01-01T00:00:00Z', step_s: 3600, rows: 3 * perFile - 2, frame: 'MOON_ME_DE440_ME421',
+    columns: [], source: 'made up for a test', home: 0,
+    chunks: [0, 1, 2].map((k) => ({
+      file: `ephemeris/${k}.bin`, start: new Date(T0 + k * DAYS * DAY).toISOString(), rows: perFile,
+    })),
+  });
+  const settle = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+  let files: Record<string, ArrayBuffer> = {};
+  let asked: string[] = [];
+  beforeEach(() => {
+    asked = [];
+    vi.stubGlobal('fetch', async (url: string) => {
+      asked.push(url);
+      return new Response(files[url.replace('/data/ephemeris/', '')]);
+    });
+  });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('stays false while the later decades download, then reads true when none of them has sunlight', async () => {
+    files = { '1.bin': steady(1), '2.bin': steady(1) };
+    setData({ eph: index.withChunk(0, steady(1)) });
+    expect(neverLitFor(getState().live)).toBe(false);   // not all in yet
+    await settle();
+    expect(asked.sort()).toEqual(['/data/ephemeris/1.bin', '/data/ephemeris/2.bin']);
+    expect(neverLitFor(getState().live)).toBe(true);
+  });
+
+  it('is false when the Sun comes back before the end, however far ahead', async () => {
+    files = { '1.bin': steady(1), '2.bin': steady(-1) };
+    setData({ eph: index.withChunk(0, steady(1)) });
+    neverLitFor(getState().live);
+    await settle();
+    expect(neverLitFor(getState().live)).toBe(false);
+  });
+
+  it('gives no verdict within 60 days of the end of the table', async () => {
+    files = { '1.bin': steady(1), '2.bin': steady(1) };
+    setData({ eph: index.withChunk(0, steady(1)) });
+    setLiveTime(T0 + 250 * DAY);                         // 50 days before the end
+    await settle();
+    neverLitFor(getState().live);
+    await settle();
+    expect(neverLitFor(getState().live)).toBe(false);
+  });
+
+  it('looks only from the chosen time on: sunlight earlier does not count', async () => {
+    files = { '1.bin': steady(1), '2.bin': steady(1) };
+    setData({ eph: index.withChunk(0, steady(-1)) });   // lit in the first 100 days only
+    setLiveTime(T0 + 120 * DAY);
+    await settle();                                      // the scenario's own decade first
+    expect(neverLitFor(getState().live)).toBe(false);   // then this asks for the rest
+    await settle();
+    expect(neverLitFor(getState().live)).toBe(true);
+    setLiveTime(T0 + 50 * DAY);                          // the Sun is up then
+    expect(neverLitFor(getState().live)).toBe(false);
   });
 });
