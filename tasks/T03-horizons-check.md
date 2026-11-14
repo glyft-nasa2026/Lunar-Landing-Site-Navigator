@@ -1,6 +1,6 @@
 # T03: Check our numbers against JPL Horizons
 
-Status: in progress (data and test written; waiting on npm test, npm run build and the hand check in the Horizons web app)
+Status: done (pull request #30; re-run on DE440 in #41)
 
 | | |
 |---|---|
@@ -58,6 +58,11 @@ site on the Moon (address `https://ssd.jpl.nasa.gov/api/horizons.api`):
 The reply's header said Horizons uses the same frame and radius we do (`MEAN_ME`, 1737.4 km,
 east-longitude positive) and its own newer table (DE441, ours is DE421). Read the header of your
 own replies to confirm.
+
+## After the merge
+
+- 14 Nov 2026, pull request #31: the table moved from DE421 to DE440 and from one file to one per decade. `horizons.test.ts` reads every decade through `realTable.testutil.ts`. In the Notes above, "ours is DE421" is now DE440; Horizons still uses DE441.
+- 14 Nov 2026, pull request #41 (`t03-horizons-check-b`): `validation.json` re-run on DE440, `max_diff_deg` 0.000001 (0.000016 on DE421). `check_horizons.py` reads the decade files; it had stopped with a missing-file error since #31 removed `ephemeris.bin`.
 
 ## Prompt to paste into Claude Code
 
