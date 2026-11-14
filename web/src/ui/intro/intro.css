@@ -1,0 +1,224 @@
+/* Main page, then loading screen (docs/design/hero.png, loading.png). Theme variables only.
+   Sizes the contract doesn't name (hero type, logo) are multiples of its variables. */
+
+body.intro-open {
+  overflow: hidden;
+}
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  transition: opacity 0.4s ease;
+}
+
+.intro.intro-closing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.intro-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.intro-star {
+  position: absolute;
+  width: calc(var(--space-1) / 2);
+  height: calc(var(--space-1) / 2);
+  border-radius: 50%;
+  background: var(--text);
+}
+
+/* Loading view */
+
+/* Laid out but unseen, so the main page can measure where the loading logo sits. */
+.intro-loading.intro-measure {
+  visibility: hidden;
+}
+
+.intro-loading {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-5);
+}
+
+.intro-logo-pulse {
+  width: calc(var(--space-5) * 8);
+  height: calc(var(--space-5) * 8);
+  animation: intro-pulse 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes intro-pulse {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
+
+.intro-bar {
+  width: calc(var(--space-5) * 10);
+  max-width: 70vw;
+  height: var(--space-1);
+  border-radius: var(--space-1);
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.intro-bar > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--border), var(--accent) 60%, var(--text));
+  transition: width 0.3s ease;
+}
+
+.intro-caption {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.intro-bar:focus {
+  outline: none;
+}
+
+/* Main page */
+
+.intro-hero {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  padding: var(--space-5) calc(var(--space-5) * 2);
+}
+
+.intro-glow {
+  position: absolute;
+  right: -15vmin;
+  top: 8vmin;
+  width: 85vmin;
+  height: 85vmin;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent), transparent 65%);
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.intro-logo-big {
+  position: absolute;
+  right: -12vmin;
+  top: 12vmin;
+  width: 78vmin;
+  height: 78vmin;
+  pointer-events: none;
+}
+
+.intro-mark {
+  position: absolute;
+  left: var(--space-5);
+  top: var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.intro-logo-sm {
+  width: calc(var(--space-5) * 1.5);
+  height: calc(var(--space-5) * 1.5);
+}
+
+.intro-wordmark {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+}
+
+.intro-text {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  gap: var(--space-5);
+  max-width: 60%;
+}
+
+/* 72 px and 56 px in the design, as multiples of --fs-xl (32 px). */
+.intro-title {
+  margin: 0;
+  font-size: calc(var(--fs-xl) * 2.25);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--accent);
+}
+
+.intro-sub {
+  font-size: calc(var(--fs-xl) * 1.75);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.intro-start {
+  color: var(--bg);
+  background: var(--text);
+  border-color: var(--text);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  padding: var(--space-3) var(--space-5);
+}
+
+.intro-start:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+@media (max-width: 800px) {
+  .intro-hero {
+    padding: var(--space-5);
+    align-content: end;
+    padding-bottom: calc(var(--space-5) * 3);
+  }
+
+  .intro-logo-big {
+    right: -25vmin;
+    top: 16vmin;
+    width: 90vmin;
+    height: 90vmin;
+    opacity: 0.5;
+  }
+
+  .intro-text {
+    max-width: none;
+  }
+
+  .intro-title {
+    font-size: calc(var(--fs-xl) * 1.5);
+  }
+
+  .intro-sub {
+    font-size: var(--fs-xl);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro,
+  .intro-bar > span {
+    transition: none;
+  }
+
+  .intro-logo-pulse {
+    animation: none;
+  }
+}

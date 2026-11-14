@@ -1,6 +1,8 @@
 /* The shared look (docs/data-contract.md section 6).
-   T00 made every name with plain placeholder values; T19 owns this file and sets the real ones.
-   Don't rename or remove a name: every module depends on them. */
+   T19 set the values from docs/design.md (T22): slate panels, one soft-blue accent, the fixed
+   scenario, Sun and Earth colours. Arrangement is in layout.css, chart style in plotTheme.ts.
+   Don't rename or remove a name: every module depends on them.
+   Contrast (WCAG 2.1, relative luminance) is listed beside each text colour. */
 
 :root {
   color-scheme: dark;
@@ -12,16 +14,16 @@
   --border: #303846;
 
   /* Main text, secondary text */
-  --text: #e6e9ee;
-  --muted: #a3acb9;
+  --text: #e6e9ee;        /* 15.5:1 on --bg, 14.2:1 on --panel, 12.6:1 on --panel-2 */
+  --muted: #a3acb9;       /* 8.3:1 on --bg, 7.5:1 on --panel, 6.7:1 on --panel-2 */
 
   /* Primary button, selection */
-  --accent: #8ab4f8;
+  --accent: #8ab4f8;      /* 9.0:1 on --bg, 8.2:1 on --panel; --bg text on it 9.0:1 */
 
   /* Best value in a row, caution, error message */
-  --ok: #7bd88f;
-  --warn: #f2c94c;
-  --bad: #ff8a80;
+  --ok: #7bd88f;          /* 9.9:1 on --panel */
+  --warn: #f2c94c;        /* 10.9:1 on --panel */
+  --bad: #ff8a80;         /* 7.6:1 on --panel */
 
   /* Scenario colours. Fixed: chosen to stay distinct for colour-blind users. */
   --scn-a: #E69F00;
@@ -33,9 +35,11 @@
   --sun: #F0E442;
   --earth: #56B4E9;
 
-  /* Filled and empty parts of the strips */
+  /* Filled and empty parts of the strips.
+     --dark is the page colour, not design.md's #262c36: there scenario B's strip was 2.71:1.
+     On #0e1116 the solid strips are A 8.40, B 3.65, C 5.53 (WCAG asks 3:1 of graphics). */
   --lit: #e6e9ee;
-  --dark: #262c36;
+  --dark: #0e1116;
 
   /* The two ends of the height colour ramp in the 3D scene */
   --terrain-lo: #3a3f47;
@@ -51,15 +55,15 @@
   /* Corner rounding */
   --radius: 6px;
 
-  /* Text; fixed-width digits for numbers */
-  --font: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* Text; fixed-width digits for numbers. System fonts only: no download. */
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-num: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 
-  /* Type sizes */
-  --fs-sm: 0.8125rem;
-  --fs-md: 0.9375rem;
-  --fs-lg: 1.125rem;
-  --fs-xl: 1.5rem;
+  /* Type sizes: 12, 14, 22, 32 px at the default root size */
+  --fs-sm: 0.75rem;
+  --fs-md: 0.875rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 2rem;
 }
 
 *,
@@ -75,19 +79,47 @@ body {
   color: var(--text);
   font-family: var(--font);
   font-size: var(--fs-md);
-  line-height: 1.4;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, p {
   margin: 0;
 }
 
+h1 {
+  font-size: var(--fs-xl);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
 h2 {
   font-size: var(--fs-lg);
+  font-weight: 500;
+}
+
+/* Small upper-case section label, as above every card in the design ("FINAL LANDING SITE"). */
+h3 {
+  font-family: var(--font-num);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 a {
   color: var(--accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--bg);
 }
 
 /* Shared classes */
@@ -96,37 +128,66 @@ a {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-5);
 }
 
 .btn {
   font: inherit;
   color: var(--text);
-  background: var(--panel-2);
+  background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;   /* pill, per docs/design.md */
+  padding: var(--space-2) var(--space-4);
   cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--text);
+  background: var(--panel-2);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .btn:disabled {
-  color: var(--muted);
+  opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Selected state for a toggle or segmented button: the design marks it with an accent outline. */
+.btn[aria-pressed='true'],
+.btn[aria-selected='true'] {
+  border-color: var(--accent);
 }
 
 .btn-primary {
   color: var(--bg);
   background: var(--accent);
   border-color: var(--accent);
+  font-weight: 600;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--text);
+  border-color: var(--text);
 }
 
 .field {
   font: inherit;
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-3);
+}
+
+.field:focus {
+  border-color: var(--accent);
+  outline: none;
 }
 
 .table {
@@ -139,19 +200,35 @@ a {
 .table th,
 .table td {
   text-align: left;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  font-weight: 400;
+  font-size: var(--fs-sm);
+  color: var(--muted);
 }
 
 .badge {
   display: inline-block;
+  font-family: var(--font-num);
   font-size: var(--fs-sm);
+  letter-spacing: 0.04em;
   color: var(--muted);
+  background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0 var(--space-2);
+  border-radius: 999px;   /* info pill, per docs/design.md */
+  padding: var(--space-1) var(--space-3);
 }
 
 .muted {
   color: var(--muted);
+}
+
+/* Phone: tighter card padding so content keeps its width at 390 px. */
+@media (max-width: 800px) {
+  .card {
+    padding: var(--space-3);
+  }
 }

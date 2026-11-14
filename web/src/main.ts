@@ -1,4 +1,4 @@
-// Entry point. Only P1 edits this file.
+// Entry point.
 // Mounts every module into its slot (docs/data-contract.md section 5) and loads the data files.
 // A later task replaces the inside of its own module folder; nothing here needs to change.
 
@@ -12,6 +12,7 @@ import { mount as mountScene } from './scene/index';
 import { setData } from './state';
 import { mount as mountAbout } from './ui/about/index';
 import { mount as mountCompare } from './ui/compare/index';
+import { startIntro } from './ui/intro/index';
 import { mount as mountNudge } from './ui/nudge/index';
 import { mount as mountPanel } from './ui/panel/index';
 import { mount as mountReadout } from './ui/readout/index';
@@ -43,6 +44,9 @@ for (const [id, mount] of slots) {
   }
 }
 
+// Main page first; after "Start exploring", the loading screen until the data is in (T22 hero.png, loading.png).
+const intro = startIntro();
+
 // --- Data loading ---------------------------------------------------------------------------
 // State stays null for a file that is missing or malformed, and the page says so. Nothing
 // crashes: the modules show "Loading" and the skyline stays flat.
@@ -56,6 +60,12 @@ const files: Record<'Sun and Earth table' | 'height map' | 'site list', Progress
 let demFraction = 0;
 
 function showStatus(): void {
+  intro.update({
+    eph: files['Sun and Earth table'],
+    sites: files['site list'],
+    dem: files['height map'],
+    demFraction,
+  });
   const el = document.getElementById('status');
   if (!el) return;
   const names = Object.keys(files) as (keyof typeof files)[];

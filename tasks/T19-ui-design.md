@@ -1,6 +1,6 @@
 # T19: Theme, layout, chart style
 
-Status: not started
+Status: in review (#23). Palette from docs/design.md, --dark #0e1116, #panel placed beside scenarios, chart animation opt-in; deployed-site screenshots after merge
 
 | | |
 |---|---|

@@ -392,11 +392,14 @@ edit made anywhere (map click, coordinate boxes, time box, timeline drag, nudge 
 on live, and the view follows.
 
 **First open (F19, T25).** When the page address names no scenario (no live one, none pinned)
-and the site list arrives, state builds an example: live at the crater rim, the rim pinned as
-A, the crater floor pinned as B, all at the current hour, live selected. The two sites are
-found by id (section 2: `shackleton-rim` and `shackleton-floor`, or `mock-rim` and `mock-floor`).
-An address that names any scenario opens exactly what it says. So a module may find two
-scenarios pinned before the user has touched anything.
+and the site list arrives, state builds an example: live at the crater rim and the crater floor
+pinned as A, both at the current hour, live selected. Don't also pin the rim: compare shows a
+Live column, so the page would open on two identical columns. The two sites are found by id
+(section 2: `shackleton-rim` and `shackleton-floor`, or `mock-rim` and `mock-floor`). An address
+that names any scenario opens exactly what it says. An edit to live or a pin made before the
+list arrives cancels the example, so an early click is never overwritten. The example goes into
+the page address like any other change. So a module may find a scenario pinned before the user
+has touched anything.
 
 **Decades.** `eph` is null until the table has loaded, and null again while a decade that the
 live scenario (its time plus 60 days, and its timeline window) or a pinned scenario (its time

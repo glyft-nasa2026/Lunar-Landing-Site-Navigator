@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseDem } from './core/dem';
 import { indexEphemeris, parseEphemeris, type Ephemeris } from './core/ephemeris';
+import type { CuratedSite } from './core/types';
 import {
   flipFor, getState, LIVE_ID, neverLitFor, pin, restoreFromAddress, samplesFor, select, selected,
   setData, setGhost, setLiveSite, setLiveTime, setMode, setRange, shiftWindow, skylineFor,
@@ -122,6 +123,95 @@ describe('page address (F17)', () => {
     setData({ eph });
     restoreFromAddress('a=-88,45,2027-01-02T00:00:00Z', T0);
     expect(getState().eph).toBe(eph);
+  });
+});
+
+describe('first open (F19)', () => {
+  const site = (id: string, lat: number, lon: number): CuratedSite => ({
+    id, name: id, lat, lon, agency: 'test', year: 2026, status: 'reference', group: 'south-pole', note: '', source: '',
+  });
+  const REAL = [
+    site('apollo-11', 0.67, 23.47),
+    site('shackleton-floor', -89.67, 129.78),
+    site('shackleton-rim', -89.6866, -162.81),
+  ];
+  const MOCK = [site('mock-floor', -88, 45), site('mock-rim', -87.67, 45), site('mock-equator', 1, 23)];
+
+  it('empty address, then the real site list: live at the rim, the floor pinned as A, live selected', () => {
+    restoreFromAddress('', T0 + 25 * 60_000);
+    setData({ sites: REAL });
+    const s = getState();
+    expect(s.live.site).toEqual({ lat: -89.6866, lon: -162.81 });
+    expect(s.live.tMs).toBe(T0);                       // the current hour
+    expect(s.pinned).toEqual([{ id: 'a', label: 'A', color: '--scn-a', site: { lat: -89.67, lon: 129.78 }, tMs: T0 }]);
+    expect(s.selectedId).toBe(LIVE_ID);
+    expect(s.windowStartMs).toBe(T0);
+  });
+
+  it('the same with the mock rim and floor', () => {
+    setData({ sites: MOCK });
+    const s = getState();
+    expect(s.live.site).toEqual({ lat: -87.67, lon: 45 });
+    expect(s.pinned.map((p) => [p.id, p.site])).toEqual([['a', { lat: -88, lon: 45 }]]);
+    expect(s.pinned[0].tMs).toBe(s.live.tMs);
+    expect(s.selectedId).toBe(LIVE_ID);
+  });
+
+  it('an address with one pinned scenario, then the site list: state is unchanged', () => {
+    restoreFromAddress('#a=-88,10,2027-01-02T00:00:00Z', T0);
+    const before = getState();
+    setData({ sites: REAL });
+    const after = getState();
+    expect(after.live).toEqual(before.live);
+    expect(after.pinned).toEqual(before.pinned);
+    expect(after.selectedId).toBe(before.selectedId);
+  });
+
+  it('unpin A and reload: nothing is pinned', () => {
+    setData({ sites: REAL });
+    unpin('a');
+    restoreFromAddress('#' + stateToAddress(), T0);   // the address names live only
+    setData({ sites: REAL });
+    expect(getState().pinned).toEqual([]);
+    expect(getState().live.site).toEqual({ lat: -89.6866, lon: -162.81 });
+  });
+
+  it('empty address, then a site list with neither pair: nothing pinned, no error', () => {
+    const broken = [site('shackleton-rim', -89.6866, -162.81), site('mock-floor', -88, 45),
+      site('mock-rim', Number.NaN, 45), null as unknown as CuratedSite];
+    expect(() => setData({ sites: broken })).not.toThrow();
+    expect(() => setData({ sites: [] })).not.toThrow();
+    expect(getState().pinned).toEqual([]);
+    expect(getState().live.site).toEqual({ lat: -89.5, lon: 0 });
+  });
+
+  it('an edit or a pin before the site list arrives is kept: no example', () => {
+    setLiveSite({ lat: -88, lon: 10 });
+    setData({ sites: REAL });
+    expect(getState().pinned).toEqual([]);
+    expect(getState().live.site).toEqual({ lat: -88, lon: 10 });
+
+    restoreFromAddress('', T0);
+    setLiveTime(T0 + DAY);
+    setData({ sites: REAL });
+    expect(getState().pinned).toEqual([]);
+
+    restoreFromAddress('', T0);
+    pin();
+    setData({ sites: REAL });
+    expect(getState().pinned.map((p) => p.site)).toEqual([{ lat: -89.5, lon: 0 }]);
+  });
+
+  it('keeps range and mode, goes into the address, and is built once', () => {
+    restoreFromAddress('#range=90d&mode=3d', T0);
+    setData({ sites: REAL });
+    expect(getState().range).toBe('90d');
+    expect(getState().mode).toBe('3d');
+    expect(stateToAddress()).toBe(
+      'live=-89.6866,-162.81,2027-01-01T00:00:00Z&a=-89.67,129.78,2027-01-01T00:00:00Z&range=90d&mode=3d');
+    unpin('a');
+    setData({ sites: REAL });                          // the list again: no second example
+    expect(getState().pinned).toEqual([]);
   });
 });
 

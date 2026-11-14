@@ -1,36 +1,68 @@
-/* Places the slots of web/index.html (docs/data-contract.md section 5, spec section 3).
-   T00 made a basic grid; T19 owns this file. Modules style only their own insides. */
+/* Places the slots of web/index.html (docs/data-contract.md section 5).
+   T19 owns this file. Modules style only their own insides.
+
+   Arrangement from docs/design.md (T22), pictures docs/design/desktop.png and phone.png:
+
+     about     about       top bar: logo, tabs, UTC date and time, pointer coordinates
+     scene     readout     the map or 3D Moon, with the data column beside it. The nudge
+                           panel floats over the map (issue #58): nudge.css places it, not this file
+     scenarios panel       chosen sites under the map; the Solar panel card (T15) beside them,
+                           in the right-hand column under readout
+     compare   compare     the comparison, full width
+     timeline  timeline    timeline of the selected scenario, full width
+     sky       sky         sky panorama of the selected scenario: 360 degrees wide, so full width
+
+   #side and #bottom are only wrappers in index.html; `display: contents` lets their children
+   take part in this grid directly.
+   Phone (800 px and under): one column, in page order.
+   Every slot has a named area: without one, a card is auto-placed at the top of the page. */
 
 #app {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 22rem;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 24rem);
   grid-template-areas:
-    'about   about'
-    'status  status'
-    'scene   side'
-    'compare side'
-    'bottom  bottom';
-  gap: var(--space-3);
-  padding: var(--space-3);
+    'about     about'
+    'status    status'
+    'scene     readout'
+    'scenarios panel'
+    'compare   compare'
+    'timeline  timeline'
+    'sky       sky';
+  grid-template-rows: auto auto 1fr;
+  gap: var(--space-4);
+  padding: 0 var(--space-5) var(--space-5);
   min-height: 100vh;
   align-content: start;
 }
 
+#side,
+#bottom {
+  display: contents;
+}
+
+/* The top bar: flush with the page, one line under it, no card. */
 #about {
   grid-area: about;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-4);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  gap: var(--space-3) var(--space-5);
+  margin: 0 calc(-1 * var(--space-5));
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 #status {
   grid-area: status;
   padding: var(--space-2) var(--space-4);
   color: var(--warn);
+  font-family: var(--font-num);
+  font-size: var(--fs-sm);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -42,33 +74,43 @@
 #scene {
   grid-area: scene;
   position: relative;
-  min-height: 26rem;
+  min-height: 36rem;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
 }
 
-#side {
-  grid-area: side;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
+#readout {
+  grid-area: readout;
+}
+
+#panel {
+  grid-area: panel;
+  align-self: start;
+}
+
+#scenarios {
+  grid-area: scenarios;
 }
 
 #compare {
   grid-area: compare;
-  min-width: 0;
+  overflow-x: auto;
 }
 
-#bottom {
-  grid-area: bottom;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-3);
+#timeline {
+  grid-area: timeline;
 }
 
+#sky {
+  grid-area: sky;
+}
+
+#scenarios,
+#readout,
+#panel,
+#compare,
 #timeline,
 #sky {
   min-width: 0;
@@ -83,16 +125,24 @@
       'about'
       'status'
       'scene'
-      'side'
+      'scenarios'
+      'readout'
+      'panel'
       'compare'
-      'bottom';
+      'timeline'
+      'sky';
+    grid-template-rows: none;
+    gap: var(--space-3);
+    padding: 0 var(--space-3) var(--space-3);
+  }
+
+  #about {
+    margin: 0 calc(-1 * var(--space-3));
+    padding: var(--space-3);
+    position: static;
   }
 
   #scene {
-    min-height: 18rem;
-  }
-
-  #bottom {
-    grid-template-columns: minmax(0, 1fr);
+    min-height: 20rem;
   }
 }
