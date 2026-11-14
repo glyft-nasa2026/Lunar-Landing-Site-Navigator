@@ -1,0 +1,628 @@
+<!doctype html>
+<!--
+  T22 design mock-up. The source of every picture in docs/design/.
+  Not part of the site: nothing in web/ reads this file.
+
+  Why HTML and not Figma frames: no Figma link was given, so this follows the fallback in
+  docs/mcp-and-skills.md section 3 (pictures exported by hand, no Figma calls spent).
+
+  Every colour, size and gap is a contract section 6 variable (the :root block below).
+  The few values with no contract name are marked "NOT IN CONTRACT" and listed in
+  docs/design.md for P1.
+
+  Views (query string):
+    ?view=desktop    whole screen, 1280 wide            -> desktop.png
+    ?view=phone      whole screen, 390 wide             -> phone.png
+    ?slot=<id>       one slot alone, at its desktop width -> <id>.png
+    ?view=components buttons, tabs, toggles, chips, pills, toast, tooltip
+    ?view=loading    brief frame 1 (proposal)
+    ?view=hero       brief frame 2 (proposal)
+    ?view=cvd        scenario, Sun and Earth colours under colour-blind simulation
+  Mock-up numbers are made up. Every number on the real site comes from web/src/core/.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Darksight design mock-up</title>
+<style>
+:root {
+  color-scheme: dark;
+  /* Colours: the values in web/src/ui/theme.css on main (T00), so the pictures match the site */
+  --bg: #0e1116;
+  --panel: #171b22;
+  --panel-2: #1f2530;
+  --border: #303846;
+  --text: #e6e9ee;
+  --muted: #a3acb9;
+  --accent: #8ab4f8;
+  --ok: #7bd88f;
+  --warn: #f2c94c;
+  --bad: #ff8a80;
+  --scn-a: #E69F00;       /* fixed */
+  --scn-b: #0072B2;       /* fixed */
+  --scn-c: #009E73;       /* fixed */
+  --scn-ghost: #8a8f98;
+  --sun: #F0E442;         /* fixed */
+  --earth: #56B4E9;       /* fixed */
+  --lit: #e6e9ee;
+  --dark: #262c36;
+  --terrain-lo: #3a3f47;
+  --terrain-hi: #d9dce1;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --radius: 6px;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-num: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  --fs-sm: 0.75rem;   /* 12 px */
+  --fs-md: 0.875rem;  /* 14 px */
+  --fs-lg: 1.375rem;  /* 22 px */
+  --fs-xl: 2rem;      /* 32 px */
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: var(--font); font-size: var(--fs-md); line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, p { margin: 0; }
+h2 { font-size: var(--fs-lg); font-weight: 500; }
+h3 {
+  font-family: var(--font-num); font-size: var(--fs-sm); font-weight: 400;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+  margin-bottom: var(--space-3);
+}
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+/* ---------- shared classes (contract section 6) ---------- */
+.card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: var(--space-4) var(--space-5);
+}
+.btn {
+  font: inherit; color: var(--text); background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px; /* NOT IN CONTRACT: pill */
+  padding: var(--space-2) var(--space-4); cursor: pointer;
+}
+.btn.hover { border-color: var(--text); background: var(--panel-2); }
+.btn.focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn.pressed { transform: translateY(1px); background: var(--bg); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); }
+.btn-primary { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.btn-primary.hover { background: var(--text); border-color: var(--text); }
+.btn-sm { padding: var(--space-1) var(--space-3); font-size: var(--fs-sm); }
+.field {
+  font: inherit; font-family: var(--font-num); font-variant-numeric: tabular-nums;
+  color: var(--text); background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: var(--space-2) var(--space-3); width: 100%;
+}
+.table { width: 100%; border-collapse: collapse; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.table th, .table td { text-align: left; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--border); }
+.table th { font-weight: 400; font-size: var(--fs-sm); color: var(--muted); }
+.badge {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-num); font-size: var(--fs-sm); letter-spacing: 0.04em;
+  color: var(--muted); background: var(--panel); border: 1px solid var(--border);
+  border-radius: 999px; /* NOT IN CONTRACT: pill */
+  padding: var(--space-1) var(--space-3);
+}
+.badge b { color: var(--text); font-weight: 400; }
+.muted { color: var(--muted); }
+
+/* ---------- page grid (spec section 3, as T19 arranged it) ---------- */
+#app {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24rem;
+  grid-template-areas:
+    'about about' 'scene readout' 'scene nudge'
+    'scenarios scenarios' 'compare compare' 'timeline timeline' 'sky sky';
+  grid-template-rows: auto auto 1fr;
+  gap: var(--space-4);
+  padding: 0 var(--space-5) var(--space-5);
+  width: 1280px;
+}
+#about { grid-area: about; } #scene { grid-area: scene; } #readout { grid-area: readout; }
+#nudge { grid-area: nudge; align-self: start; } #scenarios { grid-area: scenarios; }
+#compare { grid-area: compare; } #timeline { grid-area: timeline; } #sky { grid-area: sky; }
+#app > * { min-width: 0; }
+
+body.phone #app {
+  width: 390px; grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'about' 'scene' 'scenarios' 'readout' 'nudge' 'compare' 'timeline' 'sky';
+  grid-template-rows: none; gap: var(--space-3); padding: 0 var(--space-3) var(--space-3);
+}
+body.phone .card { padding: var(--space-3); }
+
+/* ---------- about: top bar ---------- */
+#about {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5);
+  margin: 0 calc(-1 * var(--space-5)); padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+.logo { display: flex; align-items: center; gap: var(--space-2); }
+.logo svg { width: 2.25rem; height: 2.25rem; }
+.wordmark { color: var(--accent); font-weight: 700; font-size: var(--fs-sm); line-height: 1.05; letter-spacing: 0.04em; }
+.tabs { display: flex; align-items: center; }
+.tab {
+  font: inherit; background: none; border: 0; color: var(--muted); cursor: pointer;
+  padding: var(--space-2) var(--space-4); border-left: 1px solid var(--border);
+  font-size: var(--fs-md); letter-spacing: 0.04em; text-transform: uppercase;
+}
+.tab:first-child { border-left: 0; }
+.tab .n { font-family: var(--font-num); margin-right: var(--space-1); }
+.tab[aria-selected='true'] { color: var(--accent); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: var(--space-2); }
+.tab.hover { color: var(--text); }
+.about-right { margin-left: auto; display: flex; gap: var(--space-3); align-items: center; }
+.pills { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.pill-split { display: inline-flex; padding: 0; }
+.pill-split > span { padding: var(--space-1) var(--space-3); }
+.pill-split > span + span { border-left: 1px solid var(--border); }
+body.phone #about { margin: 0 calc(-1 * var(--space-3)); padding: var(--space-3); gap: var(--space-2) var(--space-3); }
+body.phone .tabs { order: 3; flex-basis: 100%; flex-wrap: wrap; }
+body.phone .tab { padding: var(--space-1) var(--space-2); font-size: var(--fs-sm); }
+body.phone .pills { order: 4; }
+
+/* ---------- scene: map / 3D ---------- */
+#scene {
+  position: relative; min-height: 36rem; overflow: hidden;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  cursor: crosshair;
+}
+body.phone #scene { min-height: 22rem; }
+.map {
+  position: absolute; inset: 0 0 0 2rem; top: 1.75rem;
+  background:
+    radial-gradient(circle at 22% 30%, var(--terrain-lo) 0 7%, var(--terrain-hi) 7.5% 8.5%, transparent 9%),
+    radial-gradient(circle at 63% 58%, var(--terrain-lo) 0 13%, var(--terrain-hi) 13.5% 14.5%, transparent 15%),
+    radial-gradient(circle at 80% 22%, var(--terrain-lo) 0 4%, var(--terrain-hi) 4.5% 5.2%, transparent 5.6%),
+    radial-gradient(circle at 40% 80%, var(--terrain-lo) 0 5%, var(--terrain-hi) 5.4% 6%, transparent 6.5%),
+    radial-gradient(ellipse at 50% 50%, var(--terrain-hi), var(--terrain-lo) 75%);
+  opacity: 0.85;
+}
+.grid-lines {
+  position: absolute; inset: 1.75rem 0 0 2rem; pointer-events: none;
+  background-image:
+    linear-gradient(to right, var(--muted) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--muted) 1px, transparent 1px);
+  background-size: 12.5% 12.5%; opacity: 0.25;
+}
+.ruler-top, .ruler-left {
+  position: absolute; background: var(--panel); color: var(--muted);
+  font-family: var(--font-num); font-size: var(--fs-sm); display: flex;
+}
+.ruler-top { left: 2rem; right: 0; top: 0; height: 1.75rem; border-bottom: 1px solid var(--border); justify-content: space-between; align-items: center; padding: 0 var(--space-2); }
+.ruler-left { left: 0; top: 1.75rem; bottom: 0; width: 2rem; border-right: 1px solid var(--border); flex-direction: column; justify-content: space-between; align-items: center; padding: var(--space-2) 0; }
+.ruler-left span { writing-mode: vertical-rl; transform: rotate(180deg); }
+.ruler-label { position: absolute; font-family: var(--font-num); font-size: var(--fs-sm); color: var(--text); letter-spacing: 0.1em; }
+.pin { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; }
+.pin svg { width: 1.5rem; height: 1.5rem; }
+.pin .lbl { font-family: var(--font-num); font-size: var(--fs-sm); font-weight: 700; color: var(--bg); background: var(--text); border-radius: var(--radius); padding: 0 var(--space-1); margin-bottom: var(--space-1); }
+.floating { position: absolute; display: flex; gap: var(--space-2); align-items: flex-end; }
+.float-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3); display: grid; gap: var(--space-2);
+}
+.toggle { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); font-size: var(--fs-sm); color: var(--text); }
+.switch {
+  width: 2.25rem; height: 1.25rem; border-radius: 999px; /* NOT IN CONTRACT: pill */
+  background: var(--border); position: relative; flex: none;
+}
+.switch::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: calc(1.25rem - 4px); height: calc(1.25rem - 4px);
+  border-radius: 50%; background: var(--text);
+}
+.switch.on { background: var(--accent); }
+.switch.on::after { left: calc(100% - 1.25rem + 2px); background: var(--bg); }
+.view-tile {
+  width: 5.5rem; height: 5.5rem; border-radius: calc(var(--radius) * 3);
+  background: var(--bg); border: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1);
+  color: var(--accent); font-size: var(--fs-sm); font-weight: 600; letter-spacing: 0.06em;
+}
+.view-tile .moon {
+  width: 2.5rem; height: 2.5rem; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, var(--terrain-hi), var(--terrain-lo) 80%);
+}
+.zoom { display: inline-flex; padding: 0; overflow: hidden; }
+.zoom button { font: inherit; font-size: var(--fs-lg); line-height: 1; background: none; border: 0; color: var(--text); padding: var(--space-1) var(--space-3); }
+.zoom button + button { border-left: 1px solid var(--border); }
+.coord-tip {
+  position: absolute; font-family: var(--font-num); font-size: var(--fs-sm);
+  background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: var(--space-1) var(--space-2);
+}
+
+/* ---------- scenarios: chosen sites bar ---------- */
+#scenarios { display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-3) var(--space-4); align-items: center; }
+body.phone #scenarios { grid-template-columns: 1fr; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.chip {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  border: 1px solid var(--border); border-radius: 999px; /* NOT IN CONTRACT: pill */
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3); background: var(--bg);
+  min-width: 9.5rem;
+}
+.chip .dot { width: var(--space-3); height: var(--space-3); border-radius: 50%; flex: none; }
+.chip .name { flex: 1; white-space: nowrap; }
+.chip .x { color: var(--muted); font-size: var(--fs-md); padding: 0 var(--space-1); }
+.chip.selected { border-color: var(--accent); }
+.chip.empty { border-style: dashed; color: var(--muted); background: none; justify-content: center; }
+.site-inputs { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: var(--space-2); grid-column: 1 / -1; }
+body.phone .site-inputs { grid-template-columns: 1fr 1fr; }
+body.phone .site-inputs > :last-child { grid-column: 1 / -1; }
+.lab { display: grid; gap: var(--space-1); font-size: var(--fs-sm); color: var(--muted); }
+
+/* ---------- readout ---------- */
+.body-row { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: baseline; }
+.body-row + .body-row { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--border); }
+.body-name { display: flex; align-items: center; gap: var(--space-2); font-weight: 600; grid-column: 1 / -1; }
+.sw { width: var(--space-3); height: var(--space-3); border-radius: 50%; display: inline-block; }
+.kv { display: contents; }
+.kv dt { color: var(--muted); font-size: var(--fs-sm); }
+.kv dd { margin: 0; text-align: right; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.count { grid-column: 1 / -1; font-family: var(--font-num); color: var(--accent); margin-top: var(--space-1); }
+.readout-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); }
+.readout-head h3 { margin: 0; }
+
+/* ---------- nudge ---------- */
+.nudge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+.nudge-grid .btn { padding-left: 0; padding-right: 0; font-size: var(--fs-sm); }
+.nudge-days { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-top: var(--space-2); }
+.nudge-out { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); display: grid; gap: var(--space-1); }
+.ok { color: var(--ok); } .bad { color: var(--bad); }
+
+/* ---------- compare ---------- */
+.compare-wrap { overflow-x: auto; }
+.table td.best { color: var(--ok); }
+.table td.best::after { content: ' ●'; font-size: var(--fs-sm); }
+body.phone .col-head .nm { display: none; }
+body.phone .table th, body.phone .table td { padding: var(--space-2); white-space: nowrap; }
+body.phone .table tbody th { white-space: normal; }
+.col-head { display: flex; align-items: center; gap: var(--space-2); color: var(--text); font-size: var(--fs-md); }
+.strips { margin-top: var(--space-5); display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-3); align-items: center; }
+.strip { display: flex; height: var(--space-3); border-radius: var(--space-1); overflow: hidden; background: var(--dark); }
+.strip span { height: 100%; }
+.strip-axis { grid-column: 2; display: flex; justify-content: space-between; font-family: var(--font-num); font-size: var(--fs-sm); color: var(--muted); }
+.strip-lab { font-family: var(--font-num); font-size: var(--fs-sm); color: var(--muted); display: flex; gap: var(--space-2); align-items: center; }
+
+/* ---------- charts (timeline, sky) ---------- */
+.chart-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-3); }
+.chart-head h3 { margin: 0; }
+.seg { display: inline-flex; gap: var(--space-1); flex-wrap: wrap; }
+svg.chart { width: 100%; height: auto; display: block; font-family: var(--font-num); }
+svg.chart .gridl { stroke: var(--border); stroke-width: 1; }
+svg.chart .zero { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+svg.chart .below { fill: var(--dark); opacity: 0.35; }
+svg.chart .tick { fill: var(--muted); font-size: var(--fs-sm); }
+svg.chart .sun { stroke: var(--sun); fill: none; stroke-width: 2; }
+svg.chart .earth { stroke: var(--earth); fill: none; stroke-width: 2; }
+svg.chart .sun-dot { fill: var(--sun); }
+svg.chart .earth-dot { fill: var(--earth); }
+svg.chart .marker { stroke: var(--accent); stroke-width: 2; }
+svg.chart .skyline { fill: var(--terrain-lo); stroke: var(--terrain-hi); stroke-width: 1; }
+.legend { display: flex; gap: var(--space-4); font-size: var(--fs-sm); color: var(--muted); margin-top: var(--space-2); }
+.legend i { display: inline-block; width: var(--space-4); height: 2px; vertical-align: middle; margin-right: var(--space-1); }
+
+/* ---------- single-slot export ---------- */
+body.slot #app { display: block; padding: 0; }
+body.slot #app > * { display: none; }
+body.slot #app > .show { display: block; margin: 0; }
+body.slot #app > #scene.show { display: block; }
+body.slot #app > #scenarios.show { display: grid; }
+body.slot #app > #about.show { display: flex; }
+
+/* ---------- extra sheets ---------- */
+.sheet { padding: var(--space-5); display: grid; gap: var(--space-5); width: 1280px; }
+.row { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; }
+.cap { font-family: var(--font-num); font-size: var(--fs-sm); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; width: 9rem; }
+.toast {
+  display: inline-flex; gap: var(--space-3); align-items: center;
+  background: var(--panel); border: 1px solid var(--warn); border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4); color: var(--text);
+}
+.tooltip-wrap { position: relative; display: inline-block; padding-top: var(--space-5); padding-top: 2.5rem; }
+.tooltip {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%); white-space: nowrap;
+  background: var(--text); color: var(--bg); font-size: var(--fs-sm); border-radius: var(--radius);
+  padding: var(--space-1) var(--space-2);
+}
+/* loading + hero: NOT IN CONTRACT sizes and gradient, listed in docs/design.md */
+.full { width: 1440px; height: 900px; position: relative; overflow: hidden; background: var(--bg); }
+.center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-5); }
+.bar { width: 240px; height: 3px; background: var(--panel); border-radius: 999px; overflow: hidden; }
+.bar span { display: block; height: 100%; width: 64%; background: linear-gradient(135deg, var(--text) 12.5%, var(--accent) 37.5%, var(--border) 62.5%, var(--panel) 87.5%); }
+.caption { color: var(--muted); font-size: var(--fs-sm); letter-spacing: 0.1em; font-family: var(--font-num); }
+.star { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: var(--text); }
+.hero-title { font-size: 72px; font-weight: 700; color: var(--accent); letter-spacing: 0.01em; line-height: 1; }
+.hero-sub { font-family: Georgia, 'Times New Roman', serif; font-size: 56px; font-weight: 700; line-height: 1.1; color: var(--text); }
+.cvd { display: grid; grid-template-columns: 10rem repeat(5, 6rem); gap: var(--space-2); align-items: center; }
+.cvd .sq { height: 3rem; border-radius: var(--radius); }
+.cvd .h { font-family: var(--font-num); font-size: var(--fs-sm); color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Machado, Oliveira, Fernandes 2009, severity 1.0 (linearRGB) -->
+    <filter id="protan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.152286 1.052583 -0.204868 0 0  0.114503 0.786281 0.099216 0 0  -0.003882 -0.048116 1.051998 0 0  0 0 0 1 0"/></filter>
+    <filter id="deutan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.367322 0.860646 -0.227968 0 0  0.280085 0.672501 0.047413 0 0  -0.011820 0.042940 0.968881 0 0  0 0 0 1 0"/></filter>
+    <filter id="tritan" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="1.255528 -0.076749 -0.178779 0 0  -0.078411 0.930809 0.147602 0 0  0.004733 0.691367 0.303900 0 0  0 0 0 1 0"/></filter>
+    <symbol id="logo" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="36" fill="none" stroke="var(--lit)" stroke-width="8"/>
+      <path d="M12 74 C2 88 30 92 60 74 C80 62 98 42 86 28" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+      <path d="M78 20 L96 14 L90 32 Z" fill="var(--accent)"/>
+    </symbol>
+    <symbol id="pin" viewBox="0 0 24 24"><path d="M12 22s7-7.2 7-12.5A7 7 0 0 0 5 9.5C5 14.8 12 22 12 22z" stroke="var(--bg)" stroke-width="1.5"/><circle cx="12" cy="9.5" r="2.6" fill="var(--bg)"/></symbol>
+  </defs>
+</svg>
+
+<div id="app">
+  <!-- about -->
+  <header id="about">
+    <div class="logo"><svg><use href="#logo"/></svg><div class="wordmark">DARK<br>SIGHT</div></div>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true"><span class="n">01</span>Explore</button>
+      <button class="tab" role="tab"><span class="n">02</span>Comparison</button>
+      <button class="tab" role="tab"><span class="n">03</span>Launch Site</button>
+      <button class="tab" role="tab"><span class="n">04</span>Simulation</button>
+    </nav>
+    <div class="about-right">
+      <span class="badge">Checked against JPL Horizons · <b class="num">0.004°</b></span>
+      <button class="btn btn-sm">About</button>
+    </div>
+    <div class="pills">
+      <span class="badge pill-split"><span>UTC DATE <b>2027-03-14</b></span><span>UTC TIME <b>09:32:00</b></span></span>
+      <span class="badge">POINTER <b>-89.412°, 136.880°</b></span>
+    </div>
+  </header>
+
+  <!-- scene -->
+  <section id="scene" aria-label="Map and 3D view">
+    <div class="map"></div>
+    <div class="grid-lines"></div>
+    <div class="ruler-top"><span>-89.0°</span><span>-89.2°</span><span>-89.4°</span><span>-89.6°</span><span>-89.8°</span><span>-89.6°</span><span>-89.4°</span><span>-89.2°</span></div>
+    <div class="ruler-left"><span>0°</span><span>45°</span><span>90°</span><span>135°</span><span>180°</span></div>
+    <div class="ruler-label" style="left:calc(2rem + var(--space-2)); top:calc(1.75rem + var(--space-2))">LATITUDE ↔ · LONGITUDE ↕</div>
+    <div class="pin" style="left:30%; top:40%; color:var(--scn-a)"><span class="lbl">A</span><svg fill="currentColor"><use href="#pin"/></svg></div>
+    <div class="pin" style="left:58%; top:34%; color:var(--scn-b)"><span class="lbl">B</span><svg fill="currentColor"><use href="#pin"/></svg></div>
+    <div class="pin" style="left:70%; top:66%; color:var(--scn-c)"><span class="lbl">C</span><svg fill="currentColor"><use href="#pin"/></svg></div>
+    <div class="pin" style="left:44%; top:58%; color:var(--accent)"><span class="lbl">LIVE</span><svg fill="currentColor"><use href="#pin"/></svg></div>
+    <div class="coord-tip" style="left:48%; top:72%">-89.412°, 136.880°</div>
+    <div class="floating" style="left:calc(2rem + var(--space-3)); bottom:var(--space-3)">
+      <div class="float-card">
+        <div class="toggle">Day / Night Curve <span class="switch on"></span></div>
+        <div class="toggle">Depth Field Map <span class="switch"></span></div>
+      </div>
+    </div>
+    <div class="floating" style="right:var(--space-3); bottom:var(--space-3)">
+      <span class="badge zoom"><button>+</button><button>−</button></span>
+      <div class="view-tile"><span class="moon"></span>3D MOON</div>
+    </div>
+  </section>
+
+  <!-- readout -->
+  <section id="readout" class="card" aria-label="Readout">
+    <div class="readout-head"><h3>Selected · A</h3><span class="badge"><span class="sw" style="background:var(--scn-a)"></span><b>Shackleton rim</b></span></div>
+    <dl class="body-row">
+      <div class="body-name"><span class="sw" style="background:var(--sun)"></span>Sun</div>
+      <div class="kv"><dt>Altitude</dt><dd>1.42°</dd></div>
+      <div class="kv"><dt>Azimuth</dt><dd>212.07°</dd></div>
+      <div class="kv"><dt>Above skyline</dt><dd>+0.86°</dd></div>
+      <div class="kv"><dt>Disc visible</dt><dd>100 %</dd></div>
+      <div class="count">Sunset in  3 d 04 h</div>
+    </dl>
+    <dl class="body-row">
+      <div class="body-name"><span class="sw" style="background:var(--earth)"></span>Earth</div>
+      <div class="kv"><dt>Altitude</dt><dd>4.95°</dd></div>
+      <div class="kv"><dt>Azimuth</dt><dd>  1.33°</dd></div>
+      <div class="kv"><dt>Status</dt><dd>Visible</dd></div>
+      <div class="count">Earthset in 9 d 17 h</div>
+    </dl>
+  </section>
+
+  <!-- nudge -->
+  <section id="nudge" class="card" aria-label="Nudge">
+    <h3>Nudge the live site</h3>
+    <div class="nudge-grid">
+      <span></span><button class="btn">1 km N</button><span></span>
+      <button class="btn">1 km W</button><button class="btn" aria-pressed="true">1 km S</button><button class="btn">1 km E</button>
+    </div>
+    <div class="nudge-days"><button class="btn">−1 day</button><button class="btn">+1 day</button></div>
+    <div class="nudge-out">
+      <span class="bad">−31 h of sunlight</span>
+      <span class="ok">keeps Earth 2 days longer</span>
+      <span class="muted" style="font-size:var(--fs-sm)">Ghost scenario shown in grey on the map</span>
+    </div>
+  </section>
+
+  <!-- scenarios -->
+  <section id="scenarios" class="card" aria-label="Scenarios">
+    <h3 style="margin:0">Chosen sites (max 4)</h3>
+    <div class="chips">
+      <span class="chip selected"><span class="dot" style="background:var(--accent)"></span><span class="name">Live · −89.41°, 136.88°</span></span>
+      <span class="chip"><span class="dot" style="background:var(--scn-a)"></span><span class="name">A · Shackleton rim</span><span class="x">×</span></span>
+      <span class="chip"><span class="dot" style="background:var(--scn-b)"></span><span class="name">B · Connecting ridge</span><span class="x">×</span></span>
+      <span class="chip empty">+ Pin this</span>
+    </div>
+    <button class="btn btn-primary">Proceed →</button>
+    <div class="site-inputs">
+      <label class="lab">Latitude<input class="field" value="-89.412"></label>
+      <label class="lab">Longitude<input class="field" value="136.880"></label>
+      <label class="lab">UTC date and time<input class="field" value="2027-03-14T09:32:00Z"></label>
+    </div>
+  </section>
+
+  <!-- compare -->
+  <section id="compare" class="card" aria-label="Compare">
+    <h3>02 · Comparison</h3>
+    <div class="compare-wrap">
+      <table class="table">
+        <thead><tr><th></th>
+          <th><span class="col-head"><span class="sw" style="background:var(--scn-a)"></span>A<span class="nm"> · Shackleton rim</span></span></th>
+          <th><span class="col-head"><span class="sw" style="background:var(--scn-b)"></span>B<span class="nm"> · Connecting ridge</span></span></th>
+          <th><span class="col-head"><span class="sw" style="background:var(--scn-c)"></span>C<span class="nm"> · Malapert massif</span></span></th>
+        </tr></thead>
+        <tbody id="cmp-body"></tbody>
+      </table>
+    </div>
+    <div class="strips" id="strips"></div>
+  </section>
+
+  <!-- timeline -->
+  <section id="timeline" class="card" aria-label="Timeline">
+    <div class="chart-head"><h3>Timeline · A · degrees above the skyline</h3>
+      <span class="seg"><button class="btn btn-sm">← Earlier</button><button class="btn btn-sm" aria-pressed="true">30 d</button><button class="btn btn-sm">90 d</button><button class="btn btn-sm">1 yr</button><button class="btn btn-sm">Later →</button></span>
+    </div>
+    <svg class="chart" id="tl" viewBox="0 0 1200 260"></svg>
+    <div class="legend"><span><i style="background:var(--sun)"></i>Sun</span><span><i style="background:var(--earth)"></i>Earth</span><span><i style="background:var(--dark)"></i>Hidden (below skyline)</span></div>
+  </section>
+
+  <!-- sky -->
+  <section id="sky" class="card" aria-label="Sky panorama">
+    <div class="chart-head"><h3>Sky panorama · A · next 30 days</h3><span class="badge">Azimuth 0–360° · elevation</span></div>
+    <svg class="chart" id="skyc" viewBox="0 0 1200 300"></svg>
+    <div class="legend"><span><i style="background:var(--sun)"></i>Sun path</span><span><i style="background:var(--earth)"></i>Earth path</span><span><i style="background:var(--terrain-hi)"></i>Terrain skyline</span></div>
+  </section>
+</div>
+
+<div id="extra"></div>
+
+<script>
+const q = new URLSearchParams(location.search);
+const view = q.get('view') || 'desktop';
+const slot = q.get('slot');
+
+// compare table (made-up numbers)
+const rows = [
+  ['Sun now', ['Up 1.4°', 'Up 0.9°', 'Hidden'], 0],
+  ['Sunset in', ['3 d 04 h', '1 d 19 h', '—'], 0],
+  ['Earth now', ['Up 5.0°', 'Up 3.2°', 'Up 6.8°'], 2],
+  ['Earthset in', ['9 d 17 h', '8 d 02 h', '12 d 06 h'], 2],
+  ['Lit % (30 d)', ['86 %', '81 %', '54 %'], 0],
+  ['Longest light', ['19.2 d', '17.5 d', '9.1 d'], 0],
+  ['Longest dark', ['2.1 d', '3.4 d', '8.8 d'], 0],
+  ['Earth contact %', ['61 %', '55 %', '72 %'], 2],
+  ['Longest gap', ['11.8 d', '13.0 d', '8.4 d'], 2],
+];
+document.getElementById('cmp-body').innerHTML = rows.map(([k, v, b]) =>
+  `<tr><th>${k}</th>${v.map((x, i) => `<td class="${i === b ? 'best' : ''}">${x}</td>`).join('')}</tr>`).join('');
+
+// strips: 30 days, filled where up
+function runs(seed, frac) {
+  const out = []; let t = 0, up = seed % 2 === 0;
+  while (t < 30) { const len = Math.min(30 - t, (up ? frac : 1 - frac) * (6 + (seed * 7 + t * 3) % 5)); out.push([up, len]); t += len; up = !up; }
+  return out;
+}
+const sc = [['A', '--scn-a', 0.86, 0.61], ['B', '--scn-b', 0.81, 0.55], ['C', '--scn-c', 0.54, 0.72]];
+let s = '';
+sc.forEach(([n, c, sunF, earthF], i) => {
+  for (const [kind, f, op] of [['Sun', sunF, 1], ['Earth', earthF, 0.5]]) {
+    s += `<span class="strip-lab"><span class="sw" style="background:var(${c})"></span>${n} ${kind}</span><div class="strip">` +
+      runs(i * 3 + (kind === 'Sun' ? 0 : 1), f).map(([u, l]) =>
+        `<span style="width:${(l / 30) * 100}%;background:${u ? `var(${c})` : 'transparent'};opacity:${op}"></span>`).join('') + '</div>';
+  }
+});
+s += '<span></span><div class="strip-axis"><span>0 d</span><span>5</span><span>10</span><span>15</span><span>20</span><span>25</span><span>30 d</span></div>';
+document.getElementById('strips').innerHTML = s;
+
+// timeline chart
+(function () {
+  const W = 1200, H = 260, L = 44, R = 10, T = 10, B = 28;
+  const x = d => L + (d / 30) * (W - L - R), y = v => T + (1 - (v + 8) / 16) * (H - T - B);
+  let g = `<rect class="below" x="${L}" y="${y(0)}" width="${W - L - R}" height="${y(-8) - y(0)}"/>`;
+  for (let v = -8; v <= 8; v += 4) g += `<line class="gridl" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}°</text>`;
+  for (let d = 0; d <= 30; d += 5) g += `<text class="tick" x="${x(d)}" y="${H - 8}" text-anchor="${d === 30 ? 'end' : d === 0 ? 'start' : 'middle'}">${d} d</text>`;
+  g += `<line class="zero" x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}"/>`;
+  const path = f => { let p = ''; for (let d = 0; d <= 30; d += 0.1) p += (p ? 'L' : 'M') + x(d).toFixed(1) + ' ' + y(f(d)).toFixed(1); return p; };
+  g += `<path class="earth" d="${path(d => 4.5 * Math.sin((d + 2) / 27.3 * 2 * Math.PI) + 1.2)}"/>`;
+  g += `<path class="sun" d="${path(d => 1.6 * Math.sin(d / 29.5 * 2 * Math.PI * 1 + 0.3) + 0.9 * Math.sin(d * 1.3) - 0.2)}"/>`;
+  g += `<line class="marker" x1="${x(9)}" x2="${x(9)}" y1="${T}" y2="${H - B}"/><circle cx="${x(9)}" cy="${T + 2}" r="5" fill="var(--accent)"/>`;
+  document.getElementById('tl').innerHTML = g;
+})();
+
+// sky panorama
+(function () {
+  const W = 1200, H = 300, L = 44, R = 10, T = 10, B = 28;
+  const x = a => L + (a / 360) * (W - L - R), y = e => T + (1 - (e + 4) / 16) * (H - T - B);
+  let g = '';
+  for (let e = -4; e <= 12; e += 4) g += `<line class="gridl" x1="${L}" x2="${W - R}" y1="${y(e)}" y2="${y(e)}"/><text class="tick" x="${L - 6}" y="${y(e) + 4}" text-anchor="end">${e}°</text>`;
+  ['N 0', '45', 'E 90', '135', 'S 180', '225', 'W 270', '315', '360'].forEach((t, i) => g += `<text class="tick" x="${x(i * 45)}" y="${H - 8}" text-anchor="${i === 8 ? 'end' : i === 0 ? 'start' : 'middle'}">${t}</text>`);
+  let sk = `M${x(0)} ${y(-4)}`;
+  for (let a = 0; a <= 360; a += 3) sk += `L${x(a).toFixed(1)} ${y(0.8 + 1.4 * Math.sin(a / 23) + 0.9 * Math.sin(a / 7.3) + (a > 150 && a < 230 ? 2.2 : 0)).toFixed(1)}`;
+  g += `<path class="skyline" d="${sk}L${x(360)} ${y(-4)}Z"/>`;
+  let sp = ''; for (let a = 0; a <= 360; a += 2) sp += (sp ? 'L' : 'M') + x(a).toFixed(1) + ' ' + y(1.5 + 1.4 * Math.sin((a - 40) / 57.3)).toFixed(1);
+  g += `<path class="sun" d="${sp}"/>`;
+  let ep = ''; for (let t = 0; t <= 6.3; t += 0.05) { const a = 9 + 7 * Math.sin(t), e = 5 + 2.5 * Math.sin(2 * t); ep += (ep ? 'L' : 'M') + x(a).toFixed(1) + ' ' + y(e).toFixed(1); }
+  g += `<path class="earth" d="${ep}"/>`;
+  g += `<circle class="sun-dot" cx="${x(212)}" cy="${y(1.5 + 1.4 * Math.sin((212 - 40) / 57.3))}" r="8"/>`;
+  g += `<circle class="earth-dot" cx="${x(9)}" cy="${y(5)}" r="6"/>`;
+  document.getElementById('skyc').innerHTML = g;
+})();
+
+const extra = document.getElementById('extra');
+const app = document.getElementById('app');
+if (view === 'phone') document.body.classList.add('phone');
+if (slot) {
+  document.body.classList.add('slot');
+  const el = document.getElementById(slot);
+  // keep the slot at the width it has on the 1280 desktop
+  const widths = { about: 1280, scene: 1280 - 48 - 16 - 384, readout: 384, nudge: 384 };
+  el.classList.add('show');
+  el.style.width = (widths[slot] || 1280 - 48) + 'px';
+  if (slot === 'about') { el.style.margin = '0'; }
+  if (slot === 'scene') { el.style.height = '36rem'; }
+  app.style.width = 'auto';
+}
+if (['components', 'loading', 'hero', 'cvd'].includes(view)) {
+  app.style.display = 'none';
+  if (view === 'components') extra.innerHTML = `
+  <div class="sheet">
+    <div class="row"><span class="cap">Button</span><button class="btn">Secondary</button><button class="btn hover">Hover</button><button class="btn pressed">Pressed</button><button class="btn focus">Focus</button><button class="btn" aria-pressed="true">Selected</button><button class="btn" disabled>Disabled</button></div>
+    <div class="row"><span class="cap">Primary</span><button class="btn btn-primary">Proceed →</button><button class="btn btn-primary hover">Hover</button><button class="btn btn-primary focus">Focus</button>
+      <span class="tooltip-wrap"><span class="tooltip">Select at least one site</span><button class="btn btn-primary" disabled>Proceed →</button></span></div>
+    <div class="row"><span class="cap">Tab</span><nav class="tabs"><button class="tab" aria-selected="true"><span class="n">01</span>Explore</button><button class="tab"><span class="n">02</span>Inactive</button><button class="tab hover"><span class="n">03</span>Hover</button><button class="tab btn focus" style="border-radius:0;background:none;border-top:0;border-right:0;border-bottom:0"><span class="n">04</span>Focus</button></nav></div>
+    <div class="row"><span class="cap">Toggle</span><span class="toggle">On <span class="switch on"></span></span><span class="toggle">Off <span class="switch"></span></span><span class="toggle">Focus <span class="switch on" style="outline:2px solid var(--accent);outline-offset:2px"></span></span></div>
+    <div class="row"><span class="cap">Site chip</span><span class="chip"><span class="dot" style="background:var(--scn-a)"></span><span class="name">A · Filled</span><span class="x">×</span></span><span class="chip selected"><span class="dot" style="background:var(--scn-b)"></span><span class="name">B · Selected</span><span class="x">×</span></span><span class="chip empty">Empty slot</span></div>
+    <div class="row"><span class="cap">Info pill</span><span class="badge pill-split"><span>UTC DATE <b>2027-03-14</b></span><span>UTC TIME <b>09:32:00</b></span></span><span class="badge">POINTER <b>-89.412°, 136.880°</b></span><span class="badge">Checked against JPL Horizons</span></div>
+    <div class="row"><span class="cap">Field</span><input class="field" style="width:14rem" value="-89.412"><input class="field" style="width:14rem;border-color:var(--accent)" value="Focus"><input class="field" style="width:14rem;border-color:var(--bad)" value="2041-01-01"><span class="bad" style="font-size:var(--fs-sm)">Time must be 2026 to 2035</span></div>
+    <div class="row"><span class="cap">Toast</span><span class="toast"><span style="color:var(--warn)">!</span>Maximum 4 sites — remove one to add another.<span class="muted">×</span></span></div>
+    <div class="row"><span class="cap">Text</span><span>Main text</span><span class="muted">Muted text</span><span style="color:var(--accent)">Accent</span><span class="ok">Best value</span><span style="color:var(--warn)">Caution</span><span class="bad">Error</span></div>
+  </div>`;
+  if (view === 'loading') {
+    let stars = '';
+    for (let i = 0; i < 60; i++) stars += `<span class="star" style="left:${(i * 137.5) % 1440}px;top:${(i * 89.3) % 900}px;opacity:${0.2 + (i % 3) * 0.1}"></span>`;
+    extra.innerHTML = `<div class="full">${stars}<div class="center"><svg style="width:200px;height:200px"><use href="#logo"/></svg><div class="bar"><span></span></div><div class="caption">INITIALISING LUNAR DATA… 64%</div></div></div>`;
+  }
+  if (view === 'hero') extra.innerHTML = `<div class="full">
+    <div style="position:absolute;right:-260px;top:100px;width:820px;height:820px;border-radius:50%;background:radial-gradient(circle,var(--accent),transparent 65%);opacity:0.1"></div>
+    <svg style="position:absolute;right:-220px;top:110px;width:760px;height:760px"><use href="#logo"/></svg>
+    <div style="position:absolute;left:var(--space-5);top:var(--space-5)" class="logo"><svg><use href="#logo"/></svg><div class="wordmark">DARK<br>SIGHT</div></div>
+    <div style="position:absolute;left:520px;right:560px;top:115px;height:2px;background:var(--text)"></div>
+    <div style="position:absolute;left:48px;top:300px;display:grid;gap:var(--space-5)">
+      <div class="hero-title">DARKSIGHT</div>
+      <div class="hero-sub">Lunar Landing<br>Site Navigator</div>
+      <div><button class="btn" style="background:var(--text);color:var(--bg);font-size:var(--fs-lg);padding:var(--space-3) var(--space-5);font-weight:600">Start Exploring →</button></div>
+    </div></div>`;
+  if (view === 'cvd') {
+    const cols = ['--scn-a', '--scn-b', '--scn-c', '--sun', '--earth'];
+    const head = `<span></span>${['scn-a', 'scn-b', 'scn-c', 'sun', 'earth'].map(n => `<span class="h">${n}</span>`).join('')}`;
+    const line = (name, f) => `<span class="cap" style="width:auto">${name}</span>` + cols.map(c => `<span class="sq" style="background:var(${c});${f ? `filter:url(#${f})` : ''}"></span>`).join('');
+    extra.innerHTML = `<div class="sheet" style="width:auto"><div class="cvd">${head}${line('Normal')}${line('Protanopia', 'protan')}${line('Deuteranopia', 'deutan')}${line('Tritanopia', 'tritan')}</div>
+    <p class="muted" style="font-size:var(--fs-sm)">Simulation: Machado, Oliveira and Fernandes 2009, severity 1.0, SVG feColorMatrix in linear RGB.</p></div>`;
+  }
+}
+// ?measure: the export script reads the content size from the dumped DOM
+if (q.has('measure')) {
+  const el = slot ? document.getElementById(slot) : app.style.display === 'none' ? extra.firstElementChild : app;
+  const r = el.getBoundingClientRect();
+  document.body.setAttribute('data-size', Math.ceil(r.right) + 'x' + Math.ceil(r.bottom));
+}
+</script>
+</body>
+</html>

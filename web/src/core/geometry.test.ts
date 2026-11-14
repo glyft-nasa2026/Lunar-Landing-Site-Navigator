@@ -1,7 +1,11 @@
-// Sanity tests by T00. T02 owns this file next and adds the fixture tests.
+// geometry.ts tests. The sanity tests at the top are T00's, on made-up tables. The checks
+// against Skyfield (T02) need the real table and skip while web/public/data/ holds T20's mock.
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { parseEphemeris, type Ephemeris } from './ephemeris';
+import { parseEphemeris, type Ephemeris, type EphemerisMeta } from './ephemeris';
 import { destination, earthAltAz, sunAltAz } from './geometry';
+import type { AltAz, Site } from './types';
 
 const START = Date.parse('2027-01-01T00:00:00Z');
 
@@ -71,7 +75,7 @@ describe('earthAltAz', () => {
     expect(a.az).toBeCloseTo(270, 6);
   });
 
-  it('rises a little when the site is higher', () => {
+  it('sits a little lower when the site is higher', () => {
     const low = earthAltAz(eph, { lat: 0, lon: 60, eye_m: 0 }, 0, START).alt;
     const high = earthAltAz(eph, { lat: 0, lon: 60, eye_m: 0 }, 5000, START).alt;
     expect(high).toBeLessThan(low);                 // parallax grows with the site's radius
@@ -103,7 +107,139 @@ describe('destination', () => {
     expect(destination(0, 30, 0, quarter).lat).toBeCloseTo(90, 6);
   });
 
+  it('moves 1 km north from anywhere south of 89.9 N: +0.03298 degrees within 0.0001', () => {
+    for (const lat of [-90, -89.5, -88, -45, 0, 1, 26.3, 60, 89.9]) {
+      for (const lon of [-180, -120, -46.8, 0, 23, 45, 120, 179.5]) {
+        const p = destination(lat, lon, 0, 1000);
+        expect(Math.abs(p.lat - lat - 0.03298), `from (${lat}, ${lon})`).toBeLessThanOrEqual(0.0001);
+        // At the pole every direction is north, so longitude stays at the start value.
+        expect(p.lon, `from (${lat}, ${lon})`).toBeCloseTo(lon === 180 ? -180 : lon, 9);
+      }
+    }
+  });
+
+  it('agrees with a rotation of the site vector for 500 random starts, bearings and distances', () => {
+    // Independent of the formula in geometry.ts: walk the angle g = dist / R from the site's
+    // "up" vector towards the starting direction, cos(b) north + sin(b) east.
+    const RAD = Math.PI / 180;
+    const random = seededRandom(1737);
+    for (let i = 0; i < 500; i++) {
+      const lat = -89.9 + random() * 179.8, lon = -180 + random() * 360;
+      const bearing = random() * 360, distM = random() * 200_000;
+      const cl = Math.cos(lat * RAD), sl = Math.sin(lat * RAD);
+      const co = Math.cos(lon * RAD), so = Math.sin(lon * RAD);
+      const cb = Math.cos(bearing * RAD), sb = Math.sin(bearing * RAD);
+      const g = distM / (1737.4 * 1000);
+      const n = [cl * co, cl * so, sl];
+      const dir = [-sl * co * cb - so * sb, -sl * so * cb + co * sb, cl * cb];
+      const q = n.map((v, k) => Math.cos(g) * v + Math.sin(g) * dir[k]);
+      const wantLat = Math.asin(q[2]) / RAD, wantLon = Math.atan2(q[1], q[0]) / RAD;
+
+      const got = destination(lat, lon, bearing, distM);
+      const label = `(${lat}, ${lon}) bearing ${bearing} for ${distM} m`;
+      expect(got.lat, label).toBeCloseTo(wantLat, 8);
+      expect(azGap(got.lon, wantLon), label).toBeLessThan(1e-8);
+      expect(got.lon, label).toBeGreaterThanOrEqual(-180);
+      expect(got.lon, label).toBeLessThan(180);
+    }
+  });
+
   it('stays put for a distance of 0', () => {
     expect(destination(-87.67, 45, 123, 0)).toEqual({ lat: expect.closeTo(-87.67, 9), lon: expect.closeTo(45, 9) });
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// T02: against Skyfield, with the real table built by parseEphemeris.
+
+const DATA = '../../public/data/';
+const metaFile = fileURLToPath(new URL(DATA + 'ephemeris.json', import.meta.url));
+const binFile = fileURLToPath(new URL(DATA + 'ephemeris.bin', import.meta.url));
+const fixtureFile = fileURLToPath(new URL('./__fixtures__/altaz.json', import.meta.url));
+
+const realMeta: EphemerisMeta | null = existsSync(metaFile) && existsSync(binFile)
+  ? JSON.parse(readFileSync(metaFile, 'utf8')) : null;
+const real = realMeta !== null && realMeta.source !== 'mock' && existsSync(fixtureFile);
+
+function realTable(): Ephemeris {
+  const bytes = readFileSync(binFile);
+  // Copy into an ArrayBuffer of its own: Node's Buffer may sit inside a larger shared pool.
+  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  return parseEphemeris(realMeta as EphemerisMeta, buffer as ArrayBuffer);
+}
+
+type Case = { lat: number; lon: number; t: string; sun: AltAz; earth: AltAz };
+
+const TOL_DEG = 0.02;
+const AZ_UNTIL_ALT = 89;   // near the zenith azimuth is ill-defined, so it isn't compared there
+
+/** Smallest angle between two azimuths, 0..180. */
+function azGap(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+/** Same numbers on every run, so a failure can be repeated. mulberry32. */
+function seededRandom(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+describe.skipIf(!real)('against Skyfield (altaz.json, real table)', () => {
+  const eph = real ? realTable() : (null as unknown as Ephemeris);
+  const cases: Case[] = real ? JSON.parse(readFileSync(fixtureFile, 'utf8')) : [];
+
+  it('has at least 20 cases, all inside the table', () => {
+    expect(cases.length).toBeGreaterThanOrEqual(20);
+    for (const c of cases) {
+      const tMs = Date.parse(c.t);
+      expect(tMs, c.t).toBeGreaterThanOrEqual(eph.startMs);
+      expect(tMs, c.t).toBeLessThanOrEqual(eph.endMs);
+    }
+  });
+
+  // Skyfield's fixture point is on the sphere itself: ground 0, eye 0.
+  const site = (c: Case): Site => ({ lat: c.lat, lon: c.lon, eye_m: 0 });
+
+  for (const [body, altAz] of [['sun', sunAltAz], ['earth', earthAltAz]] as const) {
+    it(`matches every ${body} case within ${TOL_DEG} degrees`, () => {
+      let worstAlt = 0, worstAz = 0;
+      for (const c of cases) {
+        const want = c[body];
+        const got = altAz(eph, site(c), 0, Date.parse(c.t));
+        const label = `${body} at (${c.lat}, ${c.lon}) ${c.t}`;
+        const dAlt = Math.abs(got.alt - want.alt);
+        worstAlt = Math.max(worstAlt, dAlt);
+        expect(dAlt, `${label}: alt ${got.alt} vs ${want.alt}`).toBeLessThan(TOL_DEG);
+        if (want.alt < AZ_UNTIL_ALT) {
+          const dAz = azGap(got.az, want.az);
+          worstAz = Math.max(worstAz, dAz);
+          expect(dAz, `${label}: az ${got.az} vs ${want.az}`).toBeLessThan(TOL_DEG);
+        }
+      }
+      console.info(`${body}: ${cases.length} cases, worst alt ${worstAlt.toFixed(5)} deg, `
+        + `worst az ${worstAz.toFixed(5)} deg`);
+    });
+  }
+
+  it('keeps the Sun within 1.6 degrees of the horizon at the south pole, 1,000 random times', () => {
+    const random = seededRandom(20261114);
+    const pole: Site = { lat: -90, lon: 0 };
+    let lowest = Infinity, highest = -Infinity;
+    for (let i = 0; i < 1000; i++) {
+      const tMs = eph.startMs + random() * (eph.endMs - eph.startMs);
+      const { alt } = sunAltAz(eph, pole, 0, tMs);
+      lowest = Math.min(lowest, alt);
+      highest = Math.max(highest, alt);
+      expect(Math.abs(alt), new Date(tMs).toISOString()).toBeLessThanOrEqual(1.6);
+    }
+    console.info(`south pole Sun altitude over 1,000 times: ${lowest.toFixed(3)} to `
+      + `${highest.toFixed(3)} deg`);
   });
 });

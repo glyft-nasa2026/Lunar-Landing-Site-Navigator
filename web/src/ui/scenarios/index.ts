@@ -7,7 +7,7 @@ import {
   getState, LIVE_ID, MAX_PINNED, pin, select, setLiveSite, setLiveTime, stateToAddress, subscribe,
   unpin, type Scenario,
 } from '../../state';
-import { checkLat, checkLon, checkUtc, coordText, groupName, toBoxValue, utcText, type Checked } from './input';
+import { checkLat, checkLon, checkUtc, coordText, groupName, toBoxValue, toPickerValue, utcText, type Checked } from './input';
 
 const SAME_DEG = 1e-6; // state keeps 6 decimals, so this is "the same point"
 
@@ -54,13 +54,30 @@ export function mount(el: HTMLElement): void {
   lonBox.inputMode = 'decimal';
   lonBox.autocomplete = 'off';
   const timeBox = make('input', 'field scn-num');
-  timeBox.type = 'datetime-local';
-  timeBox.step = '60';
+  // The time is typed in a text box, not datetime-local: the browser shows a date box in its own
+  // locale's order (often MM/DD/YYYY), and the page always writes dates YYYY-MM-DD. The button
+  // opens the browser's own picker on a hidden datetime-local box, whose value is always
+  // "YYYY-MM-DDTHH:MM" whatever the locale, and the picked time is copied into the text box.
+  timeBox.placeholder = 'YYYY-MM-DD HH:MM';
+  timeBox.autocomplete = 'off';
+  timeBox.spellcheck = false;
+  const pickButton = make('button', 'btn scn-pick-time', '📅');
+  pickButton.type = 'button';
+  pickButton.title = 'Pick a date and time';
+  pickButton.setAttribute('aria-label', 'Pick a date and time');
+  const pickerBox = make('input', 'scn-picker');
+  pickerBox.type = 'datetime-local';
+  pickerBox.step = '60';
+  pickerBox.tabIndex = -1;
+  pickerBox.setAttribute('aria-hidden', 'true');
 
   const siteField = field('Site', siteBox, 'scn-site');
   const latField = field('Latitude (°, north +)', latBox, 'scn-lat');
   const lonField = field('Longitude (°, east +)', lonBox, 'scn-lon');
   const timeField = field('Time (UTC)', timeBox, 'scn-time');
+  const timeRow = make('div', 'scn-time-row');
+  timeBox.replaceWith(timeRow);
+  timeRow.append(timeBox, pickButton, pickerBox);
 
   const coords = make('div', 'scn-coords');
   coords.append(latField.wrap, lonField.wrap);
@@ -88,8 +105,8 @@ export function mount(el: HTMLElement): void {
   el.replaceChildren(title, editor, list, actions, shareNote, shareLink);
 
   // --- Actions ----------------------------------------------------------------------------
-  // A box applies on change (Enter, or leaving the box). A rejected value stays in the box with
-  // its message and changes nothing.
+  // A box applies on change (Enter, or leaving the box); the time box is held back further,
+  // below. A rejected value stays in the box with its message and changes nothing.
   const apply = <T>(result: Checked<T>, setError: (m: string) => void, use: (v: T) => void): void => {
     if (!result.ok) {
       setError(result.message);
@@ -103,8 +120,33 @@ export function mount(el: HTMLElement): void {
     apply(checkLat(latBox.value), latField.setError, (lat) => setLiveSite({ ...getState().live.site, lat })));
   lonBox.addEventListener('change', () =>
     apply(checkLon(lonBox.value), lonField.setError, (lon) => setLiveSite({ ...getState().live.site, lon })));
-  timeBox.addEventListener('change', () =>
-    apply(checkUtc(timeBox.value, getState().eph), timeField.setError, (tMs) => setLiveTime(tMs)));
+  // A text box fires 'change' only on Enter or when it loses focus, so a half-typed time
+  // never moves the live scenario.
+  const applyTime = (text: string): void =>
+    apply(checkUtc(text, getState().eph), timeField.setError, (tMs) => setLiveTime(tMs));
+  timeBox.addEventListener('change', () => applyTime(timeBox.value));
+
+  pickButton.addEventListener('click', () => {
+    // Open the picker on the time in the text box if it reads, else on the live time.
+    const typed = checkUtc(timeBox.value, null);
+    pickerBox.value = toPickerValue(typed.ok ? typed.value : getState().live.tMs);
+    const eph = getState().eph;
+    if (eph) {
+      pickerBox.min = toPickerValue(eph.startMs);
+      pickerBox.max = toPickerValue(eph.endMs - 60_000);
+    }
+    try {
+      pickerBox.showPicker();
+    } catch {
+      timeBox.focus(); // No picker in this browser: the time can still be typed.
+    }
+  });
+  pickerBox.addEventListener('change', () => {
+    if (!pickerBox.value) return;
+    const typed = checkUtc(pickerBox.value, null);
+    if (typed.ok) timeBox.value = toBoxValue(typed.value);
+    applyTime(pickerBox.value);
+  });
   siteBox.addEventListener('change', () => {
     const c = getState().sites.find((s) => s.id === siteBox.value);
     if (!c) return;
@@ -142,10 +184,6 @@ export function mount(el: HTMLElement): void {
   // view with its message until the scenario moves some other way.
   const shown = { lat: '', lon: '', time: '' };
   let shownSites: CuratedSite[] | null = null;
-  // Chromium commits a date box part by part as it is typed, and drops focus from it when its
-  // min or max is written mid-typing. So the bounds are written only when the table's range
-  // changes, and a box isn't rewritten with the value it already shows.
-  let shownRange = '';
 
   const sync = (box: HTMLInputElement, key: keyof typeof shown, value: string, setError: (m: string) => void): void => {
     if (shown[key] === value) return;
@@ -215,14 +253,6 @@ export function mount(el: HTMLElement): void {
     sync(latBox, 'lat', String(live.site.lat), latField.setError);
     sync(lonBox, 'lon', String(live.site.lon), lonField.setError);
     sync(timeBox, 'time', toBoxValue(live.tMs), timeField.setError);
-    if (s.eph) {
-      const min = toBoxValue(s.eph.startMs), max = toBoxValue(s.eph.endMs - 60_000);
-      if (`${min}|${max}` !== shownRange) {
-        shownRange = `${min}|${max}`;
-        timeBox.min = min;
-        timeBox.max = max;
-      }
-    }
 
     list.replaceChildren(
       card(live, s.selectedId === LIVE_ID, s.sites),
