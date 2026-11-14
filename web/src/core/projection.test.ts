@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { projectToGrid, type DemMeta } from './dem';
 import {
-  cylForward, cylInverse, panView, polarForward, polarInverse, screenToView, viewToScreen, wrapLon,
-  zoomView, type MapView,
+  clampView, cylForward, cylInverse, fitScale, panView, polarForward, polarInverse, screenToView,
+  viewToScreen, wrapLon, zoomView, type MapView,
 } from './projection';
 import { MOON_RADIUS_KM } from './types';
 
@@ -107,6 +107,44 @@ describe('map view', () => {
     const still = screenToView(zoomed, 100, 50);
     expect(still.x).toBeCloseTo(before.x, 6); expect(still.y).toBeCloseTo(before.y, 6);
     expect(zoomView(view, 0, 0, 1000, 0, 0.5).scale).toBe(0.5);
+  });
+
+  it('zooms out no further than the whole map fitting the canvas (issue #65)', () => {
+    // The whole Moon is 2:1. The canvas side that is tighter for it decides.
+    const W = 2 * Math.PI * MOON_RADIUS_KM, H = Math.PI * MOON_RADIUS_KM;
+    expect(fitScale(1000, 400, W, H)).toBeCloseTo(400 / H, 12);
+    expect(fitScale(390, 288, W, H)).toBeCloseTo(390 / W, 12);
+    // The height map's square at that scale fills the canvas's shorter side exactly.
+    const whole = 2534 * 240, s = fitScale(800, 500, whole, whole);
+    expect(whole * s).toBeCloseTo(500, 9);
+    // Held at it, zooming out further about any point leaves the view where it was.
+    const fitted: MapView = { cx: 3000, cy: -4000, scale: s, width: 800, height: 500 };
+    const out = zoomView(fitted, 100, 50, 0.1, s);
+    expect(out.scale).toBe(s);
+    expect(out.cx).toBeCloseTo(fitted.cx, 6); expect(out.cy).toBeCloseTo(fitted.cy, 6);
+  });
+
+  it('pans no further than the map edge, and centres the map where it is smaller (issue #65)', () => {
+    const square = { xMin: -100, xMax: 100, yMin: -100, yMax: 100 };
+    // 2 px a unit: the canvas shows 200 by 100 units. As wide as the map: centred across.
+    // Taller than the canvas: held so neither the top nor the bottom edge comes inside it.
+    const v: MapView = { cx: 0, cy: 0, scale: 2, width: 400, height: 200 };
+    expect(clampView({ ...v, cx: 70, cy: 80 }, square)).toEqual({ ...v, cx: 0, cy: 50 });
+    expect(clampView({ ...v, cx: -5, cy: -500 }, square)).toEqual({ ...v, cx: 0, cy: -50 });
+    // Inside the limits nothing moves.
+    expect(clampView({ ...v, cy: 20 }, square)).toEqual({ ...v, cy: 20 });
+    // Zoomed in (40 by 20 units shown), at a corner: the corner stays at the canvas's corner.
+    const corner = clampView({ ...v, scale: 10, cx: 99, cy: -99 }, square);
+    expect(corner.cx).toBe(80); expect(corner.cy).toBe(-90);
+    const edge = viewToScreen(corner, square.xMax, square.yMin);
+    expect(edge.px).toBeCloseTo(400, 9); expect(edge.py).toBeCloseTo(200, 9);
+    // Infinite bounds leave an axis free: the whole-Moon map repeats east and west.
+    const strip = { xMin: -Infinity, xMax: Infinity, yMin: -50, yMax: 50 };
+    expect(clampView({ ...v, scale: 4, cx: 1e6, cy: 40 }, strip)).toEqual({ ...v, scale: 4, cx: 1e6, cy: 25 });
+    // At the zoom-out limit the whole map shows, so it sits in the middle of the canvas.
+    const fit = fitScale(390, 288, 2 * Math.PI * MOON_RADIUS_KM, Math.PI * MOON_RADIUS_KM);
+    const world = { xMin: -Infinity, xMax: Infinity, yMin: -Math.PI * MOON_RADIUS_KM / 2, yMax: Math.PI * MOON_RADIUS_KM / 2 };
+    expect(clampView({ cx: 700, cy: 900, scale: fit, width: 390, height: 288 }, world).cy).toBe(0);
   });
 });
 
