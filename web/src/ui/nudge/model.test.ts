@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  amountText, asCorner, clampKm, compare, freeCorner, kmText, NUDGE_KM, NUDGES, stepLabel, stepText, WINDOW_H,
-  type Corner, type Facts,
+  ACROSS_EDGE, amountText, asCorner, clampKm, compare, freeCorner, kmText, NUDGE_KM, NUDGES, stepLabel, stepText,
+  WINDOW_H, type Corner, type Facts,
 } from './model';
 
 const H = 3_600_000;
@@ -144,10 +144,26 @@ describe('compare', () => {
       .toEqual(['No meaningful change (under 6 h)']);
   });
 
-  it('adds the terrain note when either site has no terrain', () => {
+  it('adds the terrain note when neither site has terrain', () => {
     const l = texts(facts({ terrain: false }), facts({ terrain: false }));
     expect(l[0]).toBe('No meaningful change (under 6 h)');
     expect(l[1]).toMatch(/Terrain isn't modelled north of 85° S/);
     expect(texts(facts(), facts())).toHaveLength(1);
+  });
+
+  it('says the height map is missing, not that the site is north of 85 S, while it isn\'t loaded', () => {
+    const smooth = facts({ terrain: false });
+    const l = compare(smooth, facts({ terrain: false, litPct: 50 - pct(7) }), false).map((x) => x.text);
+    expect(l).toEqual(['−7 h of sunlight in 30 days', 'The height map isn\'t loaded, so the ground here is a smooth Moon.']);
+  });
+
+  it('claims no gain or loss across the edge of the terrain model', () => {
+    // 1 km north from 85.01 S: real terrain here, a smooth Moon there. The engine's two answers
+    // differ by days, and none of it is the ground.
+    const here = facts({ terrain: true, litPct: 40 });
+    const there = facts({ terrain: false, litPct: 40 + pct(276), sunFlip: null });
+    for (const l of [compare(here, there), compare(there, here)]) {
+      expect(l).toEqual([{ text: ACROSS_EDGE, tone: 'muted' }]);
+    }
   });
 });

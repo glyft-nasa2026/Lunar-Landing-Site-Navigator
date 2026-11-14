@@ -115,6 +115,10 @@ export function mount(el: HTMLElement): void {
   const discard = make('button', 'btn', 'Discard');
   keep.type = discard.type = 'button';
   actions.append(keep, discard);
+  actions.hidden = true;
+  // Built once and left in place. Putting the slider back into the page on every redraw ended
+  // a drag at its first step and took the keyboard focus off it.
+  body.append(dist, grid, days, out, actions);
 
   el.setAttribute('aria-labelledby', title.id);
   el.replaceChildren(head, body);
@@ -229,8 +233,6 @@ export function mount(el: HTMLElement): void {
     setGhost(null);
   });
 
-  const show = (...parts: HTMLElement[]): void => body.replaceChildren(dist, grid, days, out, ...parts);
-
   const render = (): void => {
     const st = getState();
     const live = st.live;
@@ -253,12 +255,16 @@ export function mount(el: HTMLElement): void {
     out.replaceChildren();
     if (!eph) {
       out.append(make('p', 'muted', 'Loading'));
-      show();
+      actions.hidden = true;
       return;
     }
     if (!ghost || !active) {
-      out.append(make('p', 'muted nudge-hint', `Move the live site ${kmText(km)} or 1 day to see what changes.`));
-      show();
+      // Outside the table every step is switched off; say why, in the readout's words.
+      const outside = live.tMs < eph.startMs || live.tMs > eph.endMs;
+      out.append(make('p', 'muted nudge-hint', outside
+        ? 'This time is outside the Sun and Earth table'
+        : `Move the live site ${kmText(km)} or 1 day to see what changes.`));
+      actions.hidden = true;
       return;
     }
 
@@ -269,7 +275,7 @@ export function mount(el: HTMLElement): void {
     if (!fl || !fg) {
       out.append(make('p', 'muted', 'Loading'));
     } else {
-      for (const line of compare(fl, fg)) out.append(make('p', `nudge-line nudge-${line.tone}`, line.text));
+      for (const line of compare(fl, fg, !!st.dem)) out.append(make('p', `nudge-line nudge-${line.tone}`, line.text));
       const table = make('table', 'table nudge-table');
       const headRow = make('tr');
       headRow.append(make('th'), make('th', '', 'Here'), make('th', '', 'Ghost'));
@@ -290,7 +296,7 @@ export function mount(el: HTMLElement): void {
       out.append(table);
     }
     out.append(make('p', 'muted nudge-hint', 'Ghost scenario shown in grey on the map'));
-    show(actions);
+    actions.hidden = false;
   };
 
   subscribe(() => render());
