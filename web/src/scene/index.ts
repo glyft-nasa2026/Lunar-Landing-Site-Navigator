@@ -1,5 +1,5 @@
 import {
-  AmbientLight, CanvasTexture, Color, DirectionalLight, Group, Mesh, MeshBasicMaterial,
+  AmbientLight, Box3, CanvasTexture, Color, DirectionalLight, Group, Mesh, MeshBasicMaterial,
   MeshLambertMaterial, OrthographicCamera, PCFShadowMap, PerspectiveCamera, Raycaster,
   Scene, SphereGeometry, Sprite, SpriteMaterial, SRGBColorSpace, Vector2, Vector3, WebGLRenderer,
   type Camera, type Material,
@@ -109,6 +109,8 @@ export function mount(el: HTMLElement): void {
   let relief = 0;
   /** The selected site on the drawn surface. */
   const target = new Vector3();
+  /** Everything the terrain meshes draw, so the Sun's shadow box can be fitted to it. */
+  const terrainBox = new Box3(), shadowBox = new Box3(), seenBox = new Box3();
 
   const world = new Scene();
   const mapCamera = new OrthographicCamera(-1, 1, 1, -1, 0.01, 20_000);
@@ -191,7 +193,46 @@ export function mount(el: HTMLElement): void {
       orbitCamera.updateProjectionMatrix();
     }
     sizePins(camera);
+    fitShadow();
     renderer.render(world, camera);
+  }
+  /**
+   * three.js leaves everything outside the Sun's shadow box unshadowed, which drew straight-edged
+   * lit bands across dark ground. Across the Sun's rays the box covers what is on screen in 2D, or
+   * the whole terrain in 3D; along them it spans the whole terrain, because a peak far off screen
+   * can still cast a shadow into view.
+   */
+  function fitShadow(): void {
+    if (!sun.castShadow || !coarse || terrainBox.isEmpty()) return;
+    const light = sun.shadow.camera;
+    light.position.copy(sun.position); light.lookAt(sun.target.position); light.updateMatrixWorld();
+    const box = shadowBox.copy(terrainBox).applyMatrix4(light.matrixWorldInverse);
+    if (mode === '2d') {
+      // The map looks straight down the Y axis: screen right is +X and screen up is -Z.
+      const hx = (mapCamera.right - mapCamera.left) / 2 / mapCamera.zoom;
+      const hz = (mapCamera.top - mapCamera.bottom) / 2 / mapCamera.zoom;
+      const x0 = mapCamera.position.x - hx, x1 = mapCamera.position.x + hx;
+      const z0 = mapCamera.position.z - hz, z1 = mapCamera.position.z + hz;
+      // The ground drops away from the pole, as y = sqrt(R^2 - d^2) - R at a distance d from its axis.
+      const ground = (d: number): number => Math.sqrt(Math.max(0, MOON_RADIUS_KM ** 2 - d * d)) - MOON_RADIUS_KM;
+      const nearest = Math.hypot(Math.max(0, x0, -x1), Math.max(0, z0, -z1));
+      const farthest = Math.hypot(Math.max(-x0, x1), Math.max(-z0, z1));
+      const [min, max] = coarse.geometry.userData.heightRange as number[];
+      // A kilometre spare: the native patch can reach a little past the coarse grid's heights.
+      seenBox.min.set(x0, ground(farthest) + min * stretch / 1000 - 1, z0);
+      seenBox.max.set(x1, ground(nearest) + max * stretch / 1000 + 1, z1);
+      seenBox.applyMatrix4(light.matrixWorldInverse);
+      box.min.x = Math.max(box.min.x, seenBox.min.x); box.max.x = Math.min(box.max.x, seenBox.max.x);
+      box.min.y = Math.max(box.min.y, seenBox.min.y); box.max.y = Math.min(box.max.y, seenBox.max.y);
+      if (box.min.x >= box.max.x || box.min.y >= box.max.y) return;
+    }
+    light.left = box.min.x; light.right = box.max.x; light.bottom = box.min.y; light.top = box.max.y;
+    // The light looks down its -Z axis.
+    light.near = Math.max(0.01, -box.max.z - 1); light.far = -box.min.z + 1;
+    light.updateProjectionMatrix();
+    // Depth bias stays about 40 m whatever the box's depth; the normal offset follows the texel size.
+    sun.shadow.bias = -0.04 / (light.far - light.near);
+    sun.shadow.normalBias = Math.max(0.002, (box.max.y - box.min.y) / sun.shadow.mapSize.y);
   }
   // No continuous animation while idle. Controls, state changes and resize schedule a frame.
   function invalidate(): void {
@@ -254,6 +295,7 @@ export function mount(el: HTMLElement): void {
   function clearTerrain(): void {
     for (const mesh of [coarse, detail]) if (mesh) { world.remove(mesh); mesh.geometry.dispose(); }
     coarse = detail = null; coarseKey = detailKey = ''; relief = 0; bounds = undefined;
+    terrainBox.makeEmpty();
   }
   /**
    * The whole region is built once per height map, stretch and theme, and shown in every view.
@@ -271,6 +313,7 @@ export function mount(el: HTMLElement): void {
       if (coarse) { world.remove(coarse); coarse.geometry.dispose(); }
       coarse = new Mesh(terrainGeometry(dem, low, high, stretch), terrainMaterial);
       coarse.castShadow = coarse.receiveShadow = true; world.add(coarse);
+      coarse.geometry.computeBoundingBox();
       coarseKey = nextCoarse; detailKey = '';
       const [min, max] = coarse.geometry.userData.heightRange as number[];
       relief = Math.max(0, max) * stretch / 1000;
@@ -283,9 +326,11 @@ export function mount(el: HTMLElement): void {
     if (detail) { world.remove(detail); detail.geometry.dispose(); detail = null; }
     bounds = polar ? detailBounds(dem, selected().site) : undefined;
     setTerrainHole(coarse.geometry, bounds);
+    terrainBox.copy(coarse.geometry.boundingBox!);
     if (!bounds) return;
     detail = new Mesh(terrainGeometry(dem, low, high, stretch, bounds), detailMaterial);
     recolorTerrain(detail.geometry, low, high, coarse.geometry.userData.heightRange as number[]);
+    detail.geometry.computeBoundingBox(); terrainBox.union(detail.geometry.boundingBox!);
     detail.castShadow = detail.receiveShadow = true; world.add(detail);
   }
   function clearPins(): void {
@@ -333,11 +378,6 @@ export function mount(el: HTMLElement): void {
     if (s.eph) {
       const vectors = s.eph.vectorsAt(sc.tMs);
       sun.position.copy(target).addScaledVector(moonDirection(vectors.sun), 2000); sun.intensity = 3;
-      if (polar && bounds && dem) {
-        const half = Math.max(25, (bounds.col1 - bounds.col0) * dem.meta.pixel_m / 1500);
-        const camera = sun.shadow.camera;
-        camera.left = camera.bottom = -half; camera.right = camera.top = half; camera.updateProjectionMatrix();
-      }
       sun.castShadow = polar;
       // Seen from the site, not the Moon's centre: Earth is close enough for that to matter.
       const toEarth = moonDirection(vectors.earthKm).add(globe.position).sub(target);

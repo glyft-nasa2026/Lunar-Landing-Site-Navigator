@@ -1,6 +1,6 @@
 # T12: 3D scene and map
 
-Status: implemented, in review (pull request #7); merged T20 integration verified; 3D globe and audit fixes done 14 Nov; laptop FPS verification pending
+Status: implemented, in review (pull request #7); real LOLA terrain verified after T04; laptop FPS verification pending
 
 | | |
 |---|---|

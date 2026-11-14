@@ -1,7 +1,7 @@
 """T12 integration checks. Uses existing Python Playwright; installs nothing.
 Run against Vite: python3 src/scene/browser-check.py http://127.0.0.1:5173
 Only browser requests are supplied synthetic data; shared public/data files are untouched.
-Add --t20 to also check the app's unmodified, merged T20 mock files before the fixtures.
+Add --public to also check the app's own public/data files first, mock or real (--t20 is its old name).
 """
 import array
 import json
@@ -14,6 +14,8 @@ BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:5173'
 R = 1737400
 T0 = 1767225600000
 SITE = {'lat': -88, 'lon': 45}
+# Shackleton crater: its floor is permanently shadowed, so it is dark whenever the readout says hidden.
+SHACKLETON = {'lat': -89.67, 'lon': 129.78}
 
 
 def projected(lat, lon):
@@ -66,16 +68,18 @@ with sync_playwright() as p:
     page.on('pageerror', lambda e: errors.append(str(e)))
     page.on('console', lambda m: graphics_warnings.append(m.text) if m.type in ('error', 'warning') and m.text.startswith('THREE.') else None)
 
-    if '--t20' in sys.argv:
+    if '--public' in sys.argv or '--t20' in sys.argv:
         page.goto(BASE + '/#live=-88.4,45,2026-01-01T00:00:00Z')
         page.wait_for_function("async () => { const s=(await import('/src/state.ts')).getState(); return s.eph && s.dem && s.sites.length; }")
         actual = page.evaluate("""async () => {
           const s=(await import('/src/state.ts')).getState();
-          return {dem:s.dem.meta, eph:s.eph.meta, sites:s.sites.map(site=>site.id)};
+          const served=await fetch('/data/dem.json').then(r=>r.json());
+          return {dem:s.dem.meta, served, eph:s.eph.meta, sites:s.sites.map(site=>site.id)};
         }""")
-        assert actual['dem']['source'] == actual['eph']['source'] == 'mock', actual
-        assert {'mock-floor', 'mock-rim', 'mock-equator'} <= set(actual['sites']), actual
-        assert actual['dem']['size'] == 634 and actual['eph']['rows'] == 87649, actual
+        # The app drew the files as served: nothing in this folder assumes a grid size or spacing.
+        for key in ('size', 'pixel_m', 'x_min_m', 'y_max_m', 'min_lat', 'source'):
+            assert actual['dem'][key] == actual['served'][key], (key, actual)
+        mock_dem = actual['dem']['source'] == 'mock'
         page.wait_for_timeout(500)
         actual_canvas = page.locator('.scene-canvas')
         box = actual_canvas.bounding_box()
@@ -90,7 +94,12 @@ with sync_playwright() as p:
         bx, by = projected(-88, 45)
         actual_error = math.hypot(ax-bx, ay-by) / actual['dem']['pixel_m']
         assert actual_error < 1, (actual_site, actual_error)
-        # Choose hidden/visible times from core results for the actual 29.53-day mock Sun.
+        # The mock crater is under the click; real terrain uses a real permanently shadowed floor.
+        floor_site = actual_site if mock_dem else SHACKLETON
+        if not mock_dem:
+            page.evaluate("async site => (await import('/src/state.ts')).setLiveSite(site)", SHACKLETON)
+            page.wait_for_timeout(300)
+        # Choose hidden/visible times from core results for the served ephemeris.
         times = page.evaluate("""async () => {
           const state=await import('/src/state.ts');
           const samples=state.samplesFor(state.selected(), '30d');
@@ -105,7 +114,7 @@ with sync_playwright() as p:
             page.evaluate("async t => (await import('/src/state.ts')).setLiveTime(t)", times[label])
             page.wait_for_timeout(300)
             assert ('Sun hidden' if label == 'dark' else 'Sun visible') in page.locator('.scene-caption').inner_text()
-            path = f'/tmp/t12-t20-{label}.png'
+            path = f'/tmp/t12-public-{label}.png'
             actual_canvas.screenshot(path=path)
             rendered.append(Image.open(path).convert('RGB'))
         w, h = rendered[0].size
@@ -117,9 +126,9 @@ with sync_playwright() as p:
         page.get_by_role('button', name='3D orbit', exact=True).click()
         page.wait_for_timeout(250)
         page.get_by_role('button', name='2D map', exact=True).click()
-        assert page.evaluate("async () => (await import('/src/state.ts')).getState().live.site") == actual_site
+        assert page.evaluate("async () => (await import('/src/state.ts')).getState().live.site") == floor_site
         assert not errors and not graphics_warnings, (errors, graphics_warnings)
-        passed('merged T20 files', {'grid_size': actual['dem']['size'], 'ephemeris_rows': actual['eph']['rows'], 'sites': actual['sites'], 'site': actual_site, 'error_cells': actual_error, 'hidden_floor_mean_rgb': round(actual_luma, 2), 'changed_color_channels': actual_changed, 'camera_switch': 'site preserved'})
+        passed('public data files', {'height_map': actual['dem']['source'], 'grid_size': actual['dem']['size'], 'pixel_m': actual['dem']['pixel_m'], 'ephemeris': actual['eph']['source'], 'ephemeris_rows': actual['eph']['rows'], 'sites': actual['sites'], 'clicked_site': actual_site, 'error_cells': actual_error, 'dark_floor_at': floor_site, 'hidden_floor_mean_rgb': round(actual_luma, 2), 'changed_color_channels': actual_changed, 'camera_switch': 'site preserved'})
         # A hash-only navigation would retain the actual data and pins instead of loading fixtures.
         page.goto('about:blank')
 
