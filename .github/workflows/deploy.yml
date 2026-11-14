@@ -1,5 +1,10 @@
-# Each push to main (every merged pull request) builds web/ and publishes web/dist to GitHub
-# Pages. Needs Settings > Pages > Source set to "GitHub Actions".
+# Each push to main (every merged pull request) builds web/ and commits web/dist to the
+# `deploy` branch. The homelab server behind the Cloudflare Tunnel pulls that branch on a timer
+# and serves it at darksight.space. Nothing on the server is reachable from GitHub, and the repo
+# holds no secrets for it.
+#
+# The deploy branch holds only built files, one commit per deploy, with the source commit in the
+# message and in version.txt. It is never force-pushed. The branch rule covers main only.
 name: Deploy
 
 on:
@@ -8,22 +13,17 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
-# One deploy at a time. A newer merge waits for the running deploy instead of cancelling it,
-# so a half-finished publish is never cut off.
+# One deploy at a time. A newer merge waits for the running one instead of cancelling it, so
+# two runs never race to push the deploy branch.
 concurrency:
-  group: pages
+  group: deploy
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-publish:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
     steps:
       - uses: actions/checkout@v5
 
@@ -33,22 +33,34 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      - uses: actions/configure-pages@v5
-
       - run: npm ci
+        working-directory: web
       - run: npm test
+        working-directory: web
       - run: npm run build
+        working-directory: web
 
-      - uses: actions/upload-pages-artifact@v4
-        with:
-          path: web/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Commit web/dist to the deploy branch
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          set -eu
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin deploy > /dev/null; then
+            git fetch --depth 1 origin deploy
+            git worktree add --detach out FETCH_HEAD
+          else
+            git worktree add --orphan -b deploy out
+          fi
+          find out -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a web/dist/. out/
+          echo "$SHA" > out/version.txt
+          git -C out add -A
+          if git -C out diff --cached --quiet; then
+            echo "Built site is unchanged; nothing to deploy."
+            exit 0
+          fi
+          git -C out commit -q -m "Deploy $SHA"
+          git -C out push origin HEAD:refs/heads/deploy
+          echo "Deployed $SHA to the deploy branch."
