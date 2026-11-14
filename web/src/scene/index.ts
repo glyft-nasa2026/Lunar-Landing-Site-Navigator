@@ -13,7 +13,7 @@ import {
 import { themeColor } from '../ui/plotTheme';
 import { gridSite, moonCentre, moonDirection, siteNorth, sitePosition, siteUp, sphereSite } from './coordinates';
 import {
-  detailBounds, globeGeometry, recolorTerrain, setTerrainHole, terrainGeometry, type GridBounds,
+  detailBounds, edgeHeight, globeGeometry, recolorTerrain, setTerrainHole, terrainGeometry, type GridBounds,
 } from './terrain';
 import './scene.css';
 
@@ -125,7 +125,9 @@ export function mount(el: HTMLElement): void {
   sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.00001; sun.shadow.normalBias = 0.002;
   sun.shadow.camera.near = 1; sun.shadow.camera.far = 4000;
   world.add(sun, sun.target);
-  const ambient = new AmbientLight(); ambient.intensity = 0.07; world.add(ambient);
+  // A faint fill, so ground in shadow still shows its shape (through the height colours) instead of
+  // matching the background; a shadowed crater floor stays dark. Illustrative, like the shadows.
+  const ambient = new AmbientLight(); ambient.intensity = 0.3; world.add(ambient);
   const terrainMaterial = new MeshLambertMaterial({ vertexColors: true });
   const detailMaterial = terrainMaterial.clone();
   // The globe is always drawn, with the terrain set into its south cap. Pushed back in depth so
@@ -317,8 +319,9 @@ export function mount(el: HTMLElement): void {
       coarseKey = nextCoarse; detailKey = '';
       const [min, max] = coarse.geometry.userData.heightRange as number[];
       relief = Math.max(0, max) * stretch / 1000;
-      // The sphere outside the height map takes the ramp's colour for 0 m, so the seam doesn't show.
-      globeMaterial.color.copy(low).lerp(high, Math.max(0, Math.min(1, -min / Math.max(1, max - min))));
+      // The sphere outside the height map takes the colour of the ground along the map's edge.
+      const edge = (edgeHeight(coarse.geometry) - min) / Math.max(1, max - min);
+      globeMaterial.color.copy(low).lerp(high, Math.max(0, Math.min(1, edge)));
     }
     const nextDetail = polar ? `${siteKey}|${coarseKey}` : 'none';
     if (detailKey === nextDetail) return;

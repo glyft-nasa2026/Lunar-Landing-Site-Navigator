@@ -1,7 +1,7 @@
-import { BufferAttribute, BufferGeometry, Color, Float32BufferAttribute, SphereGeometry } from 'three';
+import { BufferAttribute, BufferGeometry, Color, Float32BufferAttribute, SphereGeometry, Vector3 } from 'three';
 import { projectToGrid, type Dem, type DemMeta } from '../core/dem';
 import { MOON_RADIUS_KM, type Site } from '../core/types';
-import { gridSite, sitePosition } from './coordinates';
+import { gridSite, sitePosition, sphereSite } from './coordinates';
 
 export type GridBounds = { col0: number; col1: number; row0: number; row1: number };
 /** Which grid points a mesh's vertices sit on, kept so its triangles can be rebuilt. */
@@ -153,6 +153,27 @@ export function terrainGeometry(
   geometry.computeBoundingSphere();
   geometry.userData.heightRange = Number.isFinite(min) ? [min, max] : [0, 1];
   return geometry;
+}
+
+/**
+ * Mean height, in metres, of the terrain within `band` degrees of its northern edge. The plain
+ * globe beyond the height map takes this height's colour, so no ring shows where the map stops.
+ */
+export function edgeHeight(geometry: BufferGeometry, band = 0.5): number {
+  const positions = geometry.getAttribute('position'), heights = geometry.getAttribute('height');
+  const { valid } = geometry.userData.layout as Layout;
+  const lats = new Float32Array(heights.count), point = new Vector3();
+  let north = -Infinity;
+  for (let i = 0; i < heights.count; i++) {
+    if (!valid[i]) continue;
+    lats[i] = sphereSite(point.fromBufferAttribute(positions, i)).lat;
+    north = Math.max(north, lats[i]);
+  }
+  let sum = 0, n = 0;
+  for (let i = 0; i < heights.count; i++) {
+    if (valid[i] && lats[i] >= north - band) { sum += heights.getX(i); n++; }
+  }
+  return n ? sum / n : 0;
 }
 
 /** Reuse the coarse mesh's physical height range so a detail patch has no colour seam. */

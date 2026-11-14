@@ -3,7 +3,7 @@ import { Color, Mesh, MeshBasicMaterial, Raycaster, Vector3 } from 'three';
 import { parseDem, projectToGrid, type DemMeta } from '../core/dem';
 import { MOON_RADIUS_KM } from '../core/types';
 import { gridSite, moonCentre, moonDirection, siteNorth, sitePosition, siteUp, sphereSite } from './coordinates';
-import { detailBounds, globeGeometry, setTerrainHole, terrainGeometry } from './terrain';
+import { detailBounds, edgeHeight, globeGeometry, setTerrainHole, terrainGeometry } from './terrain';
 
 const meta: DemMeta = {
   size: 65, pixel_m: 2000, x_min_m: -64_000, y_max_m: 64_000,
@@ -137,6 +137,20 @@ describe('scene coordinates and picking', () => {
     expect(globeGeometry(null).parameters.thetaStart).toBe(0);
     globe.geometry.dispose(); coarse.geometry.dispose(); material.dispose();
   }, 20_000);
+
+  it('takes the globe colour from the height along the terrain edge, not the middle', () => {
+    // A 4 km deep bowl at the pole inside a plain at 1,000 m.
+    const heights = new Int16Array(meta.size ** 2);
+    for (let row = 0; row < meta.size; row++) {
+      for (let col = 0; col < meta.size; col++) {
+        const r = Math.hypot(col - 32, row - 32);
+        heights[row * meta.size + col] = r < 10 ? -3000 : 1000;
+      }
+    }
+    const bowl = parseDem(meta, heights.buffer);
+    expect(edgeHeight(terrainGeometry(bowl, low, high))).toBeCloseTo(1000, 6);
+    expect(edgeHeight(terrainGeometry(dem, low, high))).toBe(0);
+  });
 
   it('moves the hole without rebuilding the vertices', () => {
     const m = { ...meta, size: 634, pixel_m: 960, x_min_m: -304320, y_max_m: 304320 };
