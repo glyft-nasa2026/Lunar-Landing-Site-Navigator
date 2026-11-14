@@ -1,6 +1,9 @@
 /* The shared look (docs/data-contract.md section 6).
-   T19 set the values from the design file (tasks/Untitled.svg, the "lune" frames): a near-black
-   navy page, navy cards, slate lines, and one signal red for the primary action.
+   T19 set the values from the DARKSIGHT design brief tokens:
+     bg/base #1B1B1B, bg/surface #16224D (Midnight Lapis), accent/primary #4BE8A0 (Clear Bamboo),
+     accent/soft and text/primary #EAFFF4 (Minted Bamboo), accent/deep #2E6E80 (Deep Hanada),
+     text/muted = #EAFFF4 at 60 %.
+   Arrangement comes from tasks/Quarterly Company News.pdf and tasks/Untitled.svg (layout.css).
    Don't rename or remove a name: every module depends on them.
    Contrast (WCAG 2.1, relative luminance) is listed beside each text colour. */
 
@@ -8,39 +11,38 @@
   color-scheme: dark;
 
   /* Page, cards, raised cards, lines */
-  --bg: #060B14;          /* design: page */
-  --panel: #101A2B;       /* design: card */
-  --panel-2: #18253B;     /* not in the design: one step lighter than --panel, for raised cards */
-  --border: #324157;      /* design: lines and card outlines */
+  --bg: #1B1B1B;          /* bg/base */
+  --panel: #16224D;       /* bg/surface */
+  --panel-2: #1A2D55;     /* not in the brief: 85 % bg/surface + 15 % accent/deep */
+  --border: #2E6E80;      /* accent/deep */
 
   /* Main text, secondary text */
-  --text: #FFFFFF;        /* 19.6:1 on --bg, 17.3:1 on --panel */
-  --muted: #A7B3C5;       /* 9.3:1 on --bg, 8.2:1 on --panel, 7.3:1 on --panel-2 */
+  --text: #EAFFF4;                      /* text/primary. 16.5:1 on --bg, 14.7:1 on --panel */
+  --muted: rgba(234, 255, 244, 0.6);    /* text/muted. 6.6:1 on --bg, 6.2:1 on --panel */
 
   /* Primary button, selection */
-  --accent: #FC3D21;      /* design: signal red. 5.3:1 on --bg; use --bg for text on it (5.3:1),
-                             never white (3.7:1 fails) */
+  --accent: #4BE8A0;      /* accent/primary. 11.0:1 on --bg, 9.7:1 on --panel; --bg text on it 11.0:1 */
 
-  /* Best value in a row, caution, error message */
-  --ok: #7BD88F;          /* 11.6:1 on --bg */
-  --warn: #F2C94C;        /* 12.9:1 on --bg */
-  --bad: #FF8A80;         /* 9.0:1 on --bg. Lighter than --accent so an error isn't read as a button */
+  /* Best value in a row, caution, error message. Not in the brief: kept from the first pass. */
+  --ok: #7BD88F;
+  --warn: #F2C94C;
+  --bad: #FF8A80;
 
   /* Scenario colours. Fixed: chosen to stay distinct for colour-blind users. */
   --scn-a: #E69F00;
   --scn-b: #0072B2;
   --scn-c: #009E73;
-  --scn-ghost: #7D8899;
+  --scn-ghost: #7D8899;   /* not in the brief */
 
   /* Sun and Earth in charts. Fixed. */
   --sun: #F0E442;
   --earth: #56B4E9;
 
   /* Filled and empty parts of the strips */
-  --lit: #E6EAF0;
-  --dark: #22304A;
+  --lit: #EAFFF4;         /* accent/soft */
+  --dark: #2E6E80;        /* accent/deep */
 
-  /* The two ends of the height colour ramp in the 3D scene: lunar greys from the design's maps */
+  /* The two ends of the height colour ramp in the 3D scene. Not in the brief: neutral lunar greys */
   --terrain-lo: #2B2E33;
   --terrain-hi: #D9D8D2;
 
@@ -135,19 +137,23 @@ a {
   color: var(--text);
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 999px;   /* pill, per the brief */
   padding: var(--space-2) var(--space-4);
   cursor: pointer;
   transition: border-color 0.15s, background-color 0.15s;
 }
 
 .btn:hover:not(:disabled) {
-  border-color: var(--muted);
+  border-color: var(--text);
   background: var(--panel-2);
 }
 
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
 .btn:disabled {
-  color: var(--muted);
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -165,7 +171,7 @@ a {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent);
+  background: var(--text);
   border-color: var(--text);
 }
 
@@ -211,9 +217,10 @@ a {
   font-size: var(--fs-sm);
   letter-spacing: 0.04em;
   color: var(--muted);
+  background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-1) var(--space-2);
+  border-radius: 999px;   /* info pill, per the brief */
+  padding: var(--space-1) var(--space-3);
 }
 
 .muted {

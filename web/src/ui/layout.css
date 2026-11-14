@@ -1,29 +1,46 @@
-/* Places the slots of web/index.html (docs/data-contract.md section 5, spec section 3).
+/* Places the slots of web/index.html (docs/data-contract.md section 5).
    T19 owns this file. Modules style only their own insides.
 
-   Desktop (1280 px and up, and down to the phone breakpoint):
-     about   about
-     scene   side      side = scenarios, readout, nudge
-     compare side
-     bottom  bottom    bottom = timeline | sky
+   Arrangement from the design wireframe (tasks/Quarterly Company News.pdf, "01 Explore") and
+   the design frames (tasks/Untitled.svg):
+
+     about     about       top bar: logo, tabs, UTC date and time, pointer coordinates
+     scene     readout     the map or 3D Moon, with the data column beside it
+     scene     nudge       nudge sits under readout (contract section 5)
+     scenarios scenarios   chosen sites (max 4) and Proceed, under the map
+     compare   compare     the comparison, full width
+     timeline  timeline    timeline of the selected scenario, full width
+     sky       sky         sky panorama of the selected scenario: 360 degrees wide, so full width
+
+   #side and #bottom are only wrappers in index.html; `display: contents` lets their children
+   take part in this grid directly.
    Phone (800 px and under): one column, in page order. */
 
 #app {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(20rem, 24rem);
   grid-template-areas:
-    'about   about'
-    'status  status'
-    'scene   side'
-    'compare side'
-    'bottom  bottom';
+    'about     about'
+    'status    status'
+    'scene     readout'
+    'scene     nudge'
+    'scenarios scenarios'
+    'compare   compare'
+    'timeline  timeline'
+    'sky       sky';
+  grid-template-rows: auto auto auto 1fr;
   gap: var(--space-4);
   padding: 0 var(--space-5) var(--space-5);
   min-height: 100vh;
   align-content: start;
 }
 
-/* The design's top bar: flush with the page, a single line under it, no card. */
+#side,
+#bottom {
+  display: contents;
+}
+
+/* The top bar: flush with the page, one line under it, no card. */
 #about {
   grid-area: about;
   display: flex;
@@ -57,39 +74,45 @@
 #scene {
   grid-area: scene;
   position: relative;
-  min-height: 34rem;
+  min-height: 36rem;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
 }
 
-#side {
-  grid-area: side;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
+#readout {
+  grid-area: readout;
+}
+
+#nudge {
+  grid-area: nudge;
+  align-self: start;
+}
+
+#scenarios {
+  grid-area: scenarios;
 }
 
 #compare {
   grid-area: compare;
-  min-width: 0;
   overflow-x: auto;
 }
 
-#bottom {
-  grid-area: bottom;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-4);
+#timeline {
+  grid-area: timeline;
 }
 
-#timeline,
-#sky,
+#sky {
+  grid-area: sky;
+}
+
 #scenarios,
 #readout,
-#nudge {
+#nudge,
+#compare,
+#timeline,
+#sky {
   min-width: 0;
 }
 
@@ -102,9 +125,13 @@
       'about'
       'status'
       'scene'
-      'side'
+      'scenarios'
+      'readout'
+      'nudge'
       'compare'
-      'bottom';
+      'timeline'
+      'sky';
+    grid-template-rows: none;
     gap: var(--space-3);
     padding: 0 var(--space-3) var(--space-3);
   }
@@ -117,14 +144,5 @@
 
   #scene {
     min-height: 20rem;
-  }
-
-  #side {
-    gap: var(--space-3);
-  }
-
-  #bottom {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-3);
   }
 }
