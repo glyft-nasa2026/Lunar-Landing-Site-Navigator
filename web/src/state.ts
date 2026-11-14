@@ -2,7 +2,7 @@
 // UI modules read state and call actions. They never call each other.
 
 import type { Dem } from './core/dem';
-import type { Ephemeris } from './core/ephemeris';
+import { loadEphemerisChunk, type Ephemeris } from './core/ephemeris';
 import { sunAltAz } from './core/geometry';
 import { skylineAt, skylineElev } from './core/horizon';
 import type { Body, CuratedSite, Flip, Sample, Site, Skyline, Summary } from './core/types';
@@ -15,6 +15,8 @@ export type AppState = {
   live: Scenario; pinned: Scenario[]; ghost: Scenario | null;
   selectedId: string; range: Range; mode: '2d' | '3d';
   windowStartMs: number;                 // left edge of the timeline for the live scenario
+  // eph is null until the table has loaded, and again while a decade that the live or a pinned
+  // scenario needs is still downloading, so every module shows "Loading" by itself.
   eph: Ephemeris | null; dem: Dem | null; sites: CuratedSite[];
 };
 
@@ -159,6 +161,7 @@ function writeAddress(): void {
 }
 
 function notify(saveAddress = true): void {
+  refreshEph();
   if (saveAddress && hasPage) {
     // One write a short moment after the last change, not one per step of a drag.
     if (addressTimer !== undefined) clearTimeout(addressTimer);
@@ -191,9 +194,72 @@ export function subscribe(fn: (s: AppState) => void): () => void {
 
 /** Called by main.ts as each data file arrives. Not for UI modules. */
 export function setData(patch: { eph?: Ephemeris | null; dem?: Dem | null; sites?: CuratedSite[] }): void {
-  state = { ...state, ...patch };
+  if ('eph' in patch) {
+    table = patch.eph ?? null;
+    pending.clear();
+    failed.clear();
+  }
+  const { eph: _ignored, ...rest } = patch;
+  state = { ...state, ...rest };
   clearCaches();
   notify(false);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Decades of the Sun and Earth table (core/ephemeris.ts). main.ts hands over the table with its
+// home decade (the 2020s) loaded; any other decade is fetched here the first time a scenario
+// needs it. A decade that fails to download is not asked for again; its times then read as
+// outside the table.
+// ---------------------------------------------------------------------------------------------
+
+let table: Ephemeris | null = null;   // every decade loaded so far
+const pending = new Set<number>();
+const failed = new Set<number>();
+const FLIP_DAYS = 60;                 // nextFlip's default look-ahead
+
+/**
+ * True when every decade from fromMs to toMs is in memory; asks for the ones that aren't.
+ * settled: also true when the only ones missing failed to download, since waiting won't help.
+ */
+function covered(fromMs: number, toMs: number, settled = false): boolean {
+  if (!table) return false;
+  const need = table.missing(fromMs, toMs);
+  for (const i of need) if (!failed.has(i)) fetchChunk(i);
+  return settled ? need.every((i) => failed.has(i)) : need.length === 0;
+}
+
+function fetchChunk(i: number): void {
+  if (!table || pending.has(i)) return;
+  pending.add(i);
+  const asked = table;
+  loadEphemerisChunk(asked, i).then(
+    (buffer) => {
+      if (table?.meta !== asked.meta || !pending.delete(i)) return; // a new table came meanwhile
+      table = table.withChunk(i, buffer);
+      notify(false);
+    },
+    (err: unknown) => {
+      if (table?.meta !== asked.meta || !pending.delete(i)) return;
+      failed.add(i);
+      console.warn(`Data not loaded (Sun and Earth table, decade ${i}):`, err instanceof Error ? err.message : err);
+      notify(false);
+    },
+  );
+}
+
+/** What each scenario on screen reads: its own hours, its countdowns and the timeline. */
+function scenariosCovered(): boolean {
+  const s = state;
+  const range = rangeMs(s.range);
+  let ok = covered(s.live.tMs, s.live.tMs + FLIP_DAYS * DAY_MS, true);
+  ok = covered(s.windowStartMs, s.windowStartMs + range, true) && ok;
+  for (const p of s.pinned) ok = covered(p.tMs, p.tMs + Math.max(FLIP_DAYS * DAY_MS, range), true) && ok;
+  return ok;
+}
+
+function refreshEph(): void {
+  const eph = table && scenariosCovered() ? table : null;
+  if (eph !== state.eph) state = { ...state, eph };
 }
 
 /** Moves the live scenario and selects it. Ignores a latitude outside -90..90 or a non-number. */
@@ -316,7 +382,7 @@ function groundFor(site: Site): number {
 
 function hourly(sc: Scenario, startMs: number, range: Range): Sample[] {
   const eph = state.eph;
-  if (!eph) return [];
+  if (!eph || !covered(startMs, startMs + rangeMs(range))) return [];
   return cached(seriesCache, `${siteKey(sc.site)}|${startMs}|${range}`, () =>
     series(eph, sc.site, groundFor(sc.site), skylineFor(sc), startMs, startMs + rangeMs(range), HOUR_MS));
 }
@@ -344,12 +410,15 @@ export function summaryFor(sc: Scenario): Summary {
 /** Next rise or set after sc.tMs. */
 export function flipFor(sc: Scenario, body: Body): Flip {
   const eph = state.eph;
-  if (!eph) return null;
+  if (!eph || !covered(sc.tMs, sc.tMs + FLIP_DAYS * DAY_MS)) return null;
   return cached(flipCache, `${siteKey(sc.site)}|${sc.tMs}|${body}`, () =>
     nextFlip(eph, sc.site, groundFor(sc.site), skylineFor(sc), sc.tMs, body));
 }
 
-/** No sunlight there in the whole table: no part of the Sun's disc clears the skyline. */
+/**
+ * No sunlight there in the home decade (2020-2029, always loaded): no part of the Sun's disc
+ * clears the skyline. Judged on one fixed decade so the answer doesn't change as more load.
+ */
 export function neverLitFor(sc: Scenario): boolean {
   const eph = state.eph;
   if (!eph) return false;
@@ -357,7 +426,7 @@ export function neverLitFor(sc: Scenario): boolean {
     const skyline = skylineFor(sc);
     const ground = groundFor(sc.site);
     const stepMs = eph.meta.step_s * 1000;
-    for (let t = eph.startMs; t <= eph.endMs; t += stepMs) {
+    for (let t = eph.homeStartMs; t <= eph.homeEndMs; t += stepMs) {
       const sun = sunAltAz(eph, sc.site, ground, t);
       if (sun.alt - skylineElev(skyline, sun.az) + SUN_RADIUS > 0) return false;
     }
