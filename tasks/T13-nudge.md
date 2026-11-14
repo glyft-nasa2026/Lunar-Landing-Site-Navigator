@@ -27,7 +27,7 @@ Spec feature F11.
 
 ## Done when
 
-- [ ] On the mock grid, starting at the crater rim (-87.67, 45.0) and nudging 1 km south, down the inside wall, reports a large loss of sunlight.
+- [ ] On the real height map, starting at -89.45, -137.3 at 2027-03-01T00:00Z and nudging 1 km south, reports a large loss of sunlight (days, not hours).
 - [ ] At a site north of 85 S (no terrain), a 1 km move reports "no meaningful change" and says terrain isn't modelled there.
 - [ ] +1 day changes the countdowns by about 24 hours.
 - [ ] Discard leaves the live scenario exactly as it was.
