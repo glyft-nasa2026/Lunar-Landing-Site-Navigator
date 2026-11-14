@@ -83,10 +83,22 @@ export function startIntro(): Intro {
   const word = make('span', 'intro-wordmark');
   word.append('DARK', make('br'), 'SIGHT');
   mark.append(logo('intro-logo-sm'), word);
-  const title = make('h1', 'intro-title', 'DARKSIGHT');
+  // The title's letters and the subtitle's lines are separate boxes, so each can rise in on its
+  // own (intro.css). Screen readers get the plain words from aria-label.
+  const title = make('h1', 'intro-title');
+  title.setAttribute('aria-label', 'DARKSIGHT');
+  [...'DARKSIGHT'].forEach((ch, i) => {
+    const letter = make('span', 'intro-ch', ch);
+    letter.setAttribute('aria-hidden', 'true');
+    letter.style.setProperty('--i', String(i));
+    title.append(letter);
+  });
   const sub = make('p', 'intro-sub');
-  sub.append('Lunar Landing', make('br'), 'Site Navigator');
-  const start = make('button', 'btn intro-start', 'Start exploring →');
+  sub.append(make('span', 'intro-line', 'Lunar Landing'), make('span', 'intro-line', 'Site Navigator'));
+  const start = make('button', 'btn intro-start', 'Start exploring ');
+  const arrow = make('span', 'intro-arrow', '→');
+  arrow.setAttribute('aria-hidden', 'true');
+  start.append(arrow);
   start.type = 'button';
   const text = make('div', 'intro-text');
   text.append(title, sub, start);
@@ -174,8 +186,9 @@ export function startIntro(): Intro {
       [{ transform: boxToBox(to, from), opacity: 1 }, { transform: 'none', opacity: getComputedStyle(bigLogo).opacity }],
       { duration: GLIDE_MS, easing: GLIDE_EASE },
     );
+    // The corner mark and the glow fade in; the text has its own entrance in intro.css.
     const appear = { duration: GLIDE_MS / 2, delay: GLIDE_MS / 2, easing: 'ease-out', fill: 'backwards' } as const;
-    for (const el of [text, mark, glow]) el.animate([{ opacity: 0 }, { opacity: getComputedStyle(el).opacity }], appear);
+    for (const el of [mark, glow]) el.animate([{ opacity: 0 }, { opacity: getComputedStyle(el).opacity }], appear);
   }
 
   return {
